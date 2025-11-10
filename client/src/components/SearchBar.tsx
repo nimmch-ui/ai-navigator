@@ -14,15 +14,19 @@ interface SearchResult {
 interface SearchBarProps {
   onSearch: (query: string) => void;
   onResultSelect: (result: SearchResult) => void;
+  onSubmit?: (query: string) => void;
   results?: SearchResult[];
   recentSearches?: SearchResult[];
+  isLoading?: boolean;
 }
 
 export default function SearchBar({
   onSearch,
   onResultSelect,
+  onSubmit,
   results = [],
-  recentSearches = []
+  recentSearches = [],
+  isLoading = false
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -30,7 +34,11 @@ export default function SearchBar({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      onSearch(query);
+      if (onSubmit) {
+        onSubmit(query.trim());
+      } else {
+        onSearch(query);
+      }
     }
   };
 
@@ -57,6 +65,7 @@ export default function SearchBar({
           onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           className="h-12 pl-12 pr-12 text-base"
           data-testid="input-search"
+          disabled={isLoading}
         />
         {query && (
           <Button

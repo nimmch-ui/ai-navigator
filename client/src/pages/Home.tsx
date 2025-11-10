@@ -1,12 +1,21 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import MapView from '@/components/MapView';
 import SearchBar from '@/components/SearchBar';
 import MapControls from '@/components/MapControls';
 import ChatPanel from '@/components/ChatPanel';
 import RoutePanel from '@/components/RoutePanel';
 import ThemeToggle from '@/components/ThemeToggle';
+
+interface SearchResult {
+  id: string;
+  name: string;
+  address: string;
+  category: string;
+  coordinates: [number, number];
+}
 
 export default function Home() {
   const [showChat, setShowChat] = useState(false);
@@ -17,6 +26,9 @@ export default function Home() {
     { lat: 37.7749, lng: -122.4194, label: 'San Francisco' }
   ]);
   const [route, setRoute] = useState<Array<[number, number]> | undefined>();
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const { toast } = useToast();
   
   const [chatMessages, setChatMessages] = useState<Array<{
     id: string;
@@ -25,32 +37,7 @@ export default function Home() {
     timestamp: Date;
   }>>([]);
 
-  const searchResults = [
-    {
-      id: '1',
-      name: 'Golden Gate Bridge',
-      address: 'Golden Gate Bridge, San Francisco, CA',
-      category: 'Landmark',
-      coordinates: [37.8199, -122.4783] as [number, number]
-    },
-    {
-      id: '2',
-      name: 'Alcatraz Island',
-      address: 'Alcatraz Island, San Francisco, CA 94133',
-      category: 'Historic Site',
-      coordinates: [37.8267, -122.4230] as [number, number]
-    }
-  ];
-
-  const recentSearches = [
-    {
-      id: 'r1',
-      name: 'Ferry Building',
-      address: '1 Ferry Building, San Francisco, CA 94111',
-      category: 'Building',
-      coordinates: [37.7955, -122.3937] as [number, number]
-    }
-  ];
+  const recentSearches: SearchResult[] = [];
 
   const routes = [
     {
@@ -77,22 +64,68 @@ export default function Home() {
     }
   ];
 
+  const geocodeAddress = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (!mapboxToken) {
+      toast({
+        title: 'Configuration Error',
+        description: 'Mapbox token is not configured',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&limit=5`
+      );
+
+      if (!response.ok) {
+        throw new Error('Geocoding request failed');
+      }
+
+      const data = await response.json();
+      
+      const results: SearchResult[] = data.features.map((feature: any) => ({
+        id: feature.id,
+        name: feature.text,
+        address: feature.place_name,
+        category: feature.place_type?.[0] || 'Location',
+        coordinates: [feature.center[1], feature.center[0]] as [number, number]
+      }));
+
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      toast({
+        title: 'Search Error',
+        description: 'Failed to search for location. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  }, [toast]);
+
   const handleSearch = (query: string) => {
-    console.log('Search:', query);
+    geocodeAddress(query);
   };
 
-  const handleResultSelect = (result: typeof searchResults[0]) => {
-    console.log('Selected:', result);
+  const handleSearchSubmit = (query: string) => {
+    geocodeAddress(query);
+  };
+
+  const handleResultSelect = (result: SearchResult) => {
     setMapCenter(result.coordinates);
     setMapZoom(15);
     setMarkers([{ lat: result.coordinates[0], lng: result.coordinates[1], label: result.name }]);
-    
-    setShowRoute(true);
-    setRoute([
-      [37.7749, -122.4194],
-      [37.78, -122.45],
-      result.coordinates
-    ]);
+    setSearchResults([]);
   };
 
   const handleSendMessage = (message: string) => {
@@ -130,9 +163,11 @@ export default function Home() {
             <div className="flex-1">
               <SearchBar
                 onSearch={handleSearch}
+                onSubmit={handleSearchSubmit}
                 onResultSelect={handleResultSelect}
                 results={searchResults}
                 recentSearches={recentSearches}
+                isLoading={isSearching}
               />
             </div>
             <ThemeToggle />
