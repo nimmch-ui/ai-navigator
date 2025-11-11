@@ -14,6 +14,9 @@ import TripSummary from '@/components/TripSummary';
 import HazardLegend from '@/components/HazardLegend';
 import TransportModeSelector from '@/components/TransportModeSelector';
 import RoutePreferenceSelector from '@/components/RoutePreferenceSelector';
+import SpeedLimitHUD from '@/components/SpeedLimitHUD';
+import CameraProximityAlert from '@/components/CameraProximityAlert';
+import EcoSummary from '@/components/EcoSummary';
 import { mockHazards, getHazardWarningMessage } from '@/data/hazards';
 import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled } from '@/services/voiceGuidance';
@@ -25,6 +28,8 @@ import { sendChatMessage, type ChatContext } from '@/services/chatApi';
 import { calculateRoute, formatDistance, formatDuration, getManeuverIcon, type RouteResult } from '@/services/routing';
 import { getSpeedCameras } from '@/services/radar';
 import type { SpeedCamera } from '@/data/speedCameras';
+import { detectCamerasOnRoute, getCurrentSpeedLimit, type CameraProximityWarning } from '@/services/cameraProximity';
+import { calculateEcoEstimate, type EcoEstimate } from '@/services/ecoEstimates';
 
 interface SearchResult {
   id: string;
@@ -80,6 +85,11 @@ export default function Home() {
   const [nearbyHazards, setNearbyHazards] = useState<Hazard[]>([]);
   const [tripEstimate, setTripEstimate] = useState<TripEstimate | null>(null);
   const [speedCameras, setSpeedCameras] = useState<SpeedCamera[]>([]);
+  const [cameraWarnings, setCameraWarnings] = useState<CameraProximityWarning[]>([]);
+  const [dismissedCameraIds, setDismissedCameraIds] = useState<Set<string>>(new Set());
+  const [currentSpeedLimit, setCurrentSpeedLimit] = useState<number | null>(null);
+  const [ecoEstimate, setEcoEstimate] = useState<EcoEstimate | null>(null);
+  const [isElectricVehicle, setIsElectricVehicle] = useState(false);
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -325,6 +335,23 @@ export default function Home() {
         { lat: destinationCoords[0], lng: destinationCoords[1], label: destination }
       ]);
 
+      const warnings = detectCamerasOnRoute(result.geometry, speedCameras);
+      setCameraWarnings(warnings);
+      setDismissedCameraIds(new Set());
+
+      if (ecoMode) {
+        const isEV = vehicleType === 'ev';
+        const estimate = calculateEcoEstimate(
+          result.distance,
+          result.duration,
+          transportMode,
+          isEV
+        );
+        setEcoEstimate(estimate);
+      } else {
+        setEcoEstimate(null);
+      }
+
       const distanceKm = result.distance / 1000;
       const durationMin = result.duration / 60;
       
@@ -359,7 +386,7 @@ export default function Home() {
         setIsCalculatingRoute(false);
       }
     }
-  }, [originCoords, destinationCoords, transportMode, routePreference, origin, destination, vehicleType, ecoMode, toast]);
+  }, [originCoords, destinationCoords, transportMode, routePreference, origin, destination, vehicleType, ecoMode, speedCameras, toast]);
 
   useEffect(() => {
     if (destinationCoords) {
@@ -367,6 +394,17 @@ export default function Home() {
       setShowChat(false);
     }
   }, [destinationCoords, transportMode, routePreference, handleCalculateRoute]);
+
+  useEffect(() => {
+    const limit = getCurrentSpeedLimit(mapCenter, speedCameras);
+    setCurrentSpeedLimit(limit);
+  }, [mapCenter, speedCameras]);
+
+  const handleDismissCamera = useCallback((cameraId: string) => {
+    setDismissedCameraIds(prev => new Set(prev).add(cameraId));
+  }, []);
+
+  const activeWarning = cameraWarnings.find(w => !dismissedCameraIds.has(w.camera.id));
 
   const handleSendMessage = async (message: string) => {
     const userMessage = {
@@ -503,26 +541,39 @@ export default function Home() {
           </div>
         </div>
 
-        {hazardAlertsEnabled && nearbyHazards.length > 0 && (
-          <div className="absolute top-20 left-4 right-4 z-[999] max-w-md mx-auto space-y-2">
-            {nearbyHazards.slice(0, 2).map((hazard) => {
-              const distance = calculateDistance(
-                mapCenter[0],
-                mapCenter[1],
-                hazard.coordinates[0],
-                hazard.coordinates[1]
-              );
-              return (
-                <HazardAlert
-                  key={hazard.id}
-                  hazard={hazard}
-                  distance={distance}
-                  onDismiss={() => dismissHazardAlert(hazard.id)}
-                />
-              );
-            })}
-          </div>
-        )}
+        <div className="absolute top-20 left-4 right-4 z-[999] max-w-md mx-auto space-y-2">
+          {activeWarning && (
+            <CameraProximityAlert
+              camera={activeWarning.camera}
+              distance={activeWarning.distance}
+              onDismiss={() => handleDismissCamera(activeWarning.camera.id)}
+            />
+          )}
+          
+          {hazardAlertsEnabled && nearbyHazards.slice(0, 2).map((hazard) => {
+            const distance = calculateDistance(
+              mapCenter[0],
+              mapCenter[1],
+              hazard.coordinates[0],
+              hazard.coordinates[1]
+            );
+            return (
+              <HazardAlert
+                key={hazard.id}
+                hazard={hazard}
+                distance={distance}
+                onDismiss={() => dismissHazardAlert(hazard.id)}
+              />
+            );
+          })}
+        </div>
+
+        <div className="absolute top-24 left-4 z-[999]">
+          <SpeedLimitHUD
+            speedLimit={currentSpeedLimit}
+            transportMode={transportMode}
+          />
+        </div>
 
         <div className="absolute bottom-6 right-6 z-[1000] flex flex-col gap-2">
           <MapControls
@@ -542,13 +593,16 @@ export default function Home() {
           </div>
         )}
 
-        {tripEstimate && (
-          <div className="absolute bottom-32 left-4 z-[999] max-w-sm">
-            <TripSummary
-              estimate={tripEstimate}
-              vehicleType={vehicleType}
-              ecoMode={ecoMode}
-            />
+        {(tripEstimate || ecoEstimate) && (
+          <div className="absolute bottom-32 left-4 z-[999] max-w-sm space-y-2">
+            {ecoEstimate && <EcoSummary estimate={ecoEstimate} />}
+            {tripEstimate && (
+              <TripSummary
+                estimate={tripEstimate}
+                vehicleType={vehicleType}
+                ecoMode={ecoMode}
+              />
+            )}
           </div>
         )}
 
