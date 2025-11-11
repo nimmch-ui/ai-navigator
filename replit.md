@@ -6,6 +6,12 @@ AI Navigator is a map-first navigation application that combines intelligent AI 
 
 The application is built as a full-stack TypeScript application with a React frontend and Express backend, designed to deliver a clean, uncluttered interface where users can search locations, get AI-powered recommendations, view routes, and interact with an intelligent chat assistant.
 
+**Recently Added Features (November 11, 2025):**
+- **Eco Mode**: Vehicle type selection (Regular Car, Electric Vehicle) with trip estimates showing fuel/energy consumption, CO2 emissions, and eco-friendly driving tips
+- **Hazard Warning System**: Real-time proximity detection and alerts for speed cameras, school zones, dangerous curves, and accident zones with visual markers on map
+- **Voice Guidance**: Browser-based text-to-speech announcements for hazards and navigation events with intelligent throttling to prevent alert spam
+- **Trip Estimates**: Detailed trip summaries with distance, duration, consumption metrics, and environmental impact based on vehicle type and eco mode settings
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -90,13 +96,17 @@ Preferred communication style: Simple, everyday language.
 
 **UI & Component Libraries:**
 - @radix-ui/* packages for accessible primitives (dialogs, dropdowns, tooltips, etc.)
-- lucide-react for consistent iconography
+- lucide-react for consistent iconography (used for hazard icons: Camera, School, AlertTriangle, Construction)
 - class-variance-authority for type-safe component variants
 - cmdk for command palette functionality
 
 **Mapping:**
 - Leaflet.js (@types/leaflet for TypeScript support)
+- Leaflet divIcon for custom hazard markers with embedded SVG icons
 - OpenStreetMap tile server for map tiles
+
+**Browser APIs:**
+- Web Speech API (SpeechSynthesis) for voice guidance announcements
 
 **Form Management:**
 - react-hook-form for form state management
@@ -138,3 +148,46 @@ Basic user schema prepared with:
 - UUID-based user identification
 - Schema validation through Zod
 - No active authentication flow implemented (infrastructure only)
+
+## Recent Implementation Details (November 11, 2025)
+
+### Eco Mode & Trip Estimates
+**File**: `client/src/services/tripEstimates.ts`
+- Calculates fuel consumption for gas vehicles (L/100km coefficients)
+- Calculates energy consumption for EVs (kWh/100km coefficients)
+- Estimates CO2 emissions for environmental awareness
+- Provides eco-friendly driving tips based on vehicle type
+- All coefficients are configurable for future tuning
+- Includes disclaimers about estimate accuracy
+
+### Hazard Warning System
+**Files**: `client/src/data/hazards.ts`, `client/src/components/HazardAlert.tsx`
+- Four hazard types: speed cameras, school zones, dangerous curves, accident zones
+- Each hazard has severity level (low/medium/high), alert radius (~300m), speed limit data
+- Proximity detection using Haversine formula for distance calculation
+- Visual alerts appear when user is within hazard alert radius
+- Hazard markers rendered on map with color-coded icons (red, yellow, orange, blue)
+- Dismissible alert banners with distance information
+
+### Voice Guidance Service
+**File**: `client/src/services/voiceGuidance.ts`
+- Browser-based text-to-speech using Web Speech API
+- Message queue system with priority support (high/normal)
+- Entity-based throttling prevents repeated announcements for same hazard
+- Graceful fallback when speech synthesis unavailable
+- LocalStorage persistence for user voice preference
+
+### UI Components
+- **Settings** (`client/src/components/Settings.tsx`): Popover with eco mode toggle, vehicle type selector, voice guidance switch
+- **TripSummary** (`client/src/components/TripSummary.tsx`): Card showing trip metrics with conditional rendering based on vehicle type
+- **HazardAlert** (`client/src/components/HazardAlert.tsx`): Alert banner with hazard icon, distance, speed limit info
+- **HazardLegend** (`client/src/components/HazardLegend.tsx`): Legend explaining hazard marker colors and types
+- **MapView** (updated): Now accepts `hazards` prop and renders custom markers with Leaflet divIcons
+
+### Design Decisions
+- Used Lucide React icons instead of emojis per architecture guidelines
+- Hazard ID-based throttling (not text-based) for voice announcements
+- Configurable coefficients in trip estimates for future real-world calibration
+- Mock hazard data positioned around San Francisco for demonstration
+- Distance calculations use Haversine formula for geographic accuracy
+- Voice queue prevents multiple simultaneous announcements
