@@ -1,0 +1,218 @@
+🚀 MASTER PROMPT – AI NAVIGATOR UPGRADE (English Version)
+
+Goal:
+Upgrade the AI Navigator application into an intelligent, multimodal navigation system that combines all modern features available today.
+
+⸻
+
+Main Features
+	1.	🚗 Navigation for All Transport Modes
+	•	Car, bicycle, walking, train, bus, metro, electric scooter.
+	•	Automatic switching based on movement (AI detects speed and suggests transport mode).
+	2.	🧭 Smart Routing and AI Guidance
+	•	Use Mapbox Directions API and Mapbox Geocoding API.
+	•	Let AI automatically calculate the fastest, shortest, or most eco-friendly route.
+	•	Provide a user interface to select: “Fastest”, “Shortest”, or “Eco route”.
+	3.	⚠️ Speed Cameras and Speed Limits
+	•	Integrate a radar detection system (via OpenStreetMap data or public radar APIs).
+	•	Display radar icons 🚨 on the map.
+	•	When exceeding the speed limit, show both visual and audio warnings:
+“⚠️ Speed limit exceeded! Radar detected 300m ahead.”
+	4.	🗺️ Weather Conditions and Road Status
+	•	Fetch real weather data (OpenWeather API).
+	•	AI suggests alternate routes when conditions are poor (snow, rain, or road closure).
+	5.	🎙️ Voice Assistant and Alerts
+	•	Add an AI voice guidance feature (“Turn left in 200 meters”).
+	•	Include warnings for radars, overtaking, rain, and traffic jams.
+	6.	🔋 ECO Mode
+	•	AI estimates fuel or battery consumption and suggests optimal driving behavior.
+	7.	📍 Route History and Favorites
+	•	Save past routes, frequently visited locations, and driving statistics (time, distance, average speed).
+	8.	🧠 AI Analytics and Suggestions
+	•	The AI learns user habits and suggests routes based on past trips and current weather.
+
+⸻
+
+Technical Implementation
+	•	Use Mapbox GL JS for the interactive map.
+	•	Use Mapbox Directions API and Geocoding API.
+	•	Add support for Web Speech API for voice output.
+	•	Integrate radar data from OpenStreetMap or other radar APIs.
+	•	Use async functions and real-time updates (e.g., fetch, setInterval for warnings).
+	•	Add icons, sounds, and alerts to the frontend (Tailwind + React hooks).
+
+⸻
+
+Final Goal
+
+Create the most advanced AI-powered navigation system in the world with:
+	•	Radar detection
+	•	Speed and weather alerts
+	•	Intelligent multimodal route selection
+
+After the upgrade is complete, test the following:
+	•	Map moves correctly when entering a destination.
+	•	AI calculates routes for all transport modes.
+	•	Radar detection and alerts function properly.
+
+If anything is missing, automatically add whatever enhances the user experience.
+
+⸻
+
+Simplified Vision
+
+This navigation app should combine:
+	•	Google Maps + Waze + Tesla Autopilot style 🚘
+	•	Radar detection 🚨
+	•	AI-powered alerts and suggestions 🧠
+	•	Multimodal travel (car, train, walking…)
+
+⸻
+
+APPLICATION OBJECTIVE
+
+Upgrade the existing AI Navigator into a cutting-edge AI navigation platform that supports:
+	•	Multiple travel modes (car, walk, bike, public transport)
+	•	Smart location search
+	•	Radar and speed limit warnings
+	•	AI assistant for travel-related questions
+	•	Voice navigation
+	•	Weather, traffic, and safety alerts
+	•	Favorites and travel history
+
+The app already uses React + Vite + Mapbox (+ Leaflet or Mapbox GL JS) and OpenAI API.
+Your Mapbox key is stored in VITE_MAPBOX_TOKEN, and your OpenAI key in OPENAI_API_KEY.
+
+⸻
+
+1. MULTIMODAL NAVIGATION
+	1.	Add transport mode selection (segment buttons at the top of the map):
+	•	Car 🚗
+	•	Bike 🚲
+	•	Walk 🚶
+	•	Transit 🚆 (use “driving-traffic” temporarily until full public transit integration is added).
+	2.	Use Mapbox Directions API for route calculations:
+	•	Car → driving-traffic
+	•	Walking → walking
+	•	Cycling → cycling
+	3.	Logic:
+	•	User enters destination
+	•	Selects transport mode
+	•	Clicks “Start navigation” → map draws route and displays turn-by-turn instructions
+	4.	Add dynamic recalculation:
+	•	When user moves start marker
+	•	Changes transport mode
+	•	Changes destination
+
+⸻
+
+2. SMART SEARCH (Geocoding + Autocomplete)
+	•	Use Mapbox Geocoding API for location search.
+	•	Show autocomplete suggestions while typing.
+	•	Center map on selected location.
+	•	On Enter key → use first suggestion if available.
+	•	Display error banner if geocoding fails:
+“Search error – location not found or geocoding failed.”
+
+⸻
+
+3. RADARS AND SPEED LIMITS
+	1.	Add radar and speed limit module:
+	•	Create TypeScript types: { id, position, speedLimit, direction, source }.
+	2.	For now, create mock/demo radar data (e.g., San Francisco or Zurich) in
+src/data/speedCameras.ts.
+	3.	Display radar icons 🚨 using Mapbox markers or symbol layers.
+	•	Tooltip shows “Speed camera – 80 km/h”.
+	4.	Implement radar detection logic:
+	•	If route passes within 200–300m of a radar → trigger visual and voice alert:
+“Attention, radar ahead. Reduce speed to [X] km/h.”
+	5.	Keep the structure ready to replace mock data with live API (OSM or radar feeds).
+
+⸻
+
+4. SPEED LIMIT AND SAFE SPEED
+	•	Display current speed limit on HUD overlay: “Speed limit: X km/h”.
+	•	Add AI safety assistant that suggests safe speed depending on weather and road type.
+Example: “Recommended safe speed: 90 km/h (rain, highway).”
+
+⸻
+
+5. WEATHER AND TRAFFIC
+	•	Integrate OpenWeather API (use .env → WEATHER_API_KEY).
+	•	Show live conditions (rain, snow, fog, temperature).
+	•	If bad weather → AI suggests alternative safer route.
+	•	Display real-time traffic data via driving-traffic color coding (green, yellow, red).
+
+⸻
+
+6. VOICE NAVIGATION
+	•	Use Web Speech API (SpeechSynthesis) for voice guidance.
+	•	Central function speak(text: string) handles navigation prompts.
+	•	Add toggle in settings to enable/disable voice.
+	•	Examples:
+	•	“Navigation started. Distance [X] km, ETA [Y] minutes.”
+	•	“Turn left in [X] meters onto [Street Name].”
+	•	“Radar ahead, speed limit [X] km/h.”
+	•	Fallback: if unsupported, show message: “Voice guidance not supported in this browser.”
+
+⸻
+
+7. AI ASSISTANT PANEL
+	•	Integrate OpenAI chat assistant (“AI Navigator Assistant”) in sidebar.
+	•	Users can ask:
+	•	“Fastest route between X and Y?”
+	•	“Where are gas stations along my route?”
+	•	“What’s the weather at my destination?”
+	•	“Are there any radars on the way?”
+	•	Assistant accesses route, weather, and radar data.
+	•	Answers must be concise, natural, and context-aware.
+
+⸻
+
+8. FAVORITES AND HISTORY
+	•	Add Favorites & History module:
+	•	Favorites (Home, Work, Gym, etc.)
+	•	History (last n routes with date, distance, duration, mode).
+	•	Store in localStorage initially, with scalable TypeScript structure (future DB-ready).
+	•	In UI:
+	•	“Favorites” → click to set as destination.
+	•	“History” → click to reload route.
+
+⸻
+
+9. SETTINGS
+
+Add a “Settings” panel allowing toggles for:
+	•	Voice navigation
+	•	Radar display
+	•	Overspeed warnings
+	•	Eco mode
+	•	UI language (support EN/SL basic localization structure)
+
+⸻
+
+10. TECHNICAL GUIDELINES
+	•	Maintain React + Vite + TypeScript structure.
+	•	Never hardcode API keys — always use import.meta.env.
+	•	Organize code modules:
+	•	services/mapbox/*
+	•	services/weather/*
+	•	services/radar/*
+	•	components/navigation/*
+	•	Add error handling, toasts, and loading states.
+	•	Include basic comments and simple tests for radar/geocoding logic.
+
+⸻
+
+11. FINAL STEPS
+	1.	Implement all described features.
+	2.	Comment key parts of the code for clarity.
+	3.	Test at least two routes (car + walking):
+	•	Map center on input
+	•	Route display + turn-by-turn navigation
+	•	Radar visualization + warnings
+	•	AI chat responses
+	•	History & favorites
+	4.	If anything is missing or not working, fix and optimize automatically.
+
+Follow best practices for clean code, responsive UI, and professional UX — as if developing a commercial-grade product.
