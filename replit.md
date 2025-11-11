@@ -6,15 +6,18 @@ AI Navigator is a map-first navigation application that combines intelligent AI 
 
 The application is built as a full-stack TypeScript application with a React frontend and Express backend, designed to deliver a clean, uncluttered interface where users can search locations, get AI-powered recommendations, view routes, and interact with an intelligent chat assistant.
 
+**Implementation Progress (8-Part Specification):**
+- ✅ **Part 1B: Multimodal Core (COMPLETE)** - Production-ready Mapbox Directions API integration with car/bike/walk/transit modes, AbortController pattern for race condition prevention
+- ✅ **Part 2A: Search & Route Preferences (COMPLETE)** - Smart autocomplete search, route preference selector (Fastest/Shortest/Eco), intelligent route selection from Mapbox alternatives, enhanced error handling
+
 **Recently Added Features (November 11, 2025):**
-- **Persistent User Preferences**: localStorage-based preferences system for transport mode, route preference, eco mode, vehicle type, voice guidance, and hazard alerts
-- **Smart Defaults with Trip History**: Tracks trip patterns and suggests optimal transport mode and route preference based on time of day and usage history
-- **OpenAI Chat Integration**: Context-aware AI assistant powered by gpt-4.1-mini with full navigation context (origin, destination, transport mode, eco settings, nearby hazards)
-- **Enhanced Settings UI**: Comprehensive settings panel with transport mode selection (Car/Bike/Walk/Transit), route preferences (Fastest/Shortest/Eco), and all toggles
-- **Eco Mode**: Vehicle type selection (Regular Car, Electric Vehicle, Bike, Walk) with trip estimates showing fuel/energy consumption, CO2 emissions, and eco-friendly driving tips
-- **Hazard Warning System**: Real-time proximity detection and alerts for speed cameras, school zones, dangerous curves, and accident zones with visual markers on map
-- **Voice Guidance**: Browser-based text-to-speech announcements for hazards and navigation events with intelligent throttling to prevent alert spam
-- **Trip Estimates**: Detailed trip summaries with distance, duration, consumption metrics, and environmental impact based on vehicle type and eco mode settings
+- **Route Preference Selection**: Three route options (Fastest, Shortest, Eco) with intelligent selection from Mapbox alternatives
+- **Eco Route Algorithm**: Selects lowest-duration route within 10% of shortest distance for optimal efficiency
+- **Smart Search Autocomplete**: Mapbox Geocoding API integration with up to 5 location suggestions
+- **Enhanced Error Handling**: Differentiates between API errors, network failures, and "no results found"
+- **Accessibility Improvements**: Full ARIA support (aria-pressed, aria-label, sr-only) for route preference buttons
+- **Race Condition Prevention**: AbortController pattern prevents issues from rapid transport mode switching
+- **Mapbox Alternatives**: Requests multiple route options when available for better preference selection
 
 ## User Preferences
 
