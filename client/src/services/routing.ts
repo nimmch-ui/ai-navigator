@@ -53,16 +53,45 @@ function getMapboxProfile(mode: TransportMode): string {
   }
 }
 
-function getRoutePreferenceParams(preference: RoutePreference): string {
+function getRoutePreferenceParams(preference: RoutePreference): Record<string, string> {
   switch (preference) {
     case 'fastest':
-      return '';
+      return {};
     case 'shortest':
-      return '&overview=full';
+      return { alternatives: 'true', annotations: 'distance' };
     case 'eco':
-      return '&overview=full';
+      return { alternatives: 'true', annotations: 'duration,distance' };
     default:
-      return '';
+      return {};
+  }
+}
+
+function selectRouteByPreference(routes: MapboxRoute[], preference: RoutePreference): MapboxRoute {
+  if (routes.length === 0) {
+    throw new Error('No routes available');
+  }
+
+  if (routes.length === 1 || preference === 'fastest') {
+    return routes[0];
+  }
+
+  switch (preference) {
+    case 'shortest':
+      return routes.reduce((shortest, current) => 
+        current.distance < shortest.distance ? current : shortest
+      );
+    case 'eco': {
+      const shortestDistance = Math.min(...routes.map(r => r.distance));
+      const maxEcoDistance = shortestDistance * 1.1;
+      
+      const ecoRoutes = routes.filter(r => r.distance <= maxEcoDistance);
+      
+      return ecoRoutes.reduce((best, current) => 
+        current.duration < best.duration ? current : best
+      );
+    }
+    default:
+      return routes[0];
   }
 }
 
@@ -82,8 +111,15 @@ export async function calculateRoute(
   const coordinates = `${origin[1]},${origin[0]};${destination[1]},${destination[0]}`;
   const preferenceParams = getRoutePreferenceParams(routePreference);
   
-  const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${coordinates}?` +
-    `geometries=geojson&steps=true&overview=full&access_token=${mapboxToken}${preferenceParams}`;
+  const params = new URLSearchParams({
+    geometries: 'geojson',
+    steps: 'true',
+    overview: 'full',
+    access_token: mapboxToken,
+    ...preferenceParams
+  });
+  
+  const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${coordinates}?${params.toString()}`;
 
   console.log('[Routing] Calculating route:', {
     origin,
@@ -113,7 +149,14 @@ export async function calculateRoute(
       throw new Error('No route found');
     }
 
-    const route: MapboxRoute = data.routes[0];
+    const route: MapboxRoute = selectRouteByPreference(data.routes, routePreference);
+    
+    console.log('[Routing] Route selection:', {
+      preference: routePreference,
+      alternativesCount: data.routes.length,
+      selectedDistance: route.distance,
+      selectedDuration: route.duration
+    });
     
     const steps: RouteStep[] = route.legs[0].steps.map(step => ({
       instruction: step.maneuver.instruction,

@@ -13,6 +13,7 @@ import HazardAlert from '@/components/HazardAlert';
 import TripSummary from '@/components/TripSummary';
 import HazardLegend from '@/components/HazardLegend';
 import TransportModeSelector from '@/components/TransportModeSelector';
+import RoutePreferenceSelector from '@/components/RoutePreferenceSelector';
 import { mockHazards, getHazardWarningMessage } from '@/data/hazards';
 import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled } from '@/services/voiceGuidance';
@@ -220,7 +221,13 @@ export default function Home() {
       );
 
       if (!response.ok) {
-        throw new Error('Geocoding request failed');
+        console.error('[Search] Geocoding API error:', response.status, response.statusText);
+        toast({
+          title: 'Search Error',
+          description: 'Unable to search at this time. Please try again.',
+          variant: 'destructive'
+        });
+        return;
       }
 
       const data = await response.json();
@@ -233,11 +240,20 @@ export default function Home() {
         coordinates: [feature.center[1], feature.center[0]] as [number, number]
       }));
 
+      if (results.length === 0) {
+        toast({
+          title: 'Location not found',
+          description: 'Please try another address or place name.',
+          variant: 'destructive'
+        });
+      }
+
       setSearchResults(results);
     } catch (error) {
+      console.error('[Search] Network error:', error);
       toast({
-        title: 'Search Error',
-        description: 'Failed to search for location. Please try again.',
+        title: 'Connection Error',
+        description: 'Unable to connect to search service. Please check your internet connection.',
         variant: 'destructive'
       });
     } finally {
@@ -466,10 +482,14 @@ export default function Home() {
               />
               <ThemeToggle />
             </div>
-            <div className="flex justify-center">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
               <TransportModeSelector
                 value={transportMode}
                 onChange={handleTransportModeChange}
+              />
+              <RoutePreferenceSelector
+                value={routePreference}
+                onChange={handleRoutePreferenceChange}
               />
             </div>
           </div>
