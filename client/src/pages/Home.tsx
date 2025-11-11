@@ -233,8 +233,9 @@ export default function Home() {
 
     setIsSearching(true);
     try {
+      const proximity = `${mapCenter[1]},${mapCenter[0]}`;
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&limit=5`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&limit=5&proximity=${proximity}`
       );
 
       if (!response.ok) {
@@ -249,13 +250,24 @@ export default function Home() {
 
       const data = await response.json();
       
-      const results: SearchResult[] = data.features.map((feature: any) => ({
-        id: feature.id,
-        name: feature.text,
-        address: feature.place_name,
-        category: feature.place_type?.[0] || 'Location',
-        coordinates: [feature.center[1], feature.center[0]] as [number, number]
-      }));
+      const results: SearchResult[] = data.features.map((feature: any) => {
+        const coords: [number, number] = [feature.center[1], feature.center[0]];
+        console.log('[Search] Feature:', {
+          name: feature.text,
+          place_name: feature.place_name,
+          center_raw: feature.center,
+          center_lng: feature.center[0],
+          center_lat: feature.center[1],
+          converted_coords: coords
+        });
+        return {
+          id: feature.id,
+          name: feature.text,
+          address: feature.place_name,
+          category: feature.place_type?.[0] || 'Location',
+          coordinates: coords
+        };
+      });
 
       if (results.length === 0) {
         toast({
@@ -276,7 +288,7 @@ export default function Home() {
     } finally {
       setIsSearching(false);
     }
-  }, [toast]);
+  }, [mapCenter, toast]);
 
   const handleSearch = (query: string) => {
     geocodeAddress(query);
@@ -287,15 +299,23 @@ export default function Home() {
   };
 
   const handleResultSelect = (result: SearchResult) => {
+    console.log('[ResultSelect] Selected:', {
+      name: result.name,
+      coordinates: result.coordinates,
+      isOrigin: !origin
+    });
+    
     setMapCenter(result.coordinates);
     setMapZoom(15);
     setMarkers([{ lat: result.coordinates[0], lng: result.coordinates[1], label: result.name }]);
     setSearchResults([]);
     
     if (!origin) {
+      console.log('[ResultSelect] Setting as origin:', result.coordinates);
       setOrigin(result.name);
       setOriginCoords(result.coordinates);
     } else {
+      console.log('[ResultSelect] Setting as destination:', result.coordinates);
       setDestination(result.name);
       setDestinationCoords(result.coordinates);
     }
@@ -303,6 +323,15 @@ export default function Home() {
 
   const handleCalculateRoute = useCallback(async () => {
     if (!destinationCoords) return;
+    if (!originCoords || !Array.isArray(originCoords) || originCoords.length !== 2) {
+      console.error('[Route] Invalid origin coordinates:', originCoords);
+      toast({
+        title: 'Route Error',
+        description: 'Invalid origin location. Please select a starting point.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     if (routeAbortControllerRef.current) {
       routeAbortControllerRef.current.abort();
@@ -314,6 +343,11 @@ export default function Home() {
     setIsCalculatingRoute(true);
     setShowRoute(true);
     setRouteResult(null);
+    
+    console.log('[Route] Calculating with coords:', { 
+      origin: originCoords, 
+      destination: destinationCoords 
+    });
     
     try {
       const result = await calculateRoute(
