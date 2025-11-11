@@ -8,15 +8,18 @@ import MapControls from '@/components/MapControls';
 import ChatPanel from '@/components/ChatPanel';
 import RoutePanel from '@/components/RoutePanel';
 import ThemeToggle from '@/components/ThemeToggle';
-import Settings, { VehicleType } from '@/components/Settings';
+import Settings from '@/components/Settings';
 import HazardAlert from '@/components/HazardAlert';
 import TripSummary from '@/components/TripSummary';
 import HazardLegend from '@/components/HazardLegend';
 import { mockHazards, getHazardWarningMessage } from '@/data/hazards';
 import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled } from '@/services/voiceGuidance';
-import { calculateTripEstimate } from '@/services/tripEstimates';
+import { calculateTripEstimate, type VehicleType } from '@/services/tripEstimates';
 import type { TripEstimate } from '@/services/tripEstimates';
+import { PreferencesService, type TransportMode, type RoutePreference } from '@/services/preferences';
+import { TripHistoryService } from '@/services/tripHistory';
+import { sendChatMessage, type ChatContext } from '@/services/chatApi';
 
 interface SearchResult {
   id: string;
@@ -26,9 +29,8 @@ interface SearchResult {
   coordinates: [number, number];
 }
 
-// Helper function to calculate distance between two coordinates (Haversine formula)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371e3; // Earth's radius in meters
+  const R = 6371e3;
   const φ1 = lat1 * Math.PI / 180;
   const φ2 = lat2 * Math.PI / 180;
   const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -39,7 +41,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
     Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return R * c; // Distance in meters
+  return R * c;
 }
 
 export default function Home() {
@@ -53,6 +55,7 @@ export default function Home() {
   const [route, setRoute] = useState<Array<[number, number]> | undefined>();
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const { toast } = useToast();
   
   const [chatMessages, setChatMessages] = useState<Array<{
@@ -62,12 +65,17 @@ export default function Home() {
     timestamp: Date;
   }>>([]);
 
-  // New states for eco mode and hazards
+  const [transportMode, setTransportMode] = useState<TransportMode>("car");
+  const [routePreference, setRoutePreference] = useState<RoutePreference>("fastest");
   const [ecoMode, setEcoMode] = useState(false);
   const [vehicleType, setVehicleType] = useState<VehicleType>("car");
   const [voiceEnabled, setVoiceEnabledState] = useState(getVoiceEnabled());
+  const [hazardAlertsEnabled, setHazardAlertsEnabled] = useState(true);
   const [nearbyHazards, setNearbyHazards] = useState<Hazard[]>([]);
   const [tripEstimate, setTripEstimate] = useState<TripEstimate | null>(null);
+
+  const [origin, setOrigin] = useState<string>("");
+  const [destination, setDestination] = useState<string>("");
 
   const recentSearches: SearchResult[] = [];
 
@@ -96,14 +104,69 @@ export default function Home() {
     }
   ];
 
-  // Handle voice enabled change
+  useEffect(() => {
+    const prefs = PreferencesService.getPreferences();
+    const smartDefaults = TripHistoryService.getSmartDefaults();
+    
+    if (smartDefaults) {
+      setTransportMode(smartDefaults.transportMode);
+      setRoutePreference(smartDefaults.routePreference);
+    } else {
+      setTransportMode(prefs.transportMode);
+      setRoutePreference(prefs.routePreference);
+    }
+    
+    setEcoMode(prefs.ecoMode);
+    setVehicleType(prefs.vehicleType);
+    setVoiceEnabledState(prefs.voiceGuidance);
+    setHazardAlertsEnabled(prefs.hazardAlerts);
+  }, []);
+
+  const handleTransportModeChange = (mode: TransportMode) => {
+    setTransportMode(mode);
+    PreferencesService.updatePreference('transportMode', mode);
+    
+    if (mode === 'car') {
+      setVehicleType('car');
+    } else if (mode === 'bike') {
+      setVehicleType('bike');
+    } else if (mode === 'walk') {
+      setVehicleType('walk');
+    }
+  };
+
+  const handleRoutePreferenceChange = (pref: RoutePreference) => {
+    setRoutePreference(pref);
+    PreferencesService.updatePreference('routePreference', pref);
+  };
+
+  const handleEcoModeChange = (enabled: boolean) => {
+    setEcoMode(enabled);
+    PreferencesService.updatePreference('ecoMode', enabled);
+  };
+
+  const handleVehicleTypeChange = (type: VehicleType) => {
+    setVehicleType(type);
+    PreferencesService.updatePreference('vehicleType', type);
+  };
+
   const handleVoiceEnabledChange = (enabled: boolean) => {
     setVoiceEnabledState(enabled);
     setVoiceEnabled(enabled);
+    PreferencesService.updatePreference('voiceGuidance', enabled);
   };
 
-  // Check for nearby hazards based on current position
+  const handleHazardAlertsChange = (enabled: boolean) => {
+    setHazardAlertsEnabled(enabled);
+    PreferencesService.updatePreference('hazardAlerts', enabled);
+  };
+
   useEffect(() => {
+    if (!hazardAlertsEnabled) {
+      setNearbyHazards([]);
+      return;
+    }
+
     const checkNearbyHazards = () => {
       const currentPos = mapCenter;
       const nearby: Hazard[] = [];
@@ -116,16 +179,14 @@ export default function Home() {
           hazard.coordinates[1]
         );
 
-        // If within alert radius, add to nearby hazards
         if (distance <= hazard.alertRadius) {
           nearby.push(hazard);
           
-          // Announce hazard via voice if enabled
           const message = getHazardWarningMessage(hazard, distance);
           announce(message, {
             priority: hazard.severity === 'high' ? 'high' : 'normal',
             entityId: hazard.id,
-            throttleMs: 45000 // Don't repeat same hazard within 45 seconds
+            throttleMs: 45000
           });
         }
       });
@@ -134,13 +195,11 @@ export default function Home() {
     };
 
     checkNearbyHazards();
-  }, [mapCenter]);
+  }, [mapCenter, hazardAlertsEnabled]);
 
-  // Calculate trip estimate when route changes
   useEffect(() => {
     if (showRoute) {
-      // Mock data for demonstration - in real app, this would come from Mapbox Directions API
-      const distanceKm = 5.6; // ~3.5 miles
+      const distanceKm = 5.6;
       const durationMin = 15;
 
       const estimate = calculateTripEstimate({
@@ -194,7 +253,6 @@ export default function Home() {
 
       setSearchResults(results);
     } catch (error) {
-      console.error('Geocoding error:', error);
       toast({
         title: 'Search Error',
         description: 'Failed to search for location. Please try again.',
@@ -218,30 +276,86 @@ export default function Home() {
     setMapZoom(15);
     setMarkers([{ lat: result.coordinates[0], lng: result.coordinates[1], label: result.name }]);
     setSearchResults([]);
+    
+    if (!origin) {
+      setOrigin(result.name);
+    } else {
+      setDestination(result.name);
+    }
   };
 
-  const handleSendMessage = (message: string) => {
+  const handleSendMessage = async (message: string) => {
     const userMessage = {
       id: Date.now().toString(),
       role: 'user' as const,
       content: message,
       timestamp: new Date()
     };
-    setChatMessages([...chatMessages, userMessage]);
+    setChatMessages(prev => [...prev, userMessage]);
+    setIsChatLoading(true);
 
-    setTimeout(() => {
+    try {
+      const context: ChatContext = {
+        origin,
+        destination,
+        transportMode,
+        ecoMode,
+        hazardsOnRoute: nearbyHazards.map(h => h.description)
+      };
+
+      const responseText = await sendChatMessage(
+        message,
+        chatMessages.map(m => ({ role: m.role, content: m.content })),
+        context
+      );
+
       const aiMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant' as const,
-        content: "I'd be happy to help you with that! Based on your location, I can show you the best route and provide recommendations for your journey.",
+        content: responseText,
         timestamp: new Date()
       };
-      setChatMessages((prev) => [...prev, aiMessage]);
-    }, 1000);
+      
+      setChatMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      toast({
+        title: 'Chat Error',
+        description: error instanceof Error ? error.message : 'Failed to get AI response',
+        variant: 'destructive'
+      });
+      
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant' as const,
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsChatLoading(false);
+    }
   };
 
   const dismissHazardAlert = (hazardId: string) => {
     setNearbyHazards((prev) => prev.filter((h) => h.id !== hazardId));
+  };
+
+  const handleStartNavigation = (routeId: string) => {
+    if (origin && destination) {
+      TripHistoryService.addTrip({
+        origin,
+        destination,
+        transportMode,
+        routePreference,
+        distance: 5.6,
+        duration: 15
+      });
+    }
+    
+    announce(
+      `Navigation started. Distance 5.6 kilometers, estimated time 15 minutes.`,
+      { priority: 'high' }
+    );
   };
 
   return (
@@ -252,7 +366,7 @@ export default function Home() {
           zoom={mapZoom}
           markers={markers}
           route={route}
-          hazards={mockHazards}
+          hazards={hazardAlertsEnabled ? mockHazards : []}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-[1000]">
@@ -268,20 +382,25 @@ export default function Home() {
               />
             </div>
             <Settings
+              transportMode={transportMode}
+              onTransportModeChange={handleTransportModeChange}
+              routePreference={routePreference}
+              onRoutePreferenceChange={handleRoutePreferenceChange}
               ecoMode={ecoMode}
-              onEcoModeChange={setEcoMode}
+              onEcoModeChange={handleEcoModeChange}
               vehicleType={vehicleType}
-              onVehicleTypeChange={setVehicleType}
+              onVehicleTypeChange={handleVehicleTypeChange}
               voiceEnabled={voiceEnabled}
               onVoiceEnabledChange={handleVoiceEnabledChange}
+              hazardAlertsEnabled={hazardAlertsEnabled}
+              onHazardAlertsChange={handleHazardAlertsChange}
               voiceSupported={isVoiceSupported()}
             />
             <ThemeToggle />
           </div>
         </div>
 
-        {/* Hazard alerts */}
-        {nearbyHazards.length > 0 && (
+        {hazardAlertsEnabled && nearbyHazards.length > 0 && (
           <div className="absolute top-20 left-4 right-4 z-[999] max-w-md mx-auto space-y-2">
             {nearbyHazards.slice(0, 2).map((hazard) => {
               const distance = calculateDistance(
@@ -306,7 +425,7 @@ export default function Home() {
           <MapControls
             onZoomIn={() => setMapZoom((z) => Math.min(z + 1, 18))}
             onZoomOut={() => setMapZoom((z) => Math.max(z - 1, 3))}
-            onLayersToggle={() => console.log('Toggle layers')}
+            onLayersToggle={() => toast({ title: 'Layers', description: 'Layer toggle coming soon' })}
             onCurrentLocation={() => {
               setMapCenter([37.7749, -122.4194]);
               setMapZoom(13);
@@ -314,12 +433,12 @@ export default function Home() {
           />
         </div>
 
-        {/* Hazard legend */}
-        <div className="absolute bottom-6 left-4 z-[999]">
-          <HazardLegend />
-        </div>
+        {hazardAlertsEnabled && (
+          <div className="absolute bottom-6 left-4 z-[999]">
+            <HazardLegend />
+          </div>
+        )}
 
-        {/* Trip summary */}
         {tripEstimate && (
           <div className="absolute bottom-32 left-4 z-[999] max-w-sm">
             <TripSummary
@@ -333,17 +452,11 @@ export default function Home() {
         {showRoute && (
           <div className="absolute top-20 left-4 z-[1000] max-w-md">
             <RoutePanel
-              origin="Current Location"
-              destination="Golden Gate Bridge"
+              origin={origin || "Current Location"}
+              destination={destination || "Golden Gate Bridge"}
               routes={routes}
               onClose={() => setShowRoute(false)}
-              onStartNavigation={(routeId) => {
-                console.log('Start navigation:', routeId);
-                announce(
-                  `Navigation started. Distance 5.6 kilometers, estimated time 15 minutes.`,
-                  { priority: 'high' }
-                );
-              }}
+              onStartNavigation={handleStartNavigation}
             />
           </div>
         )}
@@ -361,7 +474,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Demo button to toggle route visibility for testing */}
         <div className="absolute top-20 right-4 z-[999]">
           <Button
             onClick={() => setShowRoute(!showRoute)}
@@ -378,6 +490,7 @@ export default function Home() {
           onClose={() => setShowChat(false)}
           onSendMessage={handleSendMessage}
           messages={chatMessages}
+          isLoading={isChatLoading}
         />
       </div>
     </div>

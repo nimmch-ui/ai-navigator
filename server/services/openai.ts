@@ -31,8 +31,9 @@ export async function getChatResponse(
     messages.push({ role: "user", content: userMessage });
 
     const response = await openai.chat.completions.create({
-      model: "gpt-5",
+      model: "gpt-4.1-mini",
       messages,
+      max_tokens: 300,
     });
 
     return response.choices[0].message.content || "I'm sorry, I couldn't process that request.";
