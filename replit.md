@@ -7,7 +7,11 @@ AI Navigator is a map-first navigation application that combines intelligent AI 
 The application is built as a full-stack TypeScript application with a React frontend and Express backend, designed to deliver a clean, uncluttered interface where users can search locations, get AI-powered recommendations, view routes, and interact with an intelligent chat assistant.
 
 **Recently Added Features (November 11, 2025):**
-- **Eco Mode**: Vehicle type selection (Regular Car, Electric Vehicle) with trip estimates showing fuel/energy consumption, CO2 emissions, and eco-friendly driving tips
+- **Persistent User Preferences**: localStorage-based preferences system for transport mode, route preference, eco mode, vehicle type, voice guidance, and hazard alerts
+- **Smart Defaults with Trip History**: Tracks trip patterns and suggests optimal transport mode and route preference based on time of day and usage history
+- **OpenAI Chat Integration**: Context-aware AI assistant powered by gpt-4.1-mini with full navigation context (origin, destination, transport mode, eco settings, nearby hazards)
+- **Enhanced Settings UI**: Comprehensive settings panel with transport mode selection (Car/Bike/Walk/Transit), route preferences (Fastest/Shortest/Eco), and all toggles
+- **Eco Mode**: Vehicle type selection (Regular Car, Electric Vehicle, Bike, Walk) with trip estimates showing fuel/energy consumption, CO2 emissions, and eco-friendly driving tips
 - **Hazard Warning System**: Real-time proximity detection and alerts for speed cameras, school zones, dangerous curves, and accident zones with visual markers on map
 - **Voice Guidance**: Browser-based text-to-speech announcements for hazards and navigation events with intelligent throttling to prevent alert spam
 - **Trip Estimates**: Detailed trip summaries with distance, duration, consumption metrics, and environmental impact based on vehicle type and eco mode settings
