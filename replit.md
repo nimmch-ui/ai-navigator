@@ -10,8 +10,17 @@ The application is built as a full-stack TypeScript application with a React fro
 - ✅ **Part 1B: Multimodal Core (COMPLETE)** - Production-ready Mapbox Directions API integration with car/bike/walk/transit modes, AbortController pattern for race condition prevention
 - ✅ **Part 2A: Search & Route Preferences (COMPLETE)** - Smart autocomplete search, route preference selector (Fastest/Shortest/Eco), intelligent route selection from Mapbox alternatives, enhanced error handling
 - ✅ **Part 2B: Radar Basics (Speed Cameras) (COMPLETE)** - Extensible speed camera system with map markers, tooltips, and service layer architecture ready for real API integration
+- ✅ **Part 3A: Speed Limit HUD & Eco Mode (COMPLETE)** - Real-time speed limit display, camera proximity warnings within 250m, eco consumption estimates (L/100km or kWh/km), proximity-biased geocoding
 
-**Recently Added Features (November 11, 2025):**
+**Recently Added Features (Part 3A - November 11, 2025):**
+- **Speed Limit HUD**: Real-time display of current speed limit based on map center position with transport mode icon (car/bike/walk/bus)
+- **Camera Proximity Alerts**: Warning banners when route passes within 250m of speed cameras, showing distance and speed limit, only displays nearest non-dismissed camera
+- **Eco Mode Integration**: Consumption estimates calculated only when eco mode enabled, showing fuel (8L/100km) for gas vehicles or energy (0.2kWh/km) for EVs
+- **EcoSummary Component**: Visual card displaying trip distance, duration, fuel/energy consumption, CO2 estimates, and eco driving tips
+- **Proximity-Biased Geocoding**: Search results prioritized based on map center location to prevent returning distant matches (fixed Australia vs San Francisco bug)
+- **Auto-Following Speed Limits**: Speed limit updates automatically as map center changes, using nearest camera within 500m radius
+
+**Previously Added Features (Parts 1B-2B - November 11, 2025):**
 - **Speed Camera Radar System**: Visual markers on map showing speed camera locations with speed limits
 - **Interactive Camera Markers**: Red circular markers with camera icons, tooltips on hover, detailed popups on click
 - **Extensible Radar Architecture**: Service layer design (`services/radar.ts`) allows easy replacement of mock data with real APIs
@@ -188,11 +197,34 @@ Basic user schema prepared with:
 - LocalStorage persistence for user voice preference
 
 ### UI Components
-- **Settings** (`client/src/components/Settings.tsx`): Popover with eco mode toggle, vehicle type selector, voice guidance switch
+- **Settings** (`client/src/components/Settings.tsx`): Popover with eco mode toggle, vehicle type selector, voice guidance switch, hazard alerts toggle
+- **SpeedLimitHUD** (`client/src/components/SpeedLimitHUD.tsx`): Fixed position HUD showing current speed limit and transport mode icon, updates based on map center
+- **CameraProximityAlert** (`client/src/components/CameraProximityAlert.tsx`): Dismissible warning banner for approaching speed cameras with distance and limit info
+- **EcoSummary** (`client/src/components/EcoSummary.tsx`): Card displaying fuel/energy consumption, CO2 estimates, and eco tips when eco mode enabled
 - **TripSummary** (`client/src/components/TripSummary.tsx`): Card showing trip metrics with conditional rendering based on vehicle type
 - **HazardAlert** (`client/src/components/HazardAlert.tsx`): Alert banner with hazard icon, distance, speed limit info
 - **HazardLegend** (`client/src/components/HazardLegend.tsx`): Legend explaining hazard marker colors and types
 - **MapView** (updated): Now accepts `hazards` prop and renders custom markers with Leaflet divIcons
+
+### Services Layer
+
+**Camera Proximity Detection** (`client/src/services/cameraProximity.ts`)
+- `detectCamerasOnRoute()`: Finds cameras within 250m of route geometry using point-to-line distance
+- `getCurrentSpeedLimit()`: Returns speed limit at current map center (nearest camera within 500m)
+- Uses Haversine distance formula for accurate geographic calculations
+- Sorted by distance to prioritize nearest cameras
+
+**Eco Estimates** (`client/src/services/ecoEstimates.ts`)
+- `calculateEcoEstimate()`: Computes fuel/energy consumption based on vehicle type
+- Simple per-km constants: 8L/100km for gas vehicles, 0.2kWh/km for electric vehicles
+- Returns distance, duration, consumption, CO2 emissions, and eco driving tips
+- Designed for easy replacement with real vehicle data APIs
+
+**Geocoding Enhancement** (`client/src/pages/Home.tsx`)
+- Added `proximity` parameter to Mapbox Geocoding API calls
+- Biases search results toward current map center (lng,lat format)
+- Prevents returning distant locations with similar names (e.g., Golden Gate Bridge in Australia)
+- Automatically adapts to user's current map view
 
 ### Design Decisions
 - Used Lucide React icons instead of emojis per architecture guidelines
@@ -201,3 +233,9 @@ Basic user schema prepared with:
 - Mock hazard data positioned around San Francisco for demonstration
 - Distance calculations use Haversine formula for geographic accuracy
 - Voice queue prevents multiple simultaneous announcements
+- Speed limit HUD positioned top-left for visibility without obscuring map
+- Camera proximity shows only nearest non-dismissed alert to avoid alert fatigue
+- Eco estimates calculated only when eco mode enabled to save computation
+- isElectricVehicle derived from vehicleType === 'ev' for consistency
+- Camera detection happens after route calculation to ensure route geometry available
+- Dismissed camera IDs reset when new route calculated
