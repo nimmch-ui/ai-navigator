@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { Hazard } from '@/data/hazards';
+import { getHazardMetadata } from '@/data/hazards';
 
 interface MapViewProps {
   center?: [number, number];
@@ -8,6 +10,7 @@ interface MapViewProps {
   onLocationSelect?: (lat: number, lng: number) => void;
   markers?: Array<{ lat: number; lng: number; label?: string }>;
   route?: Array<[number, number]>;
+  hazards?: Hazard[];
 }
 
 export default function MapView({
@@ -15,7 +18,8 @@ export default function MapView({
   zoom = 13,
   onLocationSelect,
   markers = [],
-  route
+  route,
+  hazards = []
 }: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,6 +86,35 @@ export default function MapView({
       }
     });
 
+    hazards.forEach((hazard) => {
+      const metadata = getHazardMetadata(hazard.type);
+      
+      const hazardIcon = L.divIcon({
+        className: 'hazard-marker',
+        html: `
+          <div class="flex items-center justify-center w-8 h-8 rounded-full ${metadata.bgColorClass} border-2 border-white shadow-lg">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              ${getIconSvgPath(hazard.type)}
+            </svg>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16]
+      });
+
+      const hazardMarker = L.marker([hazard.coordinates[0], hazard.coordinates[1]], {
+        icon: hazardIcon
+      }).addTo(map);
+
+      hazardMarker.bindPopup(`
+        <div class="text-sm">
+          <div class="font-semibold mb-1">${hazard.description}</div>
+          ${hazard.speedLimit ? `<div class="text-xs text-gray-600">Speed limit: ${hazard.speedLimit} km/h</div>` : ''}
+        </div>
+      `);
+    });
+
     if (route && route.length > 1) {
       L.polyline(route, {
         color: 'hsl(217, 91%, 52%)',
@@ -92,7 +125,7 @@ export default function MapView({
       const bounds = L.latLngBounds(route);
       map.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [markers, route]);
+  }, [markers, route, hazards]);
 
   return (
     <div 
@@ -101,4 +134,14 @@ export default function MapView({
       data-testid="map-container"
     />
   );
+}
+
+function getIconSvgPath(type: string): string {
+  const paths: Record<string, string> = {
+    speed_camera: '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.5-4.5L21 7l-8 8-4-4m0 0L6.5 13.5 5 12l4-4z"/><circle cx="12" cy="12" r="3"/>',
+    school_zone: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 14v6"/>',
+    dangerous_curve: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>',
+    accident_zone: '<path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>'
+  };
+  return paths[type] || paths.dangerous_curve;
 }

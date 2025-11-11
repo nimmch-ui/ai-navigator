@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +8,15 @@ import MapControls from '@/components/MapControls';
 import ChatPanel from '@/components/ChatPanel';
 import RoutePanel from '@/components/RoutePanel';
 import ThemeToggle from '@/components/ThemeToggle';
+import Settings, { VehicleType } from '@/components/Settings';
+import HazardAlert from '@/components/HazardAlert';
+import TripSummary from '@/components/TripSummary';
+import HazardLegend from '@/components/HazardLegend';
+import { mockHazards, getHazardWarningMessage } from '@/data/hazards';
+import type { Hazard } from '@/data/hazards';
+import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled } from '@/services/voiceGuidance';
+import { calculateTripEstimate } from '@/services/tripEstimates';
+import type { TripEstimate } from '@/services/tripEstimates';
 
 interface SearchResult {
   id: string;
@@ -15,6 +24,22 @@ interface SearchResult {
   address: string;
   category: string;
   coordinates: [number, number];
+}
+
+// Helper function to calculate distance between two coordinates (Haversine formula)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Distance in meters
 }
 
 export default function Home() {
@@ -36,6 +61,13 @@ export default function Home() {
     content: string;
     timestamp: Date;
   }>>([]);
+
+  // New states for eco mode and hazards
+  const [ecoMode, setEcoMode] = useState(false);
+  const [vehicleType, setVehicleType] = useState<VehicleType>("car");
+  const [voiceEnabled, setVoiceEnabledState] = useState(getVoiceEnabled());
+  const [nearbyHazards, setNearbyHazards] = useState<Hazard[]>([]);
+  const [tripEstimate, setTripEstimate] = useState<TripEstimate | null>(null);
 
   const recentSearches: SearchResult[] = [];
 
@@ -63,6 +95,66 @@ export default function Home() {
       ]
     }
   ];
+
+  // Handle voice enabled change
+  const handleVoiceEnabledChange = (enabled: boolean) => {
+    setVoiceEnabledState(enabled);
+    setVoiceEnabled(enabled);
+  };
+
+  // Check for nearby hazards based on current position
+  useEffect(() => {
+    const checkNearbyHazards = () => {
+      const currentPos = mapCenter;
+      const nearby: Hazard[] = [];
+
+      mockHazards.forEach((hazard) => {
+        const distance = calculateDistance(
+          currentPos[0],
+          currentPos[1],
+          hazard.coordinates[0],
+          hazard.coordinates[1]
+        );
+
+        // If within alert radius, add to nearby hazards
+        if (distance <= hazard.alertRadius) {
+          nearby.push(hazard);
+          
+          // Announce hazard via voice if enabled
+          const message = getHazardWarningMessage(hazard, distance);
+          announce(message, {
+            priority: hazard.severity === 'high' ? 'high' : 'normal',
+            entityId: hazard.id,
+            throttleMs: 45000 // Don't repeat same hazard within 45 seconds
+          });
+        }
+      });
+
+      setNearbyHazards(nearby);
+    };
+
+    checkNearbyHazards();
+  }, [mapCenter]);
+
+  // Calculate trip estimate when route changes
+  useEffect(() => {
+    if (showRoute) {
+      // Mock data for demonstration - in real app, this would come from Mapbox Directions API
+      const distanceKm = 5.6; // ~3.5 miles
+      const durationMin = 15;
+
+      const estimate = calculateTripEstimate({
+        distanceKm,
+        durationMin,
+        vehicleType,
+        ecoMode
+      });
+
+      setTripEstimate(estimate);
+    } else {
+      setTripEstimate(null);
+    }
+  }, [showRoute, vehicleType, ecoMode]);
 
   const geocodeAddress = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -148,6 +240,10 @@ export default function Home() {
     }, 1000);
   };
 
+  const dismissHazardAlert = (hazardId: string) => {
+    setNearbyHazards((prev) => prev.filter((h) => h.id !== hazardId));
+  };
+
   return (
     <div className="h-screen w-screen overflow-hidden flex">
       <div className="flex-1 relative">
@@ -156,6 +252,7 @@ export default function Home() {
           zoom={mapZoom}
           markers={markers}
           route={route}
+          hazards={mockHazards}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-[1000]">
@@ -170,11 +267,42 @@ export default function Home() {
                 isLoading={isSearching}
               />
             </div>
+            <Settings
+              ecoMode={ecoMode}
+              onEcoModeChange={setEcoMode}
+              vehicleType={vehicleType}
+              onVehicleTypeChange={setVehicleType}
+              voiceEnabled={voiceEnabled}
+              onVoiceEnabledChange={handleVoiceEnabledChange}
+              voiceSupported={isVoiceSupported()}
+            />
             <ThemeToggle />
           </div>
         </div>
 
-        <div className="absolute bottom-6 right-6 z-[1000]">
+        {/* Hazard alerts */}
+        {nearbyHazards.length > 0 && (
+          <div className="absolute top-20 left-4 right-4 z-[999] max-w-md mx-auto space-y-2">
+            {nearbyHazards.slice(0, 2).map((hazard) => {
+              const distance = calculateDistance(
+                mapCenter[0],
+                mapCenter[1],
+                hazard.coordinates[0],
+                hazard.coordinates[1]
+              );
+              return (
+                <HazardAlert
+                  key={hazard.id}
+                  hazard={hazard}
+                  distance={distance}
+                  onDismiss={() => dismissHazardAlert(hazard.id)}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        <div className="absolute bottom-6 right-6 z-[1000] flex flex-col gap-2">
           <MapControls
             onZoomIn={() => setMapZoom((z) => Math.min(z + 1, 18))}
             onZoomOut={() => setMapZoom((z) => Math.max(z - 1, 3))}
@@ -186,14 +314,36 @@ export default function Home() {
           />
         </div>
 
+        {/* Hazard legend */}
+        <div className="absolute bottom-6 left-4 z-[999]">
+          <HazardLegend />
+        </div>
+
+        {/* Trip summary */}
+        {tripEstimate && (
+          <div className="absolute bottom-32 left-4 z-[999] max-w-sm">
+            <TripSummary
+              estimate={tripEstimate}
+              vehicleType={vehicleType}
+              ecoMode={ecoMode}
+            />
+          </div>
+        )}
+
         {showRoute && (
-          <div className="absolute bottom-6 left-6 z-[1000] max-w-md">
+          <div className="absolute top-20 left-4 z-[1000] max-w-md">
             <RoutePanel
               origin="Current Location"
               destination="Golden Gate Bridge"
               routes={routes}
               onClose={() => setShowRoute(false)}
-              onStartNavigation={(routeId) => console.log('Start navigation:', routeId)}
+              onStartNavigation={(routeId) => {
+                console.log('Start navigation:', routeId);
+                announce(
+                  `Navigation started. Distance 5.6 kilometers, estimated time 15 minutes.`,
+                  { priority: 'high' }
+                );
+              }}
             />
           </div>
         )}
@@ -210,6 +360,17 @@ export default function Home() {
             </Button>
           </div>
         )}
+
+        {/* Demo button to toggle route visibility for testing */}
+        <div className="absolute top-20 right-4 z-[999]">
+          <Button
+            onClick={() => setShowRoute(!showRoute)}
+            variant="secondary"
+            data-testid="button-toggle-route"
+          >
+            {showRoute ? 'Hide Route' : 'Show Route'}
+          </Button>
+        </div>
       </div>
 
       <div className={`${showChat ? 'fixed inset-0 z-[1001] lg:relative lg:inset-auto' : 'hidden'} lg:flex lg:w-96`}>
