@@ -1,0 +1,51 @@
+PART 1/4 – CORE GOAL & MULTIMODAL NAVIGATION
+
+This is part 1 of 4. Please read it, update your plan, but don’t start any heavy refactors until you receive all 4 parts.
+
+App context:
+- This project is "AI Navigator" – a web navigation app built with React + Vite + TypeScript.
+- Mapping must be powered by Mapbox (using the token in VITE_MAPBOX_TOKEN).
+- AI chat uses OpenAI via Replit’s integration (no direct OpenAI key needed).
+
+Core goal:
+Turn this app into a world-class, AI-powered navigation system that feels better than current top apps (Google Maps, Waze, Radarbot, MapXplorer, etc.), with:
+- multimodal routing (car, bike, walk, transit),
+- smart AI guidance,
+- speed-camera awareness and speed limit warnings,
+- eco driving mode,
+- weather and hazard awareness,
+- voice guidance,
+- beautiful & smooth UI, close to a “live 3D” feel.
+
+Architecture:
+- Use Mapbox GL JS (or the Mapbox map wrapper already in the project) instead of Leaflet long-term.
+- Keep API keys only in env variables (VITE_MAPBOX_TOKEN etc.).
+- Organize code into clear modules:
+  - services/mapbox/*
+  - services/routing/*
+  - services/radar/*
+  - services/weather/*
+  - components/navigation/*
+  - components/ui/*
+
+Multimodal routing – initial implementation:
+1. Add a mode selector UI on top of the map:
+   - Car 🚗, Bike 🚲, Walk 🚶, Transit 🚆.
+   - For now, Transit can reuse driving-traffic as a placeholder but keep the code ready for a real transit API later.
+
+2. Use Mapbox Directions API profiles:
+   - driving-traffic for car / transit,
+   - cycling for bike,
+   - walking for walk.
+
+3. Add a simple “Start navigation” flow:
+   - User enters a destination (we’ll refine search in part 2),
+   - Selects mode (Car/Bike/Walk/Transit),
+   - Clicks “Start navigation” → draw route on the map,
+   - Show basic turn-by-turn steps in a side panel.
+
+4. Make sure routing code is written so it can later support:
+   - route preferences (Fastest/Shortest/Eco),
+   - additional metadata like current speed limit, traffic level, etc.
+
+Please acknowledge PART 1/4, update your internal plan, and wait for PART 2/4 before refactoring everything.
