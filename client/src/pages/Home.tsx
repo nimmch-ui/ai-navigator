@@ -17,6 +17,8 @@ import RoutePreferenceSelector from '@/components/RoutePreferenceSelector';
 import SpeedLimitHUD from '@/components/SpeedLimitHUD';
 import CameraProximityAlert from '@/components/CameraProximityAlert';
 import EcoSummary from '@/components/EcoSummary';
+import WeatherPanel from '@/components/WeatherPanel';
+import SevereWeatherAlert from '@/components/SevereWeatherAlert';
 import { mockHazards, getHazardWarningMessage } from '@/data/hazards';
 import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled } from '@/services/voiceGuidance';
@@ -30,6 +32,7 @@ import { getSpeedCameras } from '@/services/radar';
 import type { SpeedCamera } from '@/data/speedCameras';
 import { detectCamerasOnRoute, getCurrentSpeedLimit, type CameraProximityWarning } from '@/services/cameraProximity';
 import { calculateEcoEstimate, type EcoEstimate } from '@/services/ecoEstimates';
+import { fetchWeather, getSevereWeatherWarning, type WeatherData } from '@/services/weather';
 
 interface SearchResult {
   id: string;
@@ -90,6 +93,8 @@ export default function Home() {
   const [currentSpeedLimit, setCurrentSpeedLimit] = useState<number | null>(null);
   const [ecoEstimate, setEcoEstimate] = useState<EcoEstimate | null>(null);
   const [isElectricVehicle, setIsElectricVehicle] = useState(false);
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
+  const [severeWeatherDismissed, setSevereWeatherDismissed] = useState(false);
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -434,6 +439,12 @@ export default function Home() {
     setCurrentSpeedLimit(limit);
   }, [mapCenter, speedCameras]);
 
+  useEffect(() => {
+    if (weatherData.length > 0 && getSevereWeatherWarning(weatherData)) {
+      setSevereWeatherDismissed(false);
+    }
+  }, [weatherData]);
+
   const handleDismissCamera = useCallback((cameraId: string) => {
     setDismissedCameraIds(prev => new Set(prev).add(cameraId));
   }, []);
@@ -499,8 +510,8 @@ export default function Home() {
     setNearbyHazards((prev) => prev.filter((h) => h.id !== hazardId));
   };
 
-  const handleStartNavigation = () => {
-    if (origin && destination && routeResult) {
+  const handleStartNavigation = async () => {
+    if (origin && destination && routeResult && originCoords && destinationCoords) {
       const distanceKm = routeResult.distance / 1000;
       const durationMin = routeResult.duration / 60;
       
@@ -517,6 +528,27 @@ export default function Home() {
         `Navigation started. Distance ${formatDistance(routeResult.distance)}, estimated time ${formatDuration(routeResult.duration)}.`,
         { priority: 'high' }
       );
+
+      setSevereWeatherDismissed(false);
+      
+      try {
+        console.log('[Weather] Fetching weather for route...');
+        const [originWeather, destWeather] = await Promise.all([
+          fetchWeather(originCoords[0], originCoords[1], origin),
+          fetchWeather(destinationCoords[0], destinationCoords[1], destination)
+        ]);
+        
+        setWeatherData([originWeather, destWeather]);
+        
+        const warning = getSevereWeatherWarning([originWeather, destWeather]);
+        if (warning && voiceEnabled) {
+          announce(warning, { priority: 'high' });
+        }
+        
+        console.log('[Weather] Weather data loaded:', { originWeather, destWeather });
+      } catch (error) {
+        console.error('[Weather] Failed to fetch weather:', error);
+      }
     }
   };
 
@@ -576,6 +608,13 @@ export default function Home() {
         </div>
 
         <div className="absolute top-20 left-4 right-4 z-[999] max-w-md mx-auto space-y-2">
+          {!severeWeatherDismissed && weatherData.length > 0 && getSevereWeatherWarning(weatherData) && (
+            <SevereWeatherAlert
+              message={getSevereWeatherWarning(weatherData)!}
+              onDismiss={() => setSevereWeatherDismissed(true)}
+            />
+          )}
+          
           {activeWarning && (
             <CameraProximityAlert
               camera={activeWarning.camera}
@@ -627,8 +666,9 @@ export default function Home() {
           </div>
         )}
 
-        {(tripEstimate || ecoEstimate) && (
+        {(tripEstimate || ecoEstimate || weatherData.length > 0) && (
           <div className="absolute bottom-32 left-4 z-[999] max-w-sm space-y-2">
+            {weatherData.length > 0 && <WeatherPanel weatherData={weatherData} />}
             {ecoEstimate && <EcoSummary estimate={ecoEstimate} />}
             {tripEstimate && (
               <TripSummary
@@ -663,6 +703,8 @@ export default function Home() {
                 setRouteResult(null);
                 setRoute(undefined);
                 setTripEstimate(null);
+                setWeatherData([]);
+                setSevereWeatherDismissed(false);
               }}
               onStartNavigation={handleStartNavigation}
             />
