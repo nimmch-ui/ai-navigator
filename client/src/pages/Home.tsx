@@ -291,10 +291,13 @@ export default function Home() {
       content: message,
       timestamp: new Date()
     };
+    
     setChatMessages(prev => [...prev, userMessage]);
     setIsChatLoading(true);
 
     try {
+      const currentHistory = [...chatMessages, userMessage];
+      
       const context: ChatContext = {
         origin,
         destination,
@@ -305,7 +308,7 @@ export default function Home() {
 
       const responseText = await sendChatMessage(
         message,
-        chatMessages.map(m => ({ role: m.role, content: m.content })),
+        currentHistory.map(m => ({ role: m.role, content: m.content })),
         context
       );
 
