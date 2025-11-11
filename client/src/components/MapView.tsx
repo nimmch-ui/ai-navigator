@@ -3,6 +3,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Hazard } from '@/data/hazards';
 import { getHazardMetadata } from '@/data/hazards';
+import type { SpeedCamera } from '@/data/speedCameras';
+import { formatSpeedLimit } from '@/services/radar';
 
 interface MapViewProps {
   center?: [number, number];
@@ -11,6 +13,7 @@ interface MapViewProps {
   markers?: Array<{ lat: number; lng: number; label?: string }>;
   route?: Array<[number, number]>;
   hazards?: Hazard[];
+  speedCameras?: SpeedCamera[];
 }
 
 export default function MapView({
@@ -19,7 +22,8 @@ export default function MapView({
   onLocationSelect,
   markers = [],
   route,
-  hazards = []
+  hazards = [],
+  speedCameras = []
 }: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -115,6 +119,40 @@ export default function MapView({
       `);
     });
 
+    speedCameras.forEach((camera) => {
+      const cameraIcon = L.divIcon({
+        className: 'speed-camera-marker',
+        html: `
+          <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-600 border-2 border-white shadow-lg">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20]
+      });
+
+      const cameraMarker = L.marker([camera.lat, camera.lon], {
+        icon: cameraIcon
+      }).addTo(map);
+
+      const directionText = camera.direction ? ` (${camera.direction})` : '';
+      cameraMarker.bindPopup(`
+        <div class="text-sm">
+          <div class="font-semibold mb-1">Speed Camera</div>
+          <div class="text-xs text-gray-600">Limit: ${formatSpeedLimit(camera.speedLimitKmh)}${directionText}</div>
+        </div>
+      `);
+
+      cameraMarker.bindTooltip(`Speed camera – limit ${formatSpeedLimit(camera.speedLimitKmh)}`, {
+        direction: 'top',
+        offset: [0, -20]
+      });
+    });
+
     if (route && route.length > 1) {
       L.polyline(route, {
         color: 'hsl(217, 91%, 52%)',
@@ -125,7 +163,7 @@ export default function MapView({
       const bounds = L.latLngBounds(route);
       map.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [markers, route, hazards]);
+  }, [markers, route, hazards, speedCameras]);
 
   return (
     <div 

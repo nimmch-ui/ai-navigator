@@ -23,6 +23,8 @@ import { PreferencesService, type TransportMode, type RoutePreference } from '@/
 import { TripHistoryService } from '@/services/tripHistory';
 import { sendChatMessage, type ChatContext } from '@/services/chatApi';
 import { calculateRoute, formatDistance, formatDuration, getManeuverIcon, type RouteResult } from '@/services/routing';
+import { getSpeedCameras } from '@/services/radar';
+import type { SpeedCamera } from '@/data/speedCameras';
 
 interface SearchResult {
   id: string;
@@ -77,6 +79,7 @@ export default function Home() {
   const [hazardAlertsEnabled, setHazardAlertsEnabled] = useState(true);
   const [nearbyHazards, setNearbyHazards] = useState<Hazard[]>([]);
   const [tripEstimate, setTripEstimate] = useState<TripEstimate | null>(null);
+  const [speedCameras, setSpeedCameras] = useState<SpeedCamera[]>([]);
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -103,6 +106,10 @@ export default function Home() {
     setVehicleType(prefs.vehicleType);
     setVoiceEnabledState(prefs.voiceGuidance);
     setHazardAlertsEnabled(prefs.hazardAlerts);
+
+    getSpeedCameras().then(cameras => {
+      setSpeedCameras(cameras);
+    });
   }, []);
 
   const handleTransportModeChange = (mode: TransportMode) => {
@@ -450,6 +457,7 @@ export default function Home() {
           markers={markers}
           route={route}
           hazards={hazardAlertsEnabled ? mockHazards : []}
+          speedCameras={speedCameras}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-[1000]">
