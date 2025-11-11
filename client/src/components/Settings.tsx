@@ -1,34 +1,45 @@
-import { Settings as SettingsIcon, Volume2, VolumeX } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Card } from '@/components/ui/card';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-
-export type VehicleType = "car" | "ev";
+import { Separator } from '@/components/ui/separator';
+import type { TransportMode, RoutePreference, VehicleType } from '@/services/preferences';
 
 interface SettingsProps {
+  transportMode: TransportMode;
+  onTransportModeChange: (mode: TransportMode) => void;
+  routePreference: RoutePreference;
+  onRoutePreferenceChange: (pref: RoutePreference) => void;
   ecoMode: boolean;
   onEcoModeChange: (enabled: boolean) => void;
   vehicleType: VehicleType;
   onVehicleTypeChange: (type: VehicleType) => void;
   voiceEnabled: boolean;
   onVoiceEnabledChange: (enabled: boolean) => void;
+  hazardAlertsEnabled: boolean;
+  onHazardAlertsChange: (enabled: boolean) => void;
   voiceSupported: boolean;
 }
 
 export default function Settings({
+  transportMode,
+  onTransportModeChange,
+  routePreference,
+  onRoutePreferenceChange,
   ecoMode,
   onEcoModeChange,
   vehicleType,
   onVehicleTypeChange,
   voiceEnabled,
   onVoiceEnabledChange,
+  hazardAlertsEnabled,
+  onHazardAlertsChange,
   voiceSupported
 }: SettingsProps) {
   return (
@@ -42,11 +53,110 @@ export default function Settings({
           <SettingsIcon className="h-5 w-5" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80" data-testid="settings-panel">
+      <PopoverContent className="w-80 max-h-[80vh] overflow-y-auto" data-testid="settings-panel">
         <div className="space-y-4">
           <div>
-            <h3 className="font-semibold text-sm mb-3">Navigation Settings</h3>
+            <h3 className="font-semibold text-sm mb-1">Navigation Settings</h3>
+            <p className="text-xs text-muted-foreground">Customize your navigation experience</p>
           </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Transport Mode</Label>
+            <RadioGroup
+              value={transportMode}
+              onValueChange={(value) => onTransportModeChange(value as TransportMode)}
+              data-testid="radio-transport-mode"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="car" id="transport-car" data-testid="radio-transport-car" />
+                <Label htmlFor="transport-car" className="text-sm font-normal cursor-pointer">
+                  Car
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="bike" id="transport-bike" data-testid="radio-transport-bike" />
+                <Label htmlFor="transport-bike" className="text-sm font-normal cursor-pointer">
+                  Bike
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="walk" id="transport-walk" data-testid="radio-transport-walk" />
+                <Label htmlFor="transport-walk" className="text-sm font-normal cursor-pointer">
+                  Walk
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="transit" id="transport-transit" data-testid="radio-transport-transit" />
+                <Label htmlFor="transport-transit" className="text-sm font-normal cursor-pointer">
+                  Public Transit
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {(transportMode === "car" || transportMode === "bike") && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Route Preference</Label>
+                <RadioGroup
+                  value={routePreference}
+                  onValueChange={(value) => onRoutePreferenceChange(value as RoutePreference)}
+                  data-testid="radio-route-preference"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="fastest" id="route-fastest" data-testid="radio-route-fastest" />
+                    <Label htmlFor="route-fastest" className="text-sm font-normal cursor-pointer">
+                      Fastest Route
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="shortest" id="route-shortest" data-testid="radio-route-shortest" />
+                    <Label htmlFor="route-shortest" className="text-sm font-normal cursor-pointer">
+                      Shortest Distance
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="eco" id="route-eco" data-testid="radio-route-eco" />
+                    <Label htmlFor="route-eco" className="text-sm font-normal cursor-pointer">
+                      Eco-Friendly
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </>
+          )}
+
+          {transportMode === "car" && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Vehicle Type</Label>
+                <RadioGroup
+                  value={vehicleType}
+                  onValueChange={(value) => onVehicleTypeChange(value as VehicleType)}
+                  data-testid="radio-vehicle-type"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="car" id="vehicle-car" data-testid="radio-vehicle-car" />
+                    <Label htmlFor="vehicle-car" className="text-sm font-normal cursor-pointer">
+                      Regular Car
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="ev" id="vehicle-ev" data-testid="radio-vehicle-ev" />
+                    <Label htmlFor="vehicle-ev" className="text-sm font-normal cursor-pointer">
+                      Electric Vehicle (EV)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </>
+          )}
+
+          <Separator />
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
@@ -63,28 +173,6 @@ export default function Settings({
               onCheckedChange={onEcoModeChange}
               data-testid="switch-eco-mode"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Vehicle Type</Label>
-            <RadioGroup
-              value={vehicleType}
-              onValueChange={(value) => onVehicleTypeChange(value as VehicleType)}
-              data-testid="radio-vehicle-type"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="car" id="vehicle-car" data-testid="radio-vehicle-car" />
-                <Label htmlFor="vehicle-car" className="text-sm font-normal cursor-pointer">
-                  Regular Car
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="ev" id="vehicle-ev" data-testid="radio-vehicle-ev" />
-                <Label htmlFor="vehicle-ev" className="text-sm font-normal cursor-pointer">
-                  Electric Vehicle (EV)
-                </Label>
-              </div>
-            </RadioGroup>
           </div>
 
           <div className="flex items-center justify-between">
@@ -104,6 +192,26 @@ export default function Settings({
               onCheckedChange={onVoiceEnabledChange}
               disabled={!voiceSupported}
               data-testid="switch-voice-guidance"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label htmlFor="hazard-alerts" className="text-sm font-medium">
+                  Hazard Alerts
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Warnings for speed cameras & hazards
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="hazard-alerts"
+              checked={hazardAlertsEnabled}
+              onCheckedChange={onHazardAlertsChange}
+              data-testid="switch-hazard-alerts"
             />
           </div>
 
