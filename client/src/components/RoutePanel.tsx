@@ -1,7 +1,6 @@
-import { Navigation, Clock, TrendingUp, MapPin, ArrowRight, X } from 'lucide-react';
+import { Navigation, Clock, TrendingUp, MapPin, ArrowRight, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 
 interface RouteStep {
@@ -10,8 +9,7 @@ interface RouteStep {
   icon: 'straight' | 'left' | 'right';
 }
 
-interface Route {
-  id: string;
+interface RouteData {
   name: string;
   distance: string;
   duration: string;
@@ -21,15 +19,19 @@ interface Route {
 interface RoutePanelProps {
   origin: string;
   destination: string;
-  routes: Route[];
+  route: RouteData | null;
+  isLoading?: boolean;
+  error?: string;
   onClose?: () => void;
-  onStartNavigation?: (routeId: string) => void;
+  onStartNavigation?: () => void;
 }
 
 export default function RoutePanel({
   origin,
   destination,
-  routes,
+  route,
+  isLoading = false,
+  error,
   onClose,
   onStartNavigation
 }: RoutePanelProps) {
@@ -68,71 +70,80 @@ export default function RoutePanel({
         </div>
       </div>
 
-      <Tabs defaultValue={routes[0]?.id} className="w-full">
-        <div className="px-4 pt-4">
-          <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${routes.length}, 1fr)` }}>
-            {routes.map((route) => (
-              <TabsTrigger key={route.id} value={route.id} data-testid={`tab-route-${route.id}`}>
-                {route.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
-
-        {routes.map((route) => (
-          <TabsContent key={route.id} value={route.id} className="mt-0">
-            <div className="p-4 space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{route.duration}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{route.distance}</span>
-                </div>
-                <Badge variant="secondary" className="ml-auto">
-                  {route.steps.length} steps
-                </Badge>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Turn-by-turn directions</div>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {route.steps.map((step, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start gap-3 p-3 rounded-md bg-secondary/50 hover-elevate"
-                      data-testid={`step-${index}`}
-                    >
-                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium flex-shrink-0">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm">{step.instruction}</div>
-                        <div className="text-xs text-muted-foreground mt-1">{step.distance}</div>
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground mt-1.5 flex-shrink-0" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {onStartNavigation && (
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={() => onStartNavigation(route.id)}
-                  data-testid="button-start-navigation"
-                >
-                  <Navigation className="h-5 w-5 mr-2" />
-                  Start Navigation
-                </Button>
-              )}
+      <div className="p-4">
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Calculating route...</p>
             </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <div className="py-4">
+            <div className="rounded-md bg-destructive/10 p-4">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {route && !isLoading && !error && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{route.name}</Badge>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">{route.duration}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">{route.distance}</span>
+              </div>
+              <Badge variant="outline" className="ml-auto">
+                {route.steps.length} steps
+              </Badge>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Turn-by-turn directions</div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {route.steps.map((step, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 p-3 rounded-md bg-secondary/50 hover-elevate"
+                    data-testid={`step-${index}`}
+                  >
+                    <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm">{step.instruction}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{step.distance}</div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground mt-1.5 flex-shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {onStartNavigation && (
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={onStartNavigation}
+                data-testid="button-start-navigation"
+              >
+                <Navigation className="mr-2 h-5 w-5" />
+                Start Navigation
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     </Card>
   );
 }

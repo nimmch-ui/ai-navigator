@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +12,7 @@ import Settings from '@/components/Settings';
 import HazardAlert from '@/components/HazardAlert';
 import TripSummary from '@/components/TripSummary';
 import HazardLegend from '@/components/HazardLegend';
+import TransportModeSelector from '@/components/TransportModeSelector';
 import { mockHazards, getHazardWarningMessage } from '@/data/hazards';
 import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled } from '@/services/voiceGuidance';
@@ -20,6 +21,7 @@ import type { TripEstimate } from '@/services/tripEstimates';
 import { PreferencesService, type TransportMode, type RoutePreference } from '@/services/preferences';
 import { TripHistoryService } from '@/services/tripHistory';
 import { sendChatMessage, type ChatContext } from '@/services/chatApi';
+import { calculateRoute, formatDistance, formatDuration, getManeuverIcon, type RouteResult } from '@/services/routing';
 
 interface SearchResult {
   id: string;
@@ -57,6 +59,7 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const { toast } = useToast();
+  const routeAbortControllerRef = useRef<AbortController | null>(null);
   
   const [chatMessages, setChatMessages] = useState<Array<{
     id: string;
@@ -76,33 +79,12 @@ export default function Home() {
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
+  const [originCoords, setOriginCoords] = useState<[number, number]>([37.7749, -122.4194]);
+  const [destinationCoords, setDestinationCoords] = useState<[number, number] | null>(null);
+  const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
 
   const recentSearches: SearchResult[] = [];
-
-  const routes = [
-    {
-      id: 'fastest',
-      name: 'Fastest',
-      distance: '3.5 mi',
-      duration: '15 min',
-      steps: [
-        { instruction: 'Head north on Market St toward 10th St', distance: '0.2 mi', icon: 'straight' as const },
-        { instruction: 'Turn left onto Hayes St', distance: '0.5 mi', icon: 'left' as const },
-        { instruction: 'Turn right onto Franklin St', distance: '1.2 mi', icon: 'right' as const },
-        { instruction: 'Continue onto US-101 N', distance: '1.6 mi', icon: 'straight' as const }
-      ]
-    },
-    {
-      id: 'shortest',
-      name: 'Shortest',
-      distance: '3.2 mi',
-      duration: '18 min',
-      steps: [
-        { instruction: 'Head west on Market St', distance: '0.3 mi', icon: 'straight' as const },
-        { instruction: 'Turn right onto Van Ness Ave', distance: '0.8 mi', icon: 'right' as const }
-      ]
-    }
-  ];
 
   useEffect(() => {
     const prefs = PreferencesService.getPreferences();
@@ -279,10 +261,88 @@ export default function Home() {
     
     if (!origin) {
       setOrigin(result.name);
+      setOriginCoords(result.coordinates);
     } else {
       setDestination(result.name);
+      setDestinationCoords(result.coordinates);
     }
   };
+
+  const handleCalculateRoute = useCallback(async () => {
+    if (!destinationCoords) return;
+
+    if (routeAbortControllerRef.current) {
+      routeAbortControllerRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    routeAbortControllerRef.current = abortController;
+
+    setIsCalculatingRoute(true);
+    setShowRoute(true);
+    setRouteResult(null);
+    
+    try {
+      const result = await calculateRoute(
+        originCoords,
+        destinationCoords,
+        transportMode,
+        routePreference
+      );
+
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      setRouteResult(result);
+      setRoute(result.geometry);
+      
+      setMarkers([
+        { lat: originCoords[0], lng: originCoords[1], label: origin || 'Origin' },
+        { lat: destinationCoords[0], lng: destinationCoords[1], label: destination }
+      ]);
+
+      const distanceKm = result.distance / 1000;
+      const durationMin = result.duration / 60;
+      
+      const estimate = calculateTripEstimate({
+        distanceKm,
+        durationMin,
+        vehicleType,
+        ecoMode
+      });
+      setTripEstimate(estimate);
+
+      announce(
+        `Route calculated. Distance ${formatDistance(result.distance)}, duration ${formatDuration(result.duration)}.`,
+        { priority: 'normal' }
+      );
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        return;
+      }
+      
+      console.error('Route calculation error:', error);
+      toast({
+        title: 'Route Error',
+        description: error instanceof Error ? error.message : 'Failed to calculate route',
+        variant: 'destructive'
+      });
+      setRouteResult(null);
+      setRoute(undefined);
+      setShowRoute(false);
+    } finally {
+      if (!abortController.signal.aborted) {
+        setIsCalculatingRoute(false);
+      }
+    }
+  }, [originCoords, destinationCoords, transportMode, routePreference, origin, destination, vehicleType, ecoMode, toast]);
+
+  useEffect(() => {
+    if (destinationCoords) {
+      handleCalculateRoute();
+    }
+  }, [destinationCoords, transportMode, routePreference, handleCalculateRoute]);
 
   const handleSendMessage = async (message: string) => {
     const userMessage = {
@@ -343,22 +403,25 @@ export default function Home() {
     setNearbyHazards((prev) => prev.filter((h) => h.id !== hazardId));
   };
 
-  const handleStartNavigation = (routeId: string) => {
-    if (origin && destination) {
+  const handleStartNavigation = () => {
+    if (origin && destination && routeResult) {
+      const distanceKm = routeResult.distance / 1000;
+      const durationMin = routeResult.duration / 60;
+      
       TripHistoryService.addTrip({
         origin,
         destination,
         transportMode,
         routePreference,
-        distance: 5.6,
-        duration: 15
+        distance: distanceKm,
+        duration: durationMin
       });
+      
+      announce(
+        `Navigation started. Distance ${formatDistance(routeResult.distance)}, estimated time ${formatDuration(routeResult.duration)}.`,
+        { priority: 'high' }
+      );
     }
-    
-    announce(
-      `Navigation started. Distance 5.6 kilometers, estimated time 15 minutes.`,
-      { priority: 'high' }
-    );
   };
 
   return (
@@ -373,33 +436,41 @@ export default function Home() {
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-[1000]">
-          <div className="max-w-2xl mx-auto flex items-center gap-2">
-            <div className="flex-1">
-              <SearchBar
-                onSearch={handleSearch}
-                onSubmit={handleSearchSubmit}
-                onResultSelect={handleResultSelect}
-                results={searchResults}
-                recentSearches={recentSearches}
-                isLoading={isSearching}
+          <div className="max-w-2xl mx-auto space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <SearchBar
+                  onSearch={handleSearch}
+                  onSubmit={handleSearchSubmit}
+                  onResultSelect={handleResultSelect}
+                  results={searchResults}
+                  recentSearches={recentSearches}
+                  isLoading={isSearching}
+                />
+              </div>
+              <Settings
+                transportMode={transportMode}
+                onTransportModeChange={handleTransportModeChange}
+                routePreference={routePreference}
+                onRoutePreferenceChange={handleRoutePreferenceChange}
+                ecoMode={ecoMode}
+                onEcoModeChange={handleEcoModeChange}
+                vehicleType={vehicleType}
+                onVehicleTypeChange={handleVehicleTypeChange}
+                voiceEnabled={voiceEnabled}
+                onVoiceEnabledChange={handleVoiceEnabledChange}
+                hazardAlertsEnabled={hazardAlertsEnabled}
+                onHazardAlertsChange={handleHazardAlertsChange}
+                voiceSupported={isVoiceSupported()}
+              />
+              <ThemeToggle />
+            </div>
+            <div className="flex justify-center">
+              <TransportModeSelector
+                value={transportMode}
+                onChange={handleTransportModeChange}
               />
             </div>
-            <Settings
-              transportMode={transportMode}
-              onTransportModeChange={handleTransportModeChange}
-              routePreference={routePreference}
-              onRoutePreferenceChange={handleRoutePreferenceChange}
-              ecoMode={ecoMode}
-              onEcoModeChange={handleEcoModeChange}
-              vehicleType={vehicleType}
-              onVehicleTypeChange={handleVehicleTypeChange}
-              voiceEnabled={voiceEnabled}
-              onVoiceEnabledChange={handleVoiceEnabledChange}
-              hazardAlertsEnabled={hazardAlertsEnabled}
-              onHazardAlertsChange={handleHazardAlertsChange}
-              voiceSupported={isVoiceSupported()}
-            />
-            <ThemeToggle />
           </div>
         </div>
 
@@ -452,13 +523,30 @@ export default function Home() {
           </div>
         )}
 
-        {showRoute && (
+        {showRoute && destinationCoords && (
           <div className="absolute top-20 left-4 z-[1000] max-w-md">
             <RoutePanel
               origin={origin || "Current Location"}
-              destination={destination || "Golden Gate Bridge"}
-              routes={routes}
-              onClose={() => setShowRoute(false)}
+              destination={destination || "Destination"}
+              route={routeResult ? {
+                name: `${routePreference.charAt(0).toUpperCase() + routePreference.slice(1)} Route`,
+                distance: formatDistance(routeResult.distance),
+                duration: formatDuration(routeResult.duration),
+                steps: routeResult.steps.map(step => ({
+                  instruction: step.instruction,
+                  distance: formatDistance(step.distance),
+                  icon: getManeuverIcon(step.maneuver.type, step.maneuver.modifier)
+                }))
+              } : null}
+              isLoading={isCalculatingRoute}
+              onClose={() => {
+                setShowRoute(false);
+                setDestination('');
+                setDestinationCoords(null);
+                setRouteResult(null);
+                setRoute(undefined);
+                setTripEstimate(null);
+              }}
               onStartNavigation={handleStartNavigation}
             />
           </div>
@@ -476,16 +564,6 @@ export default function Home() {
             </Button>
           </div>
         )}
-
-        <div className="absolute top-20 right-4 z-[999]">
-          <Button
-            onClick={() => setShowRoute(!showRoute)}
-            variant="secondary"
-            data-testid="button-toggle-route"
-          >
-            {showRoute ? 'Hide Route' : 'Show Route'}
-          </Button>
-        </div>
       </div>
 
       <div className={`${showChat ? 'fixed inset-0 z-[1001] lg:relative lg:inset-auto' : 'hidden'} lg:flex lg:w-96`}>
