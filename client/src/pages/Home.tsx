@@ -341,6 +341,7 @@ export default function Home() {
   useEffect(() => {
     if (destinationCoords) {
       handleCalculateRoute();
+      setShowChat(false);
     }
   }, [destinationCoords, transportMode, routePreference, handleCalculateRoute]);
 

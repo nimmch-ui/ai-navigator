@@ -85,10 +85,25 @@ export async function calculateRoute(
   const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${coordinates}?` +
     `geometries=geojson&steps=true&overview=full&access_token=${mapboxToken}${preferenceParams}`;
 
+  console.log('[Routing] Calculating route:', {
+    origin,
+    destination,
+    mode,
+    profile,
+    coordinates,
+    url: url.replace(mapboxToken, 'TOKEN')
+  });
+
   try {
     const response = await fetch(url);
     
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('[Routing] Mapbox API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      });
       throw new Error(`Mapbox API error: ${response.status}`);
     }
 
