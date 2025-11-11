@@ -1,0 +1,74 @@
+PART 1/2 – MASTER PROMPT FOR AI NAVIGATOR UPGRADE
+
+Goal:
+Upgrade my existing “AI Navigator” app into a very advanced, multimodal AI navigation system with radar awareness and smart guidance.
+
+Tech stack:
+- React + Vite + TypeScript
+- Mapbox (map + geocoding + routing)
+- OpenAI API for the AI assistant
+- Mapbox token is in VITE_MAPBOX_TOKEN
+- OpenAI key is in OPENAI_API_KEY
+Please keep using env variables (import.meta.env.VITE_MAPBOX_TOKEN, etc.), do NOT hard-code keys.
+
+High-level vision:
+I want an AI-powered navigation app that combines features similar to Google Maps + Waze + a smart driving assistant:
+- multiple transport modes (car, bike, walking, transit),
+- smart route planning (fastest / shortest / eco),
+- speed limit + radar awareness and warnings,
+- weather and traffic-aware routing,
+- voice guidance,
+- AI chat assistant in the sidebar,
+- favourites and route history.
+
+1. MULTI-MODAL NAVIGATION
+
+Add a clear UI control at the top of the map to choose the transport mode:
+- Car 🚗
+- Bike 🚲
+- Walk 🚶
+- Transit 🚆 (for now you can reuse driving-traffic as a placeholder, but structure the code so we can later plug in real transit APIs).
+
+Use Mapbox Directions API with profiles:
+- driving-traffic for car,
+- walking for walk,
+- cycling for bike.
+
+Behaviour:
+- The user types a destination in the search bar.
+- Selects a mode (car / bike / walk / transit).
+- Clicks “Start navigation”.
+- The app draws the route on the map and shows turn-by-turn instructions in a panel (for example on the left or right of the map).
+- If the user changes the mode, start or destination, recompute the route.
+
+2. SMART SEARCH (GEOCODING + AUTOCOMPLETE)
+
+Use Mapbox Geocoding API for the search bar:
+- while typing, show autocomplete suggestions.
+- when the user selects a suggestion, move the map camera to that location and treat it as the destination.
+- when the user presses Enter, if there is at least one suggestion, use the first suggestion by default.
+
+Error handling:
+- if geocoding fails or no results are found, show a visible red banner or toast:
+  “Search error – location not found or geocoding failed.”
+
+3. RADARS AND SPEED CAMERAS – DATA MODEL
+
+Create a separate TypeScript module for speed cameras / radars, for example:
+- src/data/speedCameras.ts
+
+Define a type like:
+- id
+- position (lat, lng)
+- speedLimitKmh
+- direction (optional)
+- source
+
+For now, use mock/demo data:
+- put a handful of cameras around San Francisco (or Zurich) so I can see them on the map.
+
+On the map:
+- show each radar as a special marker or symbol (e.g. 🚨 icon).
+- when hovering or tapping, show a tooltip like: “Speed camera – limit 80 km/h”.
+
+In the architecture, design this so that later we can easily replace the mock data with a real API (OpenStreetMap or public radar APIs).

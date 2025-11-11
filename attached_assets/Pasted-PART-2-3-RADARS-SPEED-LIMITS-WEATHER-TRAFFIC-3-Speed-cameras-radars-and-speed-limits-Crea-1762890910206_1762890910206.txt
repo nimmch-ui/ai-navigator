@@ -1,0 +1,39 @@
+PART 2/3 – RADARS, SPEED LIMITS, WEATHER, TRAFFIC
+
+3) Speed cameras (radars) and speed limits
+- Create a small radar module with TypeScript types, e.g.:
+  - id, coordinates, speedLimit, direction, source.
+- For now, use mock/demo data in a separate file, e.g.:
+  - src/data/speedCameras.ts
+  - Put several cameras around San Francisco (or Zürich) with different speed limits.
+- On the map:
+  - render cameras as special markers or symbols with an icon (e.g. 🚨),
+  - show a tooltip “Speed camera – 80 km/h”.
+- When a route is active:
+  - check if the route polyline passes within 200–300m of a camera,
+  - if yes, display a red banner like:
+    “⚠️ Speed camera ahead in 300 m – limit 80 km/h”.
+- Prepare the code so later we can swap the mock data with a real API (e.g. OpenStreetMap-based radar data).
+
+4) Speed limit + recommended speed
+- Show a small HUD overlay that always displays:
+  - “Speed limit: X km/h”
+- For now you can derive X from the closest radar or from some static segments near the route.
+- Add a function that can compute a “recommended safe speed” based on:
+  - type of road (city vs highway),
+  - weather (see section 5),
+  - and general safety (e.g. 10–20% under limit in bad conditions).
+- Show text like: “Recommended safe speed: 90 km/h (rain, highway)”.
+
+5) Weather and traffic awareness
+- Integrate a weather service (e.g. OpenWeather). Assume the key is in WEATHER_API_KEY.
+- When navigation starts:
+  - fetch weather for start and destination,
+  - show basic conditions (rain, snow, fog, temperature) in the side panel.
+- If heavy rain/snow/fog is detected:
+  - display a safety hint and, if possible, suggest an alternative route (less steep, slower roads, etc.).
+- For traffic:
+  - use Mapbox driving-traffic profile and, if possible, visual traffic coloring on the route (green/yellow/red sections).
+
+ACTIONS:
+After implementing these, describe which new files/modules you created (e.g. services/radar, services/weather, components/HUD). Then wait for PART 3/3 for AI assistant, voice, favorites and settings.
