@@ -1,0 +1,178 @@
+PART 3/3 – Please extend and refine the existing AI Navigator implementation you built from PART 1 and PART 2. 
+
+Important:
+- Do NOT rewrite the whole app from scratch.
+- Work with the current React + Vite + TypeScript codebase that already includes:
+  - Mapbox-based map & routing
+  - Multi-modal navigation (Car / Bike / Walk / Transit placeholder)
+  - Route preferences (Fastest / Shortest / Eco)
+  - Basic speed camera radar mock data and alerts
+  - Speed limit display
+  - Weather integration scaffold
+  - AI chat assistant panel
+  - Basic favorites / history storage
+- Make incremental improvements and add the features below. Keep the code clean and modular.
+
+GOAL:
+Turn AI Navigator into a polished, production-style navigation assistant with:
+- Eco driving mode
+- Better safety alerts
+- Smarter user learning (habits & preferences)
+- More solid UI/UX and performance
+
+────────────────────────
+1. ECO MODE & CONSUMPTION ESTIMATION
+────────────────────────
+
+1.1 Eco Mode behavior
+- When Eco mode is enabled in Settings:
+  - Prefer routes that are smoother and avoid heavy stop-and-go traffic when possible.
+  - When multiple routes exist, slightly favor routes with less traffic or more constant speed (if such data is available from Mapbox).
+- Make sure Eco mode works together with the existing Fastest / Shortest options:
+  - Example: If user chooses “Eco”, treat it as a preference that still respects basic routing constraints but tweaks the route selection.
+
+1.2 Consumption estimate
+- Implement a small “Trip summary” box that shows:
+  - Estimated distance
+  - Estimated duration
+  - Estimated fuel/battery consumption (simple model is fine).
+- For demo purposes:
+  - Assume:
+    - Car: average 7 L/100km or 18 kWh/100km if EV mode is toggled in Settings.
+    - Bike/Walk: show “Approx. calories burned” instead (simple formula based on distance).
+- Show a short text like:
+  - “Estimated fuel: 4.2 L (approx.)” or
+  - “Estimated energy: 9.5 kWh (approx.)” or
+  - “Approx. 230 kcal burned (walking).”
+
+1.3 Safe & Eco hints
+- After route calculation, generate 1–2 short hints for eco driving, e.g.:
+  - “Avoid harsh acceleration for better fuel efficiency.”
+  - “Maintaining stable speed near the limit saves fuel and time.”
+- These can be static suggestions (no need for heavy AI calls), but structure the code so they could later be AI-generated.
+
+────────────────────────
+2. SAFETY & HAZARD ALERTS
+────────────────────────
+
+2.1 Hazard model
+- Extend the “radar / speed camera” concept with additional “hazards”:
+  - school zones,
+  - accident-prone intersections (mock data),
+  - sharp curves or steep segments (mock data).
+- Create a shared data structure like:
+  - type HazardType = "speed_camera" | "school_zone" | "dangerous_curve" | "accident_zone";
+  - Store these in a file like src/data/hazards.ts.
+
+2.2 Map rendering
+- On the map, render hazards with different icons/colors:
+  - Speed cameras: 🚨
+  - School zones: 🎒
+  - Dangerous curves: ⚠️
+- Add a small legend (UI overlay) explaining what each icon means.
+
+2.3 Alerting logic
+- Reuse and extend the existing radar alert system:
+  - If the simulated user position (or route cursor) comes within X meters of a hazard:
+    - Show a non-intrusive banner at the bottom/top with a short message:
+      - “School zone ahead – reduce speed.”
+      - “Dangerous curve ahead – drive carefully.”
+  - If voice navigation is enabled:
+    - Use the speak() function to announce the warning.
+- Make sure alerts are not spammy:
+  - Do not repeat the same alert multiple times within a very short distance or time window.
+
+────────────────────────
+3. USER PREFERENCES & PROFILES
+────────────────────────
+
+3.1 Preferences storage
+- Extend the Settings system so the following options persist (localStorage is fine for now):
+  - default transport mode (Car/Bike/Walk/Transit),
+  - default route preference (Fastest / Shortest / Eco),
+  - voice navigation on/off,
+  - radar & hazard alerts on/off,
+  - Eco mode on/off,
+  - EV vs non-EV car.
+- Implement a small PreferencesService (e.g. in src/services/preferences.ts) that abstracts reading/writing from localStorage.
+
+3.2 “Smart defaults” / simple learning
+- On app start:
+  - Read past history (last N trips) and infer the most used transport mode + time of day.
+  - Use that to choose an initial suggestion, e.g.:
+    - If user often uses “Car” around 8:00–9:00 → start with Car/Fastest.
+- This can remain simple heuristic logic (no heavy ML needed), but write the code so it’s easy to evolve later.
+
+────────────────────────
+4. AI ASSISTANT – CONTEXT AWARE ANSWERS
+────────────────────────
+
+4.1 Better context
+- When sending prompts to the AI assistant (OpenAI), include:
+  - current origin & destination (if set),
+  - current selected mode (Car/Bike/Walk/Transit),
+  - whether Eco mode is active,
+  - known hazards on the current route,
+  - weather summary (if available).
+- Use this context so the assistant can answer questions like:
+  - “Are there any speed cameras on my route?”
+  - “Is this route safe in heavy rain?”
+  - “What is the most eco-friendly option for this trip?”
+
+4.2 Answer style
+- Ensure responses are:
+  - short, clear, and practical,
+  - not too verbose for a driver,
+  - focused on safety and clarity.
+
+────────────────────────
+5. UI / UX POLISH & PERFORMANCE
+────────────────────────
+
+5.1 UI polish
+- Make sure:
+  - All panels (Search, Route details, Settings, AI assistant, Favorites/History) have a consistent look & spacing.
+  - Important info (speed limit, next turn, hazard alerts) is visible even on smaller screens.
+- If necessary, add a simple responsive layout tweak for mobile/tablet.
+
+5.2 Loading & error states
+- Add clear loading indicators for:
+  - route calculation,
+  - geocoding search,
+  - weather fetch.
+- Add clear error banners/toasts for:
+  - Mapbox API errors,
+  - network errors,
+  - missing env keys.
+
+5.3 Performance
+- Avoid unnecessary re-renders of the map.
+- Make sure frequent updates (like route simulation / current position) are handled efficiently (e.g., via requestAnimationFrame or throttled updates where relevant).
+
+────────────────────────
+6. TESTING & FINAL CHECKLIST
+────────────────────────
+
+After implementing everything above, please:
+
+1. Run the app and simulate at least these scenarios:
+   - Car + Fastest, with Eco mode ON and OFF.
+   - Bike route with basic distance/time display.
+   - Walk route with calorie estimation.
+   - Route where at least one speed camera and one school zone hazard are on the way.
+   - Bad weather scenario (mock if needed) to see weather-based suggestion.
+
+2. Verify:
+   - Speed limit and hazard alerts are shown and voiced (if enabled).
+   - Eco mode changes the route selection or hints where appropriate.
+   - Settings persist between page reloads.
+   - AI assistant responses reflect current context (mode, route, hazards, weather).
+
+3. Clean up:
+   - Remove unused code, console.logs, and dead comments.
+   - Add short comments to key functions (especially hazard detection, eco calculations, and preferences).
+
+Goal:
+Deliver a stable, polished AI Navigator that feels like a modern combination of Google Maps + Waze + eco-driving coach + AI travel assistant, built on Mapbox + React + OpenAI.
+
+Please proceed with these changes now and then summarize what you implemented and where in the code (files and main components).
