@@ -9,15 +9,18 @@ The application is built as a full-stack TypeScript application with a React fro
 **Implementation Progress (8-Part Specification):**
 - ✅ **Part 1B: Multimodal Core (COMPLETE)** - Production-ready Mapbox Directions API integration with car/bike/walk/transit modes, AbortController pattern for race condition prevention
 - ✅ **Part 2A: Search & Route Preferences (COMPLETE)** - Smart autocomplete search, route preference selector (Fastest/Shortest/Eco), intelligent route selection from Mapbox alternatives, enhanced error handling
+- ✅ **Part 2B: Radar Basics (Speed Cameras) (COMPLETE)** - Extensible speed camera system with map markers, tooltips, and service layer architecture ready for real API integration
 
 **Recently Added Features (November 11, 2025):**
+- **Speed Camera Radar System**: Visual markers on map showing speed camera locations with speed limits
+- **Interactive Camera Markers**: Red circular markers with camera icons, tooltips on hover, detailed popups on click
+- **Extensible Radar Architecture**: Service layer design (`services/radar.ts`) allows easy replacement of mock data with real APIs
+- **Speed Camera Data Model**: 6 demo cameras around San Francisco with speed limits (40-60 km/h) and optional directional info
 - **Route Preference Selection**: Three route options (Fastest, Shortest, Eco) with intelligent selection from Mapbox alternatives
 - **Eco Route Algorithm**: Selects lowest-duration route within 10% of shortest distance for optimal efficiency
 - **Smart Search Autocomplete**: Mapbox Geocoding API integration with up to 5 location suggestions
 - **Enhanced Error Handling**: Differentiates between API errors, network failures, and "no results found"
 - **Accessibility Improvements**: Full ARIA support (aria-pressed, aria-label, sr-only) for route preference buttons
-- **Race Condition Prevention**: AbortController pattern prevents issues from rapid transport mode switching
-- **Mapbox Alternatives**: Requests multiple route options when available for better preference selection
 
 ## User Preferences
 
