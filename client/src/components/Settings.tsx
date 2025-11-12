@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import type { TransportMode, RoutePreference, VehicleType } from '@/services/preferences';
+import type { TransportMode, RoutePreference, VehicleType, SpeedUnit } from '@/services/preferences';
 
 interface SettingsProps {
   transportMode: TransportMode;
@@ -25,6 +25,12 @@ interface SettingsProps {
   hazardAlertsEnabled: boolean;
   onHazardAlertsChange: (enabled: boolean) => void;
   voiceSupported: boolean;
+  showSpeedCameras: boolean;
+  onShowSpeedCamerasChange: (enabled: boolean) => void;
+  speedWarnings: boolean;
+  onSpeedWarningsChange: (enabled: boolean) => void;
+  speedUnit: SpeedUnit;
+  onSpeedUnitChange: (unit: SpeedUnit) => void;
 }
 
 export default function Settings({
@@ -40,7 +46,13 @@ export default function Settings({
   onVoiceEnabledChange,
   hazardAlertsEnabled,
   onHazardAlertsChange,
-  voiceSupported
+  voiceSupported,
+  showSpeedCameras,
+  onShowSpeedCamerasChange,
+  speedWarnings,
+  onSpeedWarningsChange,
+  speedUnit,
+  onSpeedUnitChange
 }: SettingsProps) {
   return (
     <Popover>
@@ -213,6 +225,70 @@ export default function Settings({
               onCheckedChange={onHazardAlertsChange}
               data-testid="switch-hazard-alerts"
             />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5 flex items-center gap-2">
+              <Camera className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label htmlFor="show-cameras" className="text-sm font-medium">
+                  Show Speed Cameras
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Display camera markers on map
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="show-cameras"
+              checked={showSpeedCameras}
+              onCheckedChange={onShowSpeedCamerasChange}
+              data-testid="switch-show-cameras"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5 flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label htmlFor="speed-warnings" className="text-sm font-medium">
+                  Speed Limit Warnings
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Alert when exceeding speed limit
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="speed-warnings"
+              checked={speedWarnings}
+              onCheckedChange={onSpeedWarningsChange}
+              data-testid="switch-speed-warnings"
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Speed Unit</Label>
+            <RadioGroup
+              value={speedUnit}
+              onValueChange={(value) => onSpeedUnitChange(value as SpeedUnit)}
+              data-testid="radio-speed-unit"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="kmh" id="unit-kmh" data-testid="radio-unit-kmh" />
+                <Label htmlFor="unit-kmh" className="text-sm font-normal cursor-pointer">
+                  Kilometers per hour (km/h)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="mph" id="unit-mph" data-testid="radio-unit-mph" />
+                <Label htmlFor="unit-mph" className="text-sm font-normal cursor-pointer">
+                  Miles per hour (mph)
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
           {voiceEnabled && voiceSupported && (

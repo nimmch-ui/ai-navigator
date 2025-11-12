@@ -2,13 +2,15 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import MapView from '@/components/MapView';
+import MapboxMap from '@/components/MapboxMap';
 import SearchBar from '@/components/SearchBar';
 import MapControls from '@/components/MapControls';
 import ChatPanel from '@/components/ChatPanel';
 import RoutePanel from '@/components/RoutePanel';
 import ThemeToggle from '@/components/ThemeToggle';
 import Settings from '@/components/Settings';
+import Favorites from '@/components/Favorites';
+import TripHistory from '@/components/TripHistory';
 import HazardAlert from '@/components/HazardAlert';
 import TripSummary from '@/components/TripSummary';
 import HazardLegend from '@/components/HazardLegend';
@@ -24,8 +26,9 @@ import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled } from '@/services/voiceGuidance';
 import { calculateTripEstimate, type VehicleType } from '@/services/tripEstimates';
 import type { TripEstimate } from '@/services/tripEstimates';
-import { PreferencesService, type TransportMode, type RoutePreference } from '@/services/preferences';
-import { TripHistoryService } from '@/services/tripHistory';
+import { PreferencesService, type TransportMode, type RoutePreference, type SpeedUnit } from '@/services/preferences';
+import { TripHistoryService, type TripRecord } from '@/services/tripHistory';
+import { FavoritesService, type Favorite } from '@/services/favorites';
 import { sendChatMessage, type ChatContext } from '@/services/chatApi';
 import { calculateRoute, formatDistance, formatDuration, getManeuverIcon, type RouteResult } from '@/services/routing';
 import { getSpeedCameras } from '@/services/radar';
@@ -85,6 +88,9 @@ export default function Home() {
   const [vehicleType, setVehicleType] = useState<VehicleType>("car");
   const [voiceEnabled, setVoiceEnabledState] = useState(getVoiceEnabled());
   const [hazardAlertsEnabled, setHazardAlertsEnabled] = useState(true);
+  const [showSpeedCameras, setShowSpeedCameras] = useState(true);
+  const [speedWarnings, setSpeedWarnings] = useState(true);
+  const [speedUnit, setSpeedUnit] = useState<SpeedUnit>("kmh");
   const [nearbyHazards, setNearbyHazards] = useState<Hazard[]>([]);
   const [tripEstimate, setTripEstimate] = useState<TripEstimate | null>(null);
   const [speedCameras, setSpeedCameras] = useState<SpeedCamera[]>([]);
@@ -122,6 +128,9 @@ export default function Home() {
     setVoiceEnabledState(prefs.voiceGuidance);
     setVoiceEnabled(prefs.voiceGuidance);
     setHazardAlertsEnabled(prefs.hazardAlerts);
+    setShowSpeedCameras(prefs.showSpeedCameras);
+    setSpeedWarnings(prefs.speedWarnings);
+    setSpeedUnit(prefs.speedUnit);
 
     getSpeedCameras().then(cameras => {
       setSpeedCameras(cameras);
@@ -165,6 +174,41 @@ export default function Home() {
   const handleHazardAlertsChange = (enabled: boolean) => {
     setHazardAlertsEnabled(enabled);
     PreferencesService.updatePreference('hazardAlerts', enabled);
+  };
+
+  const handleShowSpeedCamerasChange = (enabled: boolean) => {
+    setShowSpeedCameras(enabled);
+    PreferencesService.updatePreference('showSpeedCameras', enabled);
+  };
+
+  const handleSpeedWarningsChange = (enabled: boolean) => {
+    setSpeedWarnings(enabled);
+    PreferencesService.updatePreference('speedWarnings', enabled);
+  };
+
+  const handleSpeedUnitChange = (unit: SpeedUnit) => {
+    setSpeedUnit(unit);
+    PreferencesService.updatePreference('speedUnit', unit);
+  };
+
+  const handleSelectFavorite = (favorite: Favorite) => {
+    setDestination(favorite.address);
+    setDestinationCoords(favorite.coordinates);
+    toast({
+      title: "Destination set",
+      description: `Navigating to ${favorite.name}`
+    });
+  };
+
+  const handleReplayTrip = (trip: TripRecord) => {
+    setOrigin(trip.origin);
+    setDestination(trip.destination);
+    setTransportMode(trip.transportMode);
+    setRoutePreference(trip.routePreference);
+    toast({
+      title: "Trip replayed",
+      description: `Replaying trip from ${trip.origin} to ${trip.destination}`
+    });
   };
 
   useEffect(() => {
@@ -596,13 +640,14 @@ export default function Home() {
   return (
     <div className="h-screen w-screen overflow-hidden flex">
       <div className="flex-1 relative">
-        <MapView
+        <MapboxMap
           center={mapCenter}
           zoom={mapZoom}
           markers={markers}
           route={route}
           hazards={hazardAlertsEnabled ? mockHazards : []}
           speedCameras={speedCameras}
+          showSpeedCameras={showSpeedCameras}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-[1000]">
@@ -618,6 +663,8 @@ export default function Home() {
                   isLoading={isSearching}
                 />
               </div>
+              <Favorites onSelectFavorite={handleSelectFavorite} />
+              <TripHistory onReplayTrip={handleReplayTrip} />
               <Settings
                 transportMode={transportMode}
                 onTransportModeChange={handleTransportModeChange}
@@ -631,6 +678,12 @@ export default function Home() {
                 onVoiceEnabledChange={handleVoiceEnabledChange}
                 hazardAlertsEnabled={hazardAlertsEnabled}
                 onHazardAlertsChange={handleHazardAlertsChange}
+                showSpeedCameras={showSpeedCameras}
+                onShowSpeedCamerasChange={handleShowSpeedCamerasChange}
+                speedWarnings={speedWarnings}
+                onSpeedWarningsChange={handleSpeedWarningsChange}
+                speedUnit={speedUnit}
+                onSpeedUnitChange={handleSpeedUnitChange}
                 voiceSupported={isVoiceSupported()}
               />
               <ThemeToggle />

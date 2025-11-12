@@ -7,9 +7,14 @@ AI Navigator is a map-first navigation application that integrates AI assistance
 Key capabilities include:
 - Multimodal navigation (car, bike, walk, transit)
 - Smart search with route preferences (Fastest, Shortest, Eco)
-- Speed camera radar system with visual alerts
+- Speed camera radar system with visual alerts and configurable display
 - Real-time speed limit display and eco-consumption estimates
 - Weather awareness with origin/destination forecasts and severe weather alerts
+- Voice navigation with turn-by-turn instructions and camera warnings
+- Favorites management with geocoding for quick navigation
+- Trip history with replay functionality
+- Premium 3D map with buildings, smooth animations, and day/night modes
+- Comprehensive settings for cameras, speed warnings, voice guidance, and units
 
 ## User Preferences
 
@@ -23,7 +28,7 @@ Preferred communication style: Simple, everyday language.
 **UI Component System:** shadcn/ui (New York style), Radix UI primitives, Tailwind CSS for styling, CSS variables for theming.
 **State Management:** TanStack Query for server state, React hooks for local state, custom hooks for reusable logic.
 **Key Layout Patterns:** Full-viewport map with overlaid UI panels, responsive design (desktop sidebar, mobile bottom sheet), fixed header, floating right-side controls.
-**Map Integration:** Leaflet.js for interactive maps, OpenStreetMap tile layers, custom markers and route overlays.
+**Map Integration:** Mapbox GL JS for 3D interactive maps with buildings, smooth camera animations, day/night style switching, custom HTML markers, and GeoJSON route overlays.
 
 ### Backend Architecture
 
@@ -41,13 +46,13 @@ Preferred communication style: Simple, everyday language.
 
 ### Design Decisions
 
-- UI uses Lucide React icons.
-- Hazard ID-based throttling for voice announcements.
+- UI uses Lucide React icons for consistent visual language.
+- Hazard ID-based throttling for voice announcements prevents repetitive alerts.
 - Configurable coefficients in trip estimates for future calibration.
 - Mock hazard data for demonstration purposes.
 - Haversine formula for accurate geographic distance calculations.
 - Voice queue prevents simultaneous announcements.
-- Speed limit HUD positioned for visibility.
+- Speed limit HUD positioned for visibility with configurable units (km/h vs mph).
 - Camera proximity alerts show only the nearest non-dismissed alert.
 - Eco estimates calculated only when eco mode is enabled.
 - Camera detection occurs after route calculation.
@@ -58,6 +63,15 @@ Preferred communication style: Simple, everyday language.
 - Weather dismissal state resets on route closure and when fresh severe weather data arrives.
 - Parallel Promise.all for efficient origin/destination weather fetching.
 - Weather data cleared when route panel closes to prevent stale UI.
+- Mapbox GL JS replaces Leaflet for premium 3D experience with buildings and animations.
+- Day/night map styles automatically switch based on time (19:00-06:00 is night).
+- Coordinate format standardized as [lat, lng] throughout app, converted to [lng, lat] for Mapbox internally.
+- Favorites use Mapbox Geocoding API to convert addresses to coordinates.
+- Trip history stores full trip details (origin, destination, mode, preference, distance, duration).
+- Settings persist via PreferencesService with localStorage for all user preferences.
+- Speed camera visibility controlled by showSpeedCameras setting.
+- Route visualization enhanced with glow effect and smooth camera transitions.
+- Mapbox token check with graceful error UI when VITE_MAPBOX_TOKEN is missing.
 
 ## External Dependencies
 
@@ -68,8 +82,8 @@ Preferred communication style: Simple, everyday language.
 - cmdk for command palette
 
 **Mapping:**
-- Leaflet.js and @types/leaflet
-- OpenStreetMap tile server
+- Mapbox GL JS and @types/mapbox-gl for 3D maps
+- Mapbox Streets styles (light/dark for day/night)
 - Mapbox Geocoding API (VITE_MAPBOX_TOKEN)
 - Mapbox Directions API (VITE_MAPBOX_TOKEN)
 

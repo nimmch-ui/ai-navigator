@@ -1,6 +1,7 @@
 export type TransportMode = "car" | "bike" | "walk" | "transit";
 export type RoutePreference = "fastest" | "shortest" | "eco";
 export type VehicleType = "car" | "ev" | "bike" | "walk";
+export type SpeedUnit = "kmh" | "mph";
 
 export interface UserPreferences {
   transportMode: TransportMode;
@@ -9,6 +10,9 @@ export interface UserPreferences {
   hazardAlerts: boolean;
   ecoMode: boolean;
   vehicleType: VehicleType;
+  showSpeedCameras: boolean;
+  speedWarnings: boolean;
+  speedUnit: SpeedUnit;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -17,7 +21,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   voiceGuidance: true,
   hazardAlerts: true,
   ecoMode: false,
-  vehicleType: "car"
+  vehicleType: "car",
+  showSpeedCameras: true,
+  speedWarnings: true,
+  speedUnit: "kmh"
 };
 
 const PREFERENCES_KEY = "ai_navigator_preferences";
