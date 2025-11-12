@@ -136,8 +136,8 @@ export default function Settings({
             // Store denied status for ARView to read
             localStorage.setItem('ar_orientation_permission', 'denied');
             toast({
-              title: 'AR Mode Unavailable',
-              description: 'Orientation sensors are required for AR mode. Please grant permission.',
+              title: t('settings.ar_unavailable_title'),
+              description: t('settings.ar_unavailable_desc'),
               variant: 'destructive',
             });
             // Stay in current mode
@@ -156,8 +156,8 @@ export default function Settings({
       } catch (error) {
         console.error('[Settings] Failed to request orientation permission:', error);
         toast({
-          title: 'AR Mode Error',
-          description: 'Failed to access device sensors. Switching to 3D mode instead.',
+          title: t('settings.ar_error_title'),
+          description: t('settings.ar_error_desc'),
           variant: 'destructive',
         });
         // Fallback to 3D mode on error
