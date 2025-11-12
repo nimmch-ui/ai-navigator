@@ -1,8 +1,11 @@
-import { memo } from 'react';
+import { memo, useMemo, useState, useEffect } from 'react';
 import { Navigation, Clock, TrendingUp, MapPin, ArrowRight, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import LaneBar from '@/components/LaneBar';
+import { getLaneDataForRoute } from '@/services/lanes';
+import type { LaneSegment } from '@shared/schema';
 
 interface RouteStep {
   instruction: string;
@@ -36,6 +39,55 @@ const RoutePanel = memo(function RoutePanel({
   onClose,
   onStartNavigation
 }: RoutePanelProps) {
+  // Simulated distance to next maneuver (in meters)
+  // In production, this would be calculated from GPS position
+  const [distanceToNextManeuver, setDistanceToNextManeuver] = useState(250);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+  // Get lane data for all route steps
+  const laneDataMap = useMemo(() => {
+    if (!route) return new Map<number, LaneSegment>();
+    return getLaneDataForRoute(route.steps);
+  }, [route]);
+
+  // Determine if we should show lane guidance (200-300m before maneuver)
+  const activeLaneGuidance = useMemo(() => {
+    if (!route || distanceToNextManeuver > 300 || distanceToNextManeuver < 0) {
+      return null;
+    }
+
+    const laneSegment = laneDataMap.get(currentStepIndex);
+    if (!laneSegment) return null;
+
+    return {
+      ...laneSegment,
+      distanceToManeuver: distanceToNextManeuver,
+    };
+  }, [route, laneDataMap, currentStepIndex, distanceToNextManeuver]);
+
+  // Demo: Simulate distance countdown for demonstration purposes
+  // Remove this in production - distance would come from GPS tracking
+  useEffect(() => {
+    if (!route || route.steps.length === 0) return;
+
+    const interval = setInterval(() => {
+      setDistanceToNextManeuver((prev) => {
+        // Decrease by 10m every second (simulated movement)
+        const newDistance = prev - 10;
+        
+        // If we've passed the maneuver, move to next step
+        if (newDistance < 0 && currentStepIndex < route.steps.length - 1) {
+          setCurrentStepIndex((idx) => idx + 1);
+          return 280; // Reset to 280m for next maneuver
+        }
+        
+        return newDistance;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [route, currentStepIndex]);
+
   return (
     <Card className="w-full max-w-md">
       <div className="p-4 border-b border-card-border">
@@ -108,6 +160,14 @@ const RoutePanel = memo(function RoutePanel({
                 {route.steps.length} steps
               </Badge>
             </div>
+
+            {/* Lane-Level Guidance */}
+            {activeLaneGuidance && (
+              <LaneBar
+                lanes={activeLaneGuidance.lanes}
+                distanceToManeuver={activeLaneGuidance.distanceToManeuver}
+              />
+            )}
 
             <div className="space-y-2">
               <div className="text-sm font-medium">Turn-by-turn directions</div>

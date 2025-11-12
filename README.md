@@ -15,6 +15,10 @@ A world-class AI-powered navigation application built with React, TypeScript, Ma
 - **Speed Limit Display**: Real-time speed limit HUD with configurable units (km/h or mph)
 - **Camera Proximity Alerts**: Dismissible warnings for upcoming speed cameras
 - **Hazard Warnings**: Alerts for road hazards with voice announcements
+- **Lane-Level Guidance**: Visual lane arrows showing recommended lanes 200-300m before maneuvers
+  - Highlights correct lanes for upcoming turns
+  - Mock data for 6-8 typical intersections (Zurich/SF)
+  - **TODO**: Integrate real lane data from Mapbox Traffic API, HERE, or TomTom
 
 ### Weather Integration
 - **Weather Radar Overlay**: Live precipitation data from RainViewer API
