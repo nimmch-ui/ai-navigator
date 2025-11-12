@@ -68,26 +68,32 @@ export const CINEMATIC_MODE: ModeDescriptor = {
     // - Auto-bearing updates during navigation
     // - Extended easing duration for cinematic feel
     
-    // Set warm voice tone for calming, cinematic experience
-    PreferencesService.updatePreference('voiceStyle', 'warm');
-    
-    // Emit event to notify listeners (voiceGuidance service)
-    EventBus.emit('preferences:voiceStyleChanged', { voiceStyle: 'warm' });
-    
-    // Track TTS style change
-    Analytics.trackTTSStyleChanged('warm', UiMode.CINEMATIC);
+    // Set warm voice tone only if not already set (avoid redundant analytics)
+    const currentPrefs = PreferencesService.getPreferences();
+    if (currentPrefs.voiceStyle !== 'warm') {
+      PreferencesService.updatePreference('voiceStyle', 'warm');
+      
+      // Emit event to notify listeners (voiceGuidance service)
+      EventBus.emit('preferences:voiceStyleChanged', { voiceStyle: 'warm' });
+      
+      // Track TTS style change
+      Analytics.trackTTSStyleChanged('warm', UiMode.CINEMATIC);
+    }
   },
   onExit: async () => {
     console.log('[Mode:CINEMATIC] Exiting Cinematic mode - resetting voice to neutral');
     
-    // Reset voice tone to neutral
-    PreferencesService.updatePreference('voiceStyle', 'neutral');
-    
-    // Emit event to notify listeners
-    EventBus.emit('preferences:voiceStyleChanged', { voiceStyle: 'neutral' });
-    
-    // Track TTS style reset
-    Analytics.trackTTSStyleChanged('neutral', UiMode.CINEMATIC);
+    // Reset voice tone to neutral only if not already neutral (avoid redundant analytics)
+    const currentPrefs = PreferencesService.getPreferences();
+    if (currentPrefs.voiceStyle !== 'neutral') {
+      PreferencesService.updatePreference('voiceStyle', 'neutral');
+      
+      // Emit event to notify listeners
+      EventBus.emit('preferences:voiceStyleChanged', { voiceStyle: 'neutral' });
+      
+      // Track TTS style reset
+      Analytics.trackTTSStyleChanged('neutral', UiMode.CINEMATIC);
+    }
   }
 };
 

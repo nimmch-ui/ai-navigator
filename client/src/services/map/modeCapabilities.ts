@@ -99,12 +99,14 @@ export function getBestSupportedMode(
     return requestedMode;
   }
   
-  // Track specific unsupported mode events
+  // Track specific unsupported mode events with full context
   if (requestedMode === UiMode.VR && !capabilities.hasWebXR) {
-    Analytics.trackVRUnsupported('WebXR not available on this device');
+    const reason = `WebXR not available (hasWebGL: ${capabilities.hasWebGL}, hasWebXR: ${capabilities.hasWebXR})`;
+    Analytics.trackVRUnsupported(reason);
   }
   if (requestedMode === UiMode.AR && !capabilities.hasCamera) {
-    Analytics.trackARPermissionDenied('Camera not available on this device');
+    const reason = `Camera not available (hasCamera: ${capabilities.hasCamera}, hasWebGL: ${capabilities.hasWebGL})`;
+    Analytics.trackARPermissionDenied(reason);
   }
 
   // Try fallback order: VR → AR → 3D → Classic

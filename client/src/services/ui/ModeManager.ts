@@ -92,10 +92,8 @@ class ModeManagerImpl {
 
         // Always delegate to ModeService - it will trigger handleModeChange via EventBus
         // This ensures mode persistence, EventBus events, and proper state management
+        // Analytics session start happens in handleModeChange to avoid double-counting
         ModeService.setMode(bestMode);
-        
-        // Start analytics session for this mode
-        Analytics.startModeSession(bestMode);
         
         this.debounceTimer = null;
         resolve();
@@ -174,9 +172,15 @@ class ModeManagerImpl {
   private async handleModeChange(mode: UiMode, previousMode: UiMode): Promise<void> {
     console.log(`[ModeManager] Handling mode change: ${previousMode} → ${mode}`);
     
+    // End analytics session for previous mode
+    Analytics.endModeSession();
+    
     // Exit previous mode, enter new mode
     // ModeService already changed the mode, we just need to update views
     await this.exit(previousMode);
+    
+    // Start analytics session for new mode (ensures all pathways track sessions)
+    Analytics.startModeSession(mode);
     
     const descriptor = this.registeredModes.get(mode);
     

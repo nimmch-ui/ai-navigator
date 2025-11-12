@@ -6,8 +6,7 @@
  */
 
 import { UiMode } from '@/types/ui';
-import { ModeService } from './mode';
-import { Analytics } from './analytics';
+import { ModeManager } from './ui/ModeManager';
 
 export interface DeepLinkParams {
   mode?: UiMode;
@@ -112,13 +111,8 @@ class DeepLinksService {
     if (params.mode) {
       console.log(`[DeepLinks] Auto-loading mode: ${params.mode}`);
       
-      // Use ModeService to set mode (will trigger ModeManager lifecycle)
-      ModeService.setMode(params.mode);
-      
-      Analytics.track('mode_selected', {
-        mode: params.mode,
-        source: 'deep_link',
-      });
+      // Use ModeManager.enter() to ensure proper lifecycle, analytics, and fallback handling
+      await ModeManager.enter(params.mode);
     }
 
     // Note: Navigation start/end will be handled by navigation service in future

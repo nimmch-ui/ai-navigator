@@ -116,13 +116,19 @@ const voiceCooldown: VoiceCooldown = {
 const VOICE_COOLDOWN_MS = 10000; // 10 seconds between same hazard announcements
 
 /**
+ * Announcement types for analytics
+ */
+export type AnnouncementType = 'radar' | 'camera' | 'hazard' | 'accident' | 'police' | 'construction';
+
+/**
  * Announce hazard with cooldown
  * Returns true if announcement was made, false if on cooldown
  */
 export function announceWithCooldown(
   hazardId: string,
   message: string,
-  speakFunction: (text: string) => void
+  speakFunction: (text: string) => void,
+  type: AnnouncementType = 'hazard'
 ): boolean {
   // Check if this hazard was recently announced
   if (voiceCooldown.lastAnnouncedId === hazardId) {
@@ -133,13 +139,11 @@ export function announceWithCooldown(
   speakFunction(message);
   voiceCooldown.lastAnnouncedId = hazardId;
   
-  // Track announcement based on message content
-  if (message.toLowerCase().includes('camera') || message.toLowerCase().includes('radar')) {
+  // Track announcement with explicit type
+  if (type === 'radar' || type === 'camera') {
     Analytics.trackRadarAnnounced(hazardId);
   } else {
-    // Extract hazard type from message or ID
-    const hazardType = message.split(' ')[0].toLowerCase(); // First word is usually hazard type
-    Analytics.trackHazardAnnounced(hazardType, hazardId);
+    Analytics.trackHazardAnnounced(type, hazardId);
   }
 
   // Clear any existing cooldown
