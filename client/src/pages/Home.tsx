@@ -14,6 +14,7 @@ import ARPreviewOverlay from '@/components/ar/ARPreviewOverlay';
 const ChatPanel = lazy(() => import('@/components/ChatPanel'));
 import RoutePanel from '@/components/RoutePanel';
 import ThemeToggle from '@/components/ThemeToggle';
+import { CarModeToggle } from '@/components/CarModeToggle';
 import Settings from '@/components/Settings';
 import Favorites from '@/components/Favorites';
 import TripHistory from '@/components/TripHistory';
@@ -780,8 +781,12 @@ export default function Home() {
                   isLoading={isSearching}
                 />
               </div>
-              <Favorites onSelectFavorite={handleSelectFavorite} />
-              <TripHistory onReplayTrip={handleReplayTrip} />
+              <div data-car-mode-hide>
+                <Favorites onSelectFavorite={handleSelectFavorite} />
+              </div>
+              <div data-car-mode-hide>
+                <TripHistory onReplayTrip={handleReplayTrip} />
+              </div>
               <Settings
                 transportMode={transportMode}
                 onTransportModeChange={handleTransportModeChange}
@@ -804,6 +809,7 @@ export default function Home() {
                 voiceSupported={isVoiceSupported()}
               />
               <ThemeToggle />
+              <CarModeToggle />
             </div>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
               <TransportModeSelector
@@ -1007,7 +1013,7 @@ export default function Home() {
         )}
 
         {!showChat && (
-          <div className="absolute bottom-6 right-6 z-20 lg:hidden">
+          <div className="absolute bottom-6 right-6 z-20 lg:hidden" data-car-mode-hide>
             <Button
               size="lg"
               className="rounded-full shadow-lg h-14 w-14"
@@ -1020,7 +1026,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className={`${showChat ? 'fixed inset-0 z-[100] lg:relative lg:inset-auto' : 'hidden'} lg:flex lg:w-96`}>
+      <div className={`${showChat ? 'fixed inset-0 z-[100] lg:relative lg:inset-auto' : 'hidden'} lg:flex lg:w-96`} data-car-mode-hide>
         <Suspense fallback={
           <div className="flex items-center justify-center h-full w-full bg-card">
             <div className="text-muted-foreground">Loading chat...</div>
