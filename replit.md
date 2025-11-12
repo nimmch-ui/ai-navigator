@@ -94,6 +94,28 @@ Preferred communication style: Simple, everyday language.
 - Graceful failure handling with non-blocking toast notifications for service unavailability.
 - No API key required for RainViewer basic usage.
 
+### Performance Optimizations
+
+**Request Optimization (November 2025):**
+- DebouncedFetcher utility class in lib/debounce.ts provides debouncing with AbortController support
+- Geocoding requests debounced to 300ms to prevent excessive API calls during rapid typing
+- Routing requests debounced to 150ms for mode/preference changes
+- AbortController cancels in-flight requests when new requests are made
+- Pending promises properly resolved to prevent UI stalls
+- Request cancellation prevents race conditions and stale data updates
+
+**Component Optimization:**
+- React.memo applied to heavy components (RoutePanel, ChatPanel, SearchBar) to prevent unnecessary re-renders
+- ChatPanel lazy loaded with React.lazy + Suspense for faster initial page load
+- Proper dependency management in hooks minimizes re-render triggers
+- Memoization reduces rendering overhead during rapid state changes
+
+**Map Performance:**
+- Pre-warmed map styles and layers for efficient startup
+- WebGL capability check with graceful 2D fallback for unsupported browsers
+- Terrain, sky, and 3D building layers managed efficiently
+- Cinematic camera updates throttled to max 15 updates/sec for smooth 60fps performance
+
 ## External Dependencies
 
 **UI & Component Libraries:**
