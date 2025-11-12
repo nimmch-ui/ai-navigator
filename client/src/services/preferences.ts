@@ -23,6 +23,8 @@ export interface UserPreferences {
   transportMode: TransportMode;
   routePreference: RoutePreference;
   voiceGuidance: boolean;
+  voiceVolume: number;
+  hapticsEnabled: boolean;
   hazardAlerts: boolean;
   ecoMode: boolean;
   vehicleType: VehicleType;
@@ -43,6 +45,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   transportMode: "car",
   routePreference: "fastest",
   voiceGuidance: true,
+  voiceVolume: 1.0,
+  hapticsEnabled: true,
   hazardAlerts: true,
   ecoMode: false,
   vehicleType: "car",

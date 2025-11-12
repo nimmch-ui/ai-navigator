@@ -1,8 +1,10 @@
-// Voice guidance service using Web Speech API
+// Voice guidance service using Web Speech API with SSML + haptics
 export interface VoiceAnnouncementOptions {
   priority?: 'low' | 'normal' | 'high';
   entityId?: string; // For hazard-based deduping (e.g., hazard ID)
   throttleMs?: number; // Custom throttle duration for this entity
+  isCritical?: boolean; // Trigger haptic + audio ding for critical alerts
+  ssml?: boolean; // Use SSML markup (if supported)
 }
 
 interface QueuedAnnouncement {
@@ -20,6 +22,10 @@ class VoiceGuidanceService {
   private isSpeaking: boolean = false;
   private entityThrottleMap: Map<string, number> = new Map(); // entityId -> last spoken time
   private readonly DEFAULT_THROTTLE_MS = 30000; // 30 seconds
+  private voiceVolume: number = 1.0;
+  private hapticsEnabled: boolean = true;
+  private audioContext: AudioContext | null = null;
+  private supportsVibrate: boolean = false;
 
   init(): boolean {
     if (this.isInitialized) {
@@ -30,6 +36,19 @@ class VoiceGuidanceService {
       this.synthesis = window.speechSynthesis;
       this.isSupported = true;
       this.isInitialized = true;
+
+      // Check for vibration API support
+      this.supportsVibrate = 'vibrate' in navigator;
+
+      // Initialize AudioContext for ding sound (lazily)
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          this.audioContext = new AudioContextClass();
+        }
+      } catch (error) {
+        // AudioContext not supported, fail gracefully
+      }
 
       // Listen for end events to process queue
       if (this.synthesis) {
@@ -99,10 +118,21 @@ class VoiceGuidanceService {
 
     this.isSpeaking = true;
 
-    const utterance = new SpeechSynthesisUtterance(announcement.text);
+    // Trigger haptic + audio for critical alerts
+    if (announcement.options.isCritical) {
+      this.triggerCriticalAlert();
+    }
+
+    // Process SSML if enabled (note: limited browser support, graceful fallback)
+    let text = announcement.text;
+    if (announcement.options.ssml) {
+      text = this.processSSML(text);
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
-    utterance.volume = 1.0;
+    utterance.volume = this.voiceVolume;
     utterance.lang = 'en-US';
 
     utterance.onend = () => {
@@ -126,6 +156,73 @@ class VoiceGuidanceService {
     this.synthesis.speak(utterance);
   }
 
+  private processSSML(text: string): string {
+    // Most browsers don't support SSML in SpeechSynthesis, but we can simulate some features
+    // Remove SSML tags and convert to natural pauses
+    let processed = text;
+    
+    // Replace <break time="Xms"/> with commas for natural pauses
+    processed = processed.replace(/<break time="(\d+)ms"\s*\/>/g, (match, ms) => {
+      const pauseMs = parseInt(ms);
+      if (pauseMs > 300) return '... '; // Longer pause
+      if (pauseMs > 150) return ', '; // Medium pause
+      return ' '; // Short pause
+    });
+    
+    // Remove <say-as> tags but keep content
+    processed = processed.replace(/<say-as[^>]*>(.*?)<\/say-as>/g, '$1');
+    
+    // Remove any remaining SSML tags
+    processed = processed.replace(/<[^>]+>/g, '');
+    
+    return processed;
+  }
+
+  private triggerCriticalAlert(): void {
+    // Trigger haptic vibration if enabled and supported
+    if (this.hapticsEnabled && this.supportsVibrate) {
+      try {
+        navigator.vibrate([60, 40, 60]); // Short pulse pattern
+      } catch (error) {
+        // Vibrate failed, fail silently
+      }
+    }
+
+    // Play audio ding
+    this.playDing();
+  }
+
+  private playDing(): void {
+    if (!this.audioContext) return;
+
+    try {
+      // Resume AudioContext if suspended (for autoplay policies)
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+      }
+
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+
+      // Create a pleasant "ding" sound
+      oscillator.frequency.value = 800; // Higher pitch for alert
+      oscillator.type = 'sine';
+
+      // Envelope for natural ding sound
+      const now = this.audioContext.currentTime;
+      gainNode.gain.setValueAtTime(0.3 * this.voiceVolume, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+      oscillator.start(now);
+      oscillator.stop(now + 0.15);
+    } catch (error) {
+      // Audio playback failed, fail silently
+    }
+  }
+
   setEnabled(enabled: boolean): void {
     this.isEnabled = enabled;
     if (!enabled) {
@@ -135,6 +232,29 @@ class VoiceGuidanceService {
 
   getEnabled(): boolean {
     return this.isEnabled;
+  }
+
+  setVolume(volume: number): void {
+    this.voiceVolume = Math.max(0, Math.min(1, volume));
+  }
+
+  getVolume(): number {
+    return this.voiceVolume;
+  }
+
+  setHapticsEnabled(enabled: boolean): void {
+    this.hapticsEnabled = enabled;
+  }
+
+  getHapticsEnabled(): boolean {
+    return this.hapticsEnabled;
+  }
+
+  isHapticsSupported(): boolean {
+    if (!this.isInitialized) {
+      this.init();
+    }
+    return this.supportsVibrate;
   }
 
   isVoiceSupported(): boolean {
@@ -177,8 +297,28 @@ export const getVoiceEnabled = (): boolean => {
   return voiceGuidance.getEnabled();
 };
 
+export const setVoiceVolume = (volume: number): void => {
+  voiceGuidance.setVolume(volume);
+};
+
+export const getVoiceVolume = (): number => {
+  return voiceGuidance.getVolume();
+};
+
+export const setHapticsEnabled = (enabled: boolean): void => {
+  voiceGuidance.setHapticsEnabled(enabled);
+};
+
+export const getHapticsEnabled = (): boolean => {
+  return voiceGuidance.getHapticsEnabled();
+};
+
 export const isVoiceSupported = (): boolean => {
   return voiceGuidance.isVoiceSupported();
+};
+
+export const isHapticsSupported = (): boolean => {
+  return voiceGuidance.isHapticsSupported();
 };
 
 export const cancelAllAnnouncements = (): void => {
