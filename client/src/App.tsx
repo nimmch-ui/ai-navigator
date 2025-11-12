@@ -17,6 +17,8 @@ import { MODE_DESCRIPTORS } from "@/services/modes/descriptors";
 import { DeepLinks } from "@/services/deepLinks";
 import { Analytics } from "@/services/analytics";
 import { regionRouter } from "@/services/regionRouter";
+import { i18n } from "@/services/i18n";
+import { geolocationService } from "@/services/geolocation";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 
@@ -31,9 +33,17 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    // Initialize region router for global availability
-    regionRouter.initialize().then(() => {
+    // Initialize region router and i18n for global availability
+    Promise.all([
+      regionRouter.initialize(),
+      geolocationService.detectUserLocation(),
+    ]).then(([, location]) => {
       console.log('[App] Region router initialized:', regionRouter.getState());
+      
+      // Initialize i18n with detected region
+      i18n.initialize(location.region).then(() => {
+        console.log('[App] i18n initialized:', i18n.getLocale(), i18n.getUnitSystem());
+      });
     });
 
     registerServiceWorker().then((registration) => {
