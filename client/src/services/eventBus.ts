@@ -6,6 +6,7 @@ export interface EventPayloadMap {
   'emotion:stateChanged': { state: DriverState; timestamp: number };
   'emotion:focusRegained': { timestamp: number };
   'navigation:stateChanged': { updates: Record<string, any> };
+  'preferences:voiceStyleChanged': { voiceStyle: string };
 }
 
 type EventName = keyof EventPayloadMap;

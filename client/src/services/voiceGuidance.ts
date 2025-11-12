@@ -3,6 +3,7 @@ import { EmotionEngine } from './emotion/EmotionEngine';
 import { AudioBus } from './audio/AudioBus';
 import { HapticsUtil } from '@/hooks/useHaptics';
 import { PreferencesService, type VoiceStyle } from './preferences';
+import { EventBus } from './eventBus';
 
 // Voice style presets
 const VOICE_STYLE_PRESETS: Record<VoiceStyle, { rate: number; pitch: number; }> = {
@@ -69,6 +70,12 @@ class VoiceGuidanceService {
         testUtterance.volume = 0;
         this.synthesis.speak(testUtterance);
       }
+      
+      // Listen for voice style changes from mode descriptors
+      EventBus.subscribe('preferences:voiceStyleChanged', ({ voiceStyle }) => {
+        console.log(`[VoiceGuidance] Voice style changed to: ${voiceStyle}`);
+        // Voice style will be applied in processQueue() via getVoicePreset()
+      });
     } else {
       this.isInitialized = true;
       this.isSupported = false;

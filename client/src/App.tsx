@@ -12,6 +12,7 @@ import { PWAUpdateNotification } from "@/components/PWAUpdateNotification";
 import { registerServiceWorker } from "@/lib/serviceWorker";
 import { initializeSubscriptions, cleanupSubscriptions } from "@/services/subscriptions";
 import { ModeManager } from "@/services/ui/ModeManager";
+import { MODE_DESCRIPTORS } from "@/services/modes/descriptors";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 
@@ -36,6 +37,11 @@ function App() {
     
     // Initialize ModeManager after subscriptions are ready
     ModeManager.initialize();
+    
+    // Register mode descriptors with visual logic
+    MODE_DESCRIPTORS.forEach(descriptor => {
+      ModeManager.registerMode(descriptor);
+    });
 
     return () => {
       cleanupSubscriptions();

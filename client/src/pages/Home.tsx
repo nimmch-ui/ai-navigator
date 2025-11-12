@@ -1176,7 +1176,7 @@ export default function Home() {
             {(tripEstimate || ecoEstimate || weatherData.length > 0) && (
               <div className="absolute bottom-32 left-4 z-20 max-w-sm space-y-2">
                 {weatherData.length > 0 && <WeatherPanel weatherData={weatherData} />}
-                {ecoEstimate && <EcoSummary estimate={ecoEstimate} />}
+                {ecoEstimate && uiMode === UiMode.ECO && <EcoSummary estimate={ecoEstimate} />}
                 {tripEstimate && (
                   <TripSummary
                     estimate={tripEstimate}

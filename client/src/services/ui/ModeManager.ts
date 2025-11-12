@@ -11,7 +11,7 @@ import type { IRouteView } from '@shared/interfaces';
 import { getDeviceCapabilities } from '@/services/map/webglCapability';
 import { getBestSupportedMode } from '@/services/map/modeCapabilities';
 
-interface ModeDescriptor {
+export interface ModeDescriptor {
   mode: UiMode;
   viewFactory?: () => IRouteView;
   onEnter?: (mode: UiMode, previousMode: UiMode) => void | Promise<void>;
@@ -26,6 +26,8 @@ class ModeManagerImpl {
   private listeners: Set<ModeChangeListener> = new Set();
   private unsubscribeModeService: (() => void) | null = null;
   private initialized: boolean = false;
+  private debounceTimer: number | null = null;
+  private readonly DEBOUNCE_MS = 250;
 
   /**
    * Initialize ModeManager
@@ -63,20 +65,32 @@ class ModeManagerImpl {
 
   /**
    * Enter a specific mode
-   * Handles WebGL fallback and delegates to ModeService
+   * Handles WebGL fallback, debouncing (250ms), and delegates to ModeService
    */
   async enter(mode: UiMode): Promise<void> {
-    // Check device capabilities and fallback if unsupported
-    const capabilities = getDeviceCapabilities();
-    const bestMode = getBestSupportedMode(mode, capabilities);
-
-    if (bestMode !== mode) {
-      console.log(`[ModeManager] Mode ${mode} unsupported, falling back to ${bestMode}`);
+    // Debounce mode changes to prevent rapid switching (60fps target)
+    if (this.debounceTimer !== null) {
+      clearTimeout(this.debounceTimer);
     }
 
-    // Always delegate to ModeService - it will trigger handleModeChange via EventBus
-    // This ensures mode persistence, EventBus events, and proper state management
-    ModeService.setMode(bestMode);
+    return new Promise<void>((resolve) => {
+      this.debounceTimer = window.setTimeout(() => {
+        // Check device capabilities and fallback if unsupported
+        const capabilities = getDeviceCapabilities();
+        const bestMode = getBestSupportedMode(mode, capabilities);
+
+        if (bestMode !== mode) {
+          console.log(`[ModeManager] Mode ${mode} unsupported, falling back to ${bestMode}`);
+        }
+
+        // Always delegate to ModeService - it will trigger handleModeChange via EventBus
+        // This ensures mode persistence, EventBus events, and proper state management
+        ModeService.setMode(bestMode);
+        
+        this.debounceTimer = null;
+        resolve();
+      }, this.DEBOUNCE_MS);
+    });
   }
 
   /**
