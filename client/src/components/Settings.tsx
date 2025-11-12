@@ -115,7 +115,7 @@ export default function Settings({
   onRadarPulseChange
 }: SettingsProps) {
   const { toast } = useToast();
-  const { locale, changeLocale, availableLocales, getLocaleName } = useTranslation();
+  const { t, locale, changeLocale, availableLocales, getLocaleName } = useTranslation();
 
   /**
    * Handle UI Mode change with AR permission request for iOS compatibility
@@ -183,8 +183,8 @@ export default function Settings({
       <PopoverContent className="w-80 max-h-[80vh] overflow-y-auto" data-testid="settings-panel">
         <div className="space-y-4">
           <div>
-            <h3 className="font-semibold text-sm mb-1">Navigation Settings</h3>
-            <p className="text-xs text-muted-foreground">Customize your navigation experience</p>
+            <h3 className="font-semibold text-sm mb-1">{t('settings.title')}</h3>
+            <p className="text-xs text-muted-foreground">{t('settings.description')}</p>
           </div>
 
           <Separator />
@@ -192,7 +192,7 @@ export default function Settings({
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-1.5">
               <Globe className="h-3.5 w-3.5" />
-              Language
+              {t('settings.language')}
             </Label>
             <Select
               value={locale}
@@ -200,7 +200,7 @@ export default function Settings({
               data-testid="select-language"
             >
               <SelectTrigger data-testid="button-language-trigger">
-                <SelectValue placeholder="Select language" />
+                <SelectValue placeholder={t('settings.language_placeholder')} />
               </SelectTrigger>
               <SelectContent>
                 {availableLocales.map((loc) => (
@@ -217,15 +217,15 @@ export default function Settings({
           <div>
             <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5" />
-              Immersive Experience
+              {t('settings.immersive_experience')}
             </h3>
             <p className="text-xs text-muted-foreground mb-3">
-              Choose your navigation mode
+              {t('settings.immersive_description')}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">UI Mode</Label>
+            <Label className="text-sm font-medium">{t('settings.ui_mode')}</Label>
             <RadioGroup
               value={uiMode}
               onValueChange={handleUiModeChange}
@@ -234,37 +234,37 @@ export default function Settings({
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value={UiMode.CLASSIC} id="ui-classic" data-testid="radio-ui-classic" />
                 <Label htmlFor="ui-classic" className="text-sm font-normal cursor-pointer">
-                  Classic
+                  {t('mode.classic')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value={UiMode.THREED} id="ui-threed" data-testid="radio-ui-threed" />
                 <Label htmlFor="ui-threed" className="text-sm font-normal cursor-pointer">
-                  3D Mode
+                  {t('mode.3d_mode')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value={UiMode.CINEMATIC} id="ui-cinematic" data-testid="radio-ui-cinematic" />
                 <Label htmlFor="ui-cinematic" className="text-sm font-normal cursor-pointer">
-                  Cinematic
+                  {t('mode.cinematic')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value={UiMode.AR} id="ui-ar" data-testid="radio-ui-ar" />
                 <Label htmlFor="ui-ar" className="text-sm font-normal cursor-pointer">
-                  AR Preview
+                  {t('mode.ar_preview')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value={UiMode.VR} id="ui-vr" data-testid="radio-ui-vr" />
                 <Label htmlFor="ui-vr" className="text-sm font-normal cursor-pointer">
-                  VR (Future)
+                  {t('mode.vr_future')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value={UiMode.ECO} id="ui-eco" data-testid="radio-ui-eco" />
                 <Label htmlFor="ui-eco" className="text-sm font-normal cursor-pointer">
-                  Eco Optimized
+                  {t('mode.eco_optimized')}
                 </Label>
               </div>
             </RadioGroup>
@@ -273,10 +273,10 @@ export default function Settings({
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="spatial-audio" className="text-sm font-medium">
-                Spatial Audio
+                {t('settings.spatial_audio')}
               </Label>
               <p className="text-xs text-muted-foreground">
-                3D positional sound effects
+                {t('settings.spatial_audio_desc')}
               </p>
             </div>
             <Switch
@@ -290,10 +290,10 @@ export default function Settings({
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="ambient-music" className="text-sm font-medium">
-                Ambient Music
+                {t('settings.ambient_music')}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Background music for navigation
+                {t('settings.ambient_music_desc')}
               </p>
             </div>
             <Switch
@@ -307,7 +307,7 @@ export default function Settings({
           <Separator />
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Transport Mode</Label>
+            <Label className="text-sm font-medium">{t('settings.transport_mode')}</Label>
             <RadioGroup
               value={transportMode}
               onValueChange={(value) => onTransportModeChange(value as TransportMode)}
@@ -316,25 +316,25 @@ export default function Settings({
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="car" id="transport-car" data-testid="radio-transport-car" />
                 <Label htmlFor="transport-car" className="text-sm font-normal cursor-pointer">
-                  Car
+                  {t('settings.transport_car')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="bike" id="transport-bike" data-testid="radio-transport-bike" />
                 <Label htmlFor="transport-bike" className="text-sm font-normal cursor-pointer">
-                  Bike
+                  {t('settings.transport_bike')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="walk" id="transport-walk" data-testid="radio-transport-walk" />
                 <Label htmlFor="transport-walk" className="text-sm font-normal cursor-pointer">
-                  Walk
+                  {t('settings.transport_walk')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="transit" id="transport-transit" data-testid="radio-transport-transit" />
                 <Label htmlFor="transport-transit" className="text-sm font-normal cursor-pointer">
-                  Public Transit
+                  {t('settings.transport_transit')}
                 </Label>
               </div>
             </RadioGroup>
@@ -344,7 +344,7 @@ export default function Settings({
             <>
               <Separator />
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Route Preference</Label>
+                <Label className="text-sm font-medium">{t('settings.route_preference')}</Label>
                 <RadioGroup
                   value={routePreference}
                   onValueChange={(value) => onRoutePreferenceChange(value as RoutePreference)}
@@ -353,19 +353,19 @@ export default function Settings({
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="fastest" id="route-fastest" data-testid="radio-route-fastest" />
                     <Label htmlFor="route-fastest" className="text-sm font-normal cursor-pointer">
-                      Fastest Route
+                      {t('settings.route_fastest')}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="shortest" id="route-shortest" data-testid="radio-route-shortest" />
                     <Label htmlFor="route-shortest" className="text-sm font-normal cursor-pointer">
-                      Shortest Distance
+                      {t('settings.route_shortest')}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="eco" id="route-eco" data-testid="radio-route-eco" />
                     <Label htmlFor="route-eco" className="text-sm font-normal cursor-pointer">
-                      Eco-Friendly
+                      {t('settings.route_eco')}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -377,7 +377,7 @@ export default function Settings({
             <>
               <Separator />
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Vehicle Type</Label>
+                <Label className="text-sm font-medium">{t('settings.vehicle_type')}</Label>
                 <RadioGroup
                   value={vehicleType}
                   onValueChange={(value) => onVehicleTypeChange(value as VehicleType)}
@@ -386,13 +386,13 @@ export default function Settings({
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="car" id="vehicle-car" data-testid="radio-vehicle-car" />
                     <Label htmlFor="vehicle-car" className="text-sm font-normal cursor-pointer">
-                      Regular Car
+                      {t('settings.vehicle_car')}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="ev" id="vehicle-ev" data-testid="radio-vehicle-ev" />
                     <Label htmlFor="vehicle-ev" className="text-sm font-normal cursor-pointer">
-                      Electric Vehicle (EV)
+                      {t('settings.vehicle_ev')}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -405,10 +405,10 @@ export default function Settings({
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="eco-mode" className="text-sm font-medium">
-                Eco Mode
+                {t('settings.eco_mode')}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Prefer fuel-efficient routes
+                {t('settings.eco_mode_desc')}
               </p>
             </div>
             <Switch
@@ -422,12 +422,12 @@ export default function Settings({
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="voice-guidance" className="text-sm font-medium">
-                Voice Guidance
+                {t('settings.voice_guidance')}
               </Label>
               <p className="text-xs text-muted-foreground">
                 {voiceSupported
-                  ? "Turn-by-turn voice instructions"
-                  : "Not supported in this browser"}
+                  ? t('settings.voice_guidance_desc')
+                  : t('settings.voice_not_supported')}
               </p>
             </div>
             <Switch
@@ -444,7 +444,7 @@ export default function Settings({
               <div className="space-y-1">
                 <Label htmlFor="voice-volume" className="text-xs font-medium flex items-center gap-2">
                   <Volume2 className="h-3 w-3" />
-                  Voice Volume: {Math.round(voiceVolume * 100)}%
+                  {t('settings.voice_volume')}: {Math.round(voiceVolume * 100)}%
                 </Label>
                 <Slider
                   id="voice-volume"
@@ -459,7 +459,7 @@ export default function Settings({
               </div>
               
               <div className="space-y-2">
-                <Label className="text-xs font-medium">Voice Style</Label>
+                <Label className="text-xs font-medium">{t('settings.voice_style')}</Label>
                 <RadioGroup
                   value={voiceStyle}
                   onValueChange={(value) => onVoiceStyleChange(value as VoiceStyle)}
@@ -468,19 +468,19 @@ export default function Settings({
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="neutral" id="voice-neutral" data-testid="radio-voice-neutral" />
                     <Label htmlFor="voice-neutral" className="text-xs font-normal cursor-pointer">
-                      Neutral
+                      {t('settings.voice_neutral')}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="warm" id="voice-warm" data-testid="radio-voice-warm" />
                     <Label htmlFor="voice-warm" className="text-xs font-normal cursor-pointer">
-                      Warm
+                      {t('settings.voice_warm')}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="energetic" id="voice-energetic" data-testid="radio-voice-energetic" />
                     <Label htmlFor="voice-energetic" className="text-xs font-normal cursor-pointer">
-                      Energetic
+                      {t('settings.voice_energetic')}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -488,7 +488,7 @@ export default function Settings({
 
               <div className="flex items-center justify-between">
                 <Label htmlFor="emotion-adaptive" className="text-xs font-medium">
-                  Emotion-Adaptive Voice
+                  {t('settings.emotion_adaptive')}
                 </Label>
                 <Switch
                   id="emotion-adaptive"
@@ -498,7 +498,7 @@ export default function Settings({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                AI adjusts tone & pace based on driving state
+                {t('settings.emotion_adaptive_desc')}
               </p>
             </div>
           )}
@@ -508,12 +508,12 @@ export default function Settings({
               <Vibrate className="h-4 w-4 text-muted-foreground" />
               <div>
                 <Label htmlFor="haptics" className="text-sm font-medium">
-                  Haptic Feedback
+                  {t('settings.haptic_feedback')}
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   {hapticsSupported
-                    ? "Vibration for critical alerts"
-                    : "Not supported on this device"}
+                    ? t('settings.haptic_feedback_desc')
+                    : t('settings.haptic_not_supported')}
                 </p>
               </div>
             </div>
@@ -529,7 +529,7 @@ export default function Settings({
           {hapticsEnabled && hapticsSupported && (
             <div className="space-y-1 pl-4 border-l-2 border-muted">
               <Label htmlFor="haptics-intensity" className="text-xs font-medium">
-                Haptic Intensity: {Math.round(hapticsIntensity * 100)}%
+                {t('settings.haptic_intensity')}: {Math.round(hapticsIntensity * 100)}%
               </Label>
               <Slider
                 id="haptics-intensity"
@@ -549,10 +549,10 @@ export default function Settings({
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               <div>
                 <Label htmlFor="hazard-alerts" className="text-sm font-medium">
-                  Hazard Alerts
+                  {t('settings.hazard_alerts')}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Warnings for speed cameras & hazards
+                  {t('settings.hazard_alerts_desc')}
                 </p>
               </div>
             </div>
@@ -569,10 +569,10 @@ export default function Settings({
               <Camera className="h-4 w-4 text-muted-foreground" />
               <div>
                 <Label htmlFor="show-cameras" className="text-sm font-medium">
-                  Show Speed Cameras
+                  {t('settings.show_cameras')}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Display camera markers on map
+                  {t('settings.show_cameras_desc')}
                 </p>
               </div>
             </div>
@@ -589,10 +589,10 @@ export default function Settings({
               <Gauge className="h-4 w-4 text-muted-foreground" />
               <div>
                 <Label htmlFor="speed-warnings" className="text-sm font-medium">
-                  Speed Limit Warnings
+                  {t('settings.speed_warnings')}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Alert when exceeding speed limit
+                  {t('settings.speed_warnings_desc')}
                 </p>
               </div>
             </div>
@@ -607,7 +607,7 @@ export default function Settings({
           <Separator />
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Speed Unit</Label>
+            <Label className="text-sm font-medium">{t('settings.speed_unit')}</Label>
             <RadioGroup
               value={speedUnit}
               onValueChange={(value) => onSpeedUnitChange(value as SpeedUnit)}
@@ -616,13 +616,13 @@ export default function Settings({
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="kmh" id="unit-kmh" data-testid="radio-unit-kmh" />
                 <Label htmlFor="unit-kmh" className="text-sm font-normal cursor-pointer">
-                  Kilometers per hour (km/h)
+                  {t('settings.speed_unit_kmh')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="mph" id="unit-mph" data-testid="radio-unit-mph" />
                 <Label htmlFor="unit-mph" className="text-sm font-normal cursor-pointer">
-                  Miles per hour (mph)
+                  {t('settings.speed_unit_mph')}
                 </Label>
               </div>
             </RadioGroup>
@@ -631,19 +631,19 @@ export default function Settings({
           <Separator />
 
           <div>
-            <h3 className="font-semibold text-sm mb-1">Realism Pack</h3>
+            <h3 className="font-semibold text-sm mb-1">{t('settings.realism_pack')}</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              Advanced visual and audio enhancements
+              {t('settings.realism_pack_desc')}
             </p>
           </div>
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="weather-lighting" className="text-sm font-medium">
-                Weather Lighting
+                {t('settings.weather_lighting')}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Adjust map based on weather conditions
+                {t('settings.weather_lighting_desc')}
               </p>
             </div>
             <Switch
@@ -657,10 +657,10 @@ export default function Settings({
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="motion-polish" className="text-sm font-medium">
-                Motion Polish
+                {t('settings.motion_polish')}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Breathing glow and motion effects
+                {t('settings.motion_polish_desc')}
               </p>
             </div>
             <Switch
@@ -674,10 +674,10 @@ export default function Settings({
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="radar-pulse" className="text-sm font-medium">
-                Radar Pulse
+                {t('settings.radar_pulse')}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Pulse camera icons when nearby
+                {t('settings.radar_pulse_desc')}
               </p>
             </div>
             <Switch
@@ -691,14 +691,14 @@ export default function Settings({
           {voiceEnabled && voiceSupported && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
               <Volume2 className="h-4 w-4" />
-              <span>Voice announcements enabled</span>
+              <span>{t('settings.voice_announcements_enabled')}</span>
             </div>
           )}
 
           {!voiceSupported && (
             <div className="flex items-center gap-2 text-xs text-destructive pt-2 border-t">
               <VolumeX className="h-4 w-4" />
-              <span>Voice guidance not available</span>
+              <span>{t('settings.voice_not_available')}</span>
             </div>
           )}
         </div>
