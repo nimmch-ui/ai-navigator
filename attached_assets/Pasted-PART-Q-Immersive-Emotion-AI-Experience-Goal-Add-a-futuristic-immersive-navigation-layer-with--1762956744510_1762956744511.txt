@@ -1,0 +1,82 @@
+PART Q – Immersive & Emotion AI Experience
+
+Goal:
+Add a futuristic, immersive navigation layer with AR overlay, cinematic camera, emotion-adaptive UI, spatial audio cues, haptics, and a hybrid Street/Satellite preview. Keep everything modular and privacy-safe.
+
+Scope (add or update):
+- src/features/immersive/
+  - ar/AROverlay.ts
+  - camera/CinematicCamera.ts
+  - audio/SpatialAudio.ts
+  - haptics/Haptics.ts
+  - emotion/EmotionAdapter.ts
+  - hybrid/StreetSatHybrid.ts
+  - index.ts
+- src/services/preferences/PreferencesService.ts (extend)
+- src/components/immersive/ImmersivePanel.tsx (feature toggles + status)
+- README.md (section: Immersive & Privacy)
+
+Requirements:
+
+1) AR Overlay (camera + on-device sensors)
+   - Use getUserMedia for rear camera stream; draw a transparent overlay over the map view.
+   - Use DeviceOrientation / ScreenOrientation to estimate heading/tilt; render directional chevrons and turn arrows aligned with the next maneuver.
+   - Fallback: if sensors not supported, show HUD arrows with distance countdown.
+   - Add a toggle: Settings → Immersive → “AR Overlay (Beta)”, store in PreferencesService.
+
+2) Cinematic Camera (AI-assisted)
+   - Implement a small intent state machine: { cruising, approaching_turn, in_turn, overview } and transitions from route context (next step distance, speed).
+   - Smooth camera updates with clamped per-frame deltas; pitch/zoom heuristics for dense turns, traffic, and bad weather flags.
+   - Export applyCinematic(map, state, ctx) and integrate with existing map init.
+
+3) Spatial Audio Cues
+   - Create a minimal audio bus: playCue(id, panLeftRight) for maneuvers and radar warnings.
+   - Pan sound slightly toward the side of the next turn; use a short “ding” for hazards.
+   - Respect mute/volume in PreferencesService; fail gracefully if AudioContext blocked.
+
+4) Haptics (mobile-friendly)
+   - Add navigator.vibrate() patterns for critical alerts:
+     - speeding/radar<300m: [60,40,60]
+     - next-turn imminent: [40]
+   - Toggle in Settings → “Haptic alerts”.
+
+5) Emotion Adapter (opt-in; privacy by design)
+   - Provide an optional, on-device-only fatigue/stress adapter:
+     - No cloud uploads. Add clear consent UI and a local-only disclaimer.
+     - If active and “tired” flag detected (placeholder heuristic or mock), soften colors, reduce motion, slow voice cadence.
+     - Add a simple interface EmotionAdapter.getUiHints(): { palette: 'calm|normal', motionScale: 0..1, voiceStyle: 'soft|normal' }.
+   - Must work even if adapter is OFF (default OFF).
+
+6) Street/Satellite Hybrid Preview
+   - Add a button: “Hybrid Preview” that briefly shows a Street/Sat hybrid (static pano or nearest street imagery if available) with an AI-labeled turn overlay (mock if real API not available).
+   - Cleanly return to live map after preview.
+
+7) Voice Copilot hooks
+   - Expose hooks so the existing AI assistant can speak proactive hints:
+     - “Radar 400m ahead”, “Left turn in 200m”, “Heavy rain ahead – slowing camera motion”.
+
+8) Feature flags & Settings
+   - Settings → Immersive:
+     - AR Overlay (Beta) [ON/OFF]
+     - Cinematic camera [ON/OFF]
+     - Spatial audio [ON/OFF], volume 0–100
+     - Haptic alerts [ON/OFF]
+     - Emotion Adapter (local only) [ON/OFF]
+     - Hybrid Preview [SHOW]
+   - Persist all preferences.
+
+9) Privacy & Resilience
+   - No API keys in logs. No media frames leave the device.
+   - If any module fails (permissions denied / unsupported), show a non-blocking toast and continue core navigation.
+
+Test Plan:
+- Desktop + mobile: enable/disable each feature independently; verify no console errors.
+- AR: deny camera → fallback HUD; allow camera → overlay visible, arrows track heading.
+- Cinematic: verify state transitions and smoothness; no motion sickness.
+- Audio/Haptics: cues fire once per event; respect settings.
+- Emotion Adapter OFF by default; when ON, UI becomes calmer under “tired” mock state.
+- Hybrid Preview opens and closes cleanly; route UI resumes.
+
+Deliverables:
+- New feature folder with modules above, integrated toggles, docs in README.
+- Short summary of changes and any TODOs for real street imagery API.
