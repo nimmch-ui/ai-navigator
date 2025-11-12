@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import MapboxMap from '@/components/MapboxMap';
 import SearchBar from '@/components/SearchBar';
 import MapControls from '@/components/MapControls';
@@ -18,6 +19,9 @@ import { CarModeToggle } from '@/components/CarModeToggle';
 import Settings from '@/components/Settings';
 import Favorites from '@/components/Favorites';
 import TripHistory from '@/components/TripHistory';
+import ReportButton from '@/components/ReportButton';
+import CommunityReportMarker from '@/components/CommunityReportMarker';
+import type { CommunityReport } from '@shared/schema';
 import HazardAlert from '@/components/HazardAlert';
 import TripSummary from '@/components/TripSummary';
 import HazardLegend from '@/components/HazardLegend';
@@ -83,6 +87,19 @@ export default function Home() {
   const [markers, setMarkers] = useState<Array<{ lat: number; lng: number; label?: string }>>([
     { lat: 37.7749, lng: -122.4194, label: 'San Francisco' }
   ]);
+  const [minTrustScore, setMinTrustScore] = useState(0);
+  const [selectedReport, setSelectedReport] = useState<CommunityReport | null>(null);
+
+  const { data: communityReports = [] } = useQuery<CommunityReport[]>({
+    queryKey: ['/api/reports', minTrustScore],
+    queryFn: async () => {
+      const params = minTrustScore > 0 ? `?minTrustScore=${minTrustScore}` : '';
+      const response = await fetch(`/api/reports${params}`);
+      if (!response.ok) throw new Error('Failed to fetch reports');
+      return response.json();
+    },
+    refetchInterval: 30000,
+  });
   const [route, setRoute] = useState<Array<[number, number]> | undefined>();
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -787,6 +804,9 @@ export default function Home() {
               <div data-car-mode-hide>
                 <TripHistory onReplayTrip={handleReplayTrip} />
               </div>
+              <div data-car-mode-hide>
+                <ReportButton currentLocation={mapCenter} />
+              </div>
               <Settings
                 transportMode={transportMode}
                 onTransportModeChange={handleTransportModeChange}
@@ -1009,6 +1029,62 @@ export default function Home() {
               onStartNavigation={handleStartNavigation}
               onStopNavigation={rerouting.stopNavigation}
             />
+          </div>
+        )}
+
+        {selectedReport && (
+          <div className="absolute bottom-24 right-6 z-20" data-testid="selected-report-popup">
+            <CommunityReportMarker report={selectedReport} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedReport(null)}
+              className="mt-2 w-full"
+              data-testid="button-close-report"
+            >
+              Close
+            </Button>
+          </div>
+        )}
+
+        {communityReports.length > 0 && !selectedReport && (
+          <div className="absolute top-32 right-4 z-20 max-h-64 overflow-y-auto" data-car-mode-hide>
+            <div className="bg-card/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border w-64">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h3 className="text-sm font-semibold">Reports ({communityReports.length})</h3>
+                <select
+                  value={minTrustScore}
+                  onChange={(e) => setMinTrustScore(Number(e.target.value))}
+                  className="text-xs border rounded px-2 py-1 bg-background"
+                  data-testid="select-trust-filter"
+                >
+                  <option value="0">All</option>
+                  <option value="40">40%+ Trust</option>
+                  <option value="70">70%+ Trust</option>
+                </select>
+              </div>
+              {communityReports.slice(0, 5).map((report) => (
+                <button
+                  key={report.id}
+                  onClick={() => setSelectedReport(report)}
+                  className="w-full text-left p-2 rounded hover-elevate active-elevate-2 mb-1 last:mb-0 border"
+                  data-testid={`button-view-report-${report.id}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium truncate">
+                      {report.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {report.trustScore}%
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                    <span>✓ {report.confirmations}</span>
+                    <span>✗ {report.rejections}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
