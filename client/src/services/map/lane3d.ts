@@ -40,7 +40,7 @@ interface LaneGeometry {
   };
 }
 
-interface LaneMesh {
+export interface LaneMesh {
   geojson: GeoJSON.FeatureCollection<GeoJSON.Polygon>;
   opacity: number;
   visible: boolean;

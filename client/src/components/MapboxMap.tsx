@@ -14,7 +14,7 @@ import { toggle3DMode } from '@/services/map/visual3d';
 import { startCinematicFollow, stopCinematicFollow } from '@/services/map/camera';
 import { resolveTheme, getStyleUrl, type MapTheme } from '@/services/map/theme';
 import { fetchRadarData, getMostRecentRadarTileUrl } from '@/services/weatherRadar';
-import { buildLaneMesh, findNextLaneManeuver, LANE_CONFIG } from '@/services/map/lane3d';
+import { buildLaneMesh, findNextLaneManeuver, LANE_CONFIG, type LaneMesh } from '@/services/map/lane3d';
 import type { LaneSegment } from '@shared/schema';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
@@ -68,7 +68,7 @@ export default function MapboxMap({
   
   // Lane rendering state
   const activeLaneSegmentRef = useRef<string | null>(null);
-  const laneMeshCacheRef = useRef<Map<string, any>>(new Map());
+  const laneMeshCacheRef = useRef<Map<string, LaneMesh>>(new Map());
 
   /**
    * Check if WebGL is supported in the current browser

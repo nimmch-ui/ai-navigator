@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
-import { MessageSquare, Box, Map, Video, Sun, Moon, Cloud, CloudOff } from 'lucide-react';
+import { MessageSquare, Box, Map as MapIcon, Video, Sun, Moon, Cloud, CloudOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
@@ -204,7 +204,7 @@ export default function Home() {
 
     reroutingService.setInitialETA(newRoute.duration);
     reroutingService.updateCurrentETA(newRoute.duration);
-  }, [vehicleType, ecoMode, routePreference, speedCameras]);
+  }, [vehicleType, ecoMode, transportMode, routePreference, speedCameras]);
 
   const rerouting = useRerouting({
     routeResult,
@@ -1004,7 +1004,7 @@ export default function Home() {
             title={is3DMode ? "Switch to 2D" : "Switch to 3D"}
             data-testid="button-toggle-3d"
           >
-            {is3DMode ? <Box className="h-5 w-5" /> : <Map className="h-5 w-5" />}
+            {is3DMode ? <Box className="h-5 w-5" /> : <MapIcon className="h-5 w-5" />}
           </Button>
           <ARToggleButton
             isActive={isARActive}
