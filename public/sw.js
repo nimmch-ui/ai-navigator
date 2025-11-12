@@ -19,7 +19,9 @@ self.addEventListener('install', (event) => {
       return cache.addAll(STATIC_ASSETS);
     })
   );
-  self.skipWaiting();
+  // Don't call skipWaiting() here - let the service worker enter waiting state
+  // so PWAUpdateNotification can detect it and prompt the user.
+  // skipWaiting() will be called when user clicks "Update" via SKIP_WAITING message.
 });
 
 self.addEventListener('activate', (event) => {
