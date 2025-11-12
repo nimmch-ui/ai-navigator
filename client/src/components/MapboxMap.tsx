@@ -35,9 +35,11 @@ import {
   cleanupMotionPolish 
 } from '@/services/map/motionPolish';
 import { useToast } from '@/hooks/use-toast';
+import { useMapLongPressToggle } from '@/hooks/useMapLongPressToggle';
 import { UiMode } from '@/types/ui';
 import { CameraRig } from '@/services/map/CameraRig';
 import { RouteRenderer } from '@/services/map/RouteRenderer';
+import { getCameraSettingsForMode } from '@/services/map/modeCameraSettings';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -69,6 +71,8 @@ interface MapboxMapProps {
   weatherLightingEnabled?: boolean;
   motionPolishEnabled?: boolean;
   isDarkMode?: boolean;
+  // Mode integration
+  onModeToggleRequest?: () => void; // Long-press gesture callback
 }
 
 export default function MapboxMap({
@@ -96,7 +100,8 @@ export default function MapboxMap({
   distanceToStepAfterNext,
   weatherLightingEnabled = true,
   motionPolishEnabled = true,
-  isDarkMode = false
+  isDarkMode = false,
+  onModeToggleRequest
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -124,6 +129,17 @@ export default function MapboxMap({
 
   // Toast notifications
   const { toast } = useToast();
+
+  // Long-press gesture for mode toggle (Classic ↔ 3D)
+  useMapLongPressToggle(mapContainer, {
+    onTrigger: () => {
+      if (onModeToggleRequest) {
+        onModeToggleRequest();
+      }
+    },
+    duration: 600,
+    movementThreshold: 10
+  });
 
   /**
    * Handle 3D mode errors
@@ -846,6 +862,23 @@ export default function MapboxMap({
       }
     };
   }, [laneData, route, currentPosition, mapLoaded]);
+
+  /**
+   * Apply camera adjustments when UI mode changes
+   */
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    const cameraSettings = getCameraSettingsForMode(uiMode);
+    
+    // Apply camera transition
+    map.current.easeTo({
+      pitch: cameraSettings.pitch,
+      bearing: cameraSettings.bearing,
+      duration: cameraSettings.duration,
+      essential: cameraSettings.essential
+    });
+  }, [uiMode, mapLoaded]);
 
   /**
    * Update markers, hazards, cameras, and route

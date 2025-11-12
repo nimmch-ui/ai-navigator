@@ -62,6 +62,9 @@ import { reroutingService } from '@/services/rerouting';
 import type { TrafficIncident, RerouteOption } from '@shared/schema';
 import { RerouteBanner } from '@/components/RerouteBanner';
 import { useRerouting } from '@/hooks/useRerouting';
+import { ModeService } from '@/services/mode';
+import { getDeviceCapabilities } from '@/services/map/webglCapability';
+import { getBestSupportedMode } from '@/services/map/modeCapabilities';
 
 interface SearchResult {
   id: string;
@@ -873,6 +876,42 @@ export default function Home() {
     setUiMode(UiMode.THREED);
   };
 
+  // Mode toggle handler for long-press gesture (Classic ↔ 3D)
+  const handleModeToggle = useCallback(() => {
+    const currentMode = uiMode;
+    const newMode = currentMode === UiMode.CLASSIC ? UiMode.THREED : UiMode.CLASSIC;
+    ModeService.setMode(newMode);
+  }, [uiMode]);
+
+  // WebGL fallback check on mode changes
+  const lastToastedFallbackRef = useRef<string | null>(null);
+  useEffect(() => {
+    const capabilities = getDeviceCapabilities();
+    
+    // Check if current mode is supported
+    const bestMode = getBestSupportedMode(uiMode, capabilities);
+    
+    if (bestMode !== uiMode) {
+      // Mode is unsupported, need to fallback
+      
+      // Create a unique key for this fallback combination
+      const fallbackKey = `${uiMode}->${bestMode}`;
+      
+      // Always enforce fallback
+      ModeService.setMode(bestMode);
+      
+      // Only show toast if this specific fallback hasn't been toasted yet
+      if (lastToastedFallbackRef.current !== fallbackKey) {
+        lastToastedFallbackRef.current = fallbackKey;
+        toast({
+          title: "Switched to supported mode",
+          description: `${uiMode} mode is unavailable on this device. Using ${bestMode} mode instead.`,
+        });
+      }
+    }
+    // Don't clear the ref when mode is supported - keep toast suppression
+  }, [uiMode, toast]); // Monitor uiMode changes
+
   return (
     <div className="h-screen w-screen overflow-hidden flex">
       <div className="flex-1 relative">
@@ -919,6 +958,7 @@ export default function Home() {
             weatherLightingEnabled={weatherLighting}
             motionPolishEnabled={motionPolish}
             isDarkMode={isDarkMode}
+            onModeToggleRequest={handleModeToggle}
           />
         )}
 

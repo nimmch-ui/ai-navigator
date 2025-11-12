@@ -100,10 +100,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     motionPolish: true,
     radarPulse: true,
   },
-  uiMode: UiMode.THREED,
+  uiMode: UiMode.CLASSIC,
   spatialAudio: false,
   ambientMusic: false,
-  is3DMode: true,
+  is3DMode: false,
 };
 
 const PREFERENCES_KEY = "ai_navigator_preferences";

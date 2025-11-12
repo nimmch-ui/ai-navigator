@@ -23,7 +23,7 @@ interface ModeConfig {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
-  shortcut?: string;
+  shortcuts: string[];
 }
 
 const MODE_CONFIGS: ModeConfig[] = [
@@ -32,42 +32,42 @@ const MODE_CONFIGS: ModeConfig[] = [
     label: 'Classic',
     icon: Navigation,
     description: 'Traditional 2D map navigation',
-    shortcut: '1'
+    shortcuts: ['1']
   },
   {
     mode: UiMode.THREED,
     label: '3D',
     icon: Box,
     description: 'Interactive 3D map with terrain',
-    shortcut: '2'
+    shortcuts: ['2']
   },
   {
     mode: UiMode.CINEMATIC,
     label: 'Cinematic',
     icon: Video,
     description: 'Immersive camera following',
-    shortcut: '3'
+    shortcuts: ['3', 'c', 'C']
   },
   {
     mode: UiMode.AR,
     label: 'AR',
     icon: Camera,
     description: 'Augmented reality overlay',
-    shortcut: '4'
+    shortcuts: ['4', 'a', 'A']
   },
   {
     mode: UiMode.VR,
     label: 'VR',
     icon: Glasses,
     description: 'Virtual reality mode',
-    shortcut: '5'
+    shortcuts: ['5']
   },
   {
     mode: UiMode.ECO,
     label: 'Eco',
     icon: Leaf,
     description: 'Energy-efficient minimal UI',
-    shortcut: '6'
+    shortcuts: ['6', 'e', 'E']
   }
 ];
 
@@ -100,7 +100,7 @@ export function ModeSwitcher({ className, onModeChange }: ModeSwitcherProps) {
       }
 
       const key = e.key;
-      const config = MODE_CONFIGS.find(c => c.shortcut === key);
+      const config = MODE_CONFIGS.find(c => c.shortcuts.includes(key));
       
       if (config) {
         e.preventDefault();
@@ -138,7 +138,7 @@ export function ModeSwitcher({ className, onModeChange }: ModeSwitcherProps) {
                 variant={isActive ? "default" : "ghost"}
                 onClick={() => handleModeSelect(config.mode)}
                 aria-pressed={isActive}
-                aria-label={`${config.label} mode${config.shortcut ? ` (${config.shortcut})` : ''}`}
+                aria-label={`${config.label} mode (${config.shortcuts.join('/')})`}
                 className={cn(
                   "h-9 w-9 transition-all",
                   isActive && "shadow-sm"
@@ -151,11 +151,14 @@ export function ModeSwitcher({ className, onModeChange }: ModeSwitcherProps) {
             <TooltipContent side="bottom" className="text-xs">
               <div className="font-medium">{config.label}</div>
               <div className="text-muted-foreground">{config.description}</div>
-              {config.shortcut && (
-                <div className="text-muted-foreground mt-1">
-                  Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs">{config.shortcut}</kbd>
-                </div>
-              )}
+              <div className="text-muted-foreground mt-1">
+                Press {config.shortcuts.map((key, i) => (
+                  <span key={key}>
+                    {i > 0 && ' or '}
+                    <kbd className="px-1 py-0.5 bg-muted rounded text-xs">{key}</kbd>
+                  </span>
+                ))}
+              </div>
             </TooltipContent>
           </Tooltip>
         );
