@@ -3,6 +3,7 @@
  */
 
 import { UiMode } from '@/types/ui';
+import { Analytics } from '@/services/analytics';
 
 export interface ModeCapability {
   mode: UiMode;
@@ -96,6 +97,14 @@ export function getBestSupportedMode(
   // If requested mode is supported, use it
   if (isModeSupported(requestedMode, capabilities)) {
     return requestedMode;
+  }
+  
+  // Track specific unsupported mode events
+  if (requestedMode === UiMode.VR && !capabilities.hasWebXR) {
+    Analytics.trackVRUnsupported('WebXR not available on this device');
+  }
+  if (requestedMode === UiMode.AR && !capabilities.hasCamera) {
+    Analytics.trackARPermissionDenied('Camera not available on this device');
   }
 
   // Try fallback order: VR → AR → 3D → Classic

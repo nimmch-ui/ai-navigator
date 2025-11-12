@@ -13,6 +13,8 @@ import { registerServiceWorker } from "@/lib/serviceWorker";
 import { initializeSubscriptions, cleanupSubscriptions } from "@/services/subscriptions";
 import { ModeManager } from "@/services/ui/ModeManager";
 import { MODE_DESCRIPTORS } from "@/services/modes/descriptors";
+import { DeepLinks } from "@/services/deepLinks";
+import { Analytics } from "@/services/analytics";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 
@@ -42,10 +44,16 @@ function App() {
     MODE_DESCRIPTORS.forEach(descriptor => {
       ModeManager.registerMode(descriptor);
     });
+    
+    // Apply deep links (auto-load mode from URL params)
+    DeepLinks.applyDeepLinks();
+    
+    console.log('[App] Analytics session started:', Analytics.getSessionSummary().sessionId);
 
     return () => {
       cleanupSubscriptions();
       ModeManager.destroy();
+      Analytics.endSession();
     };
   }, []);
 

@@ -5,6 +5,7 @@
 
 import { useCallback, useRef } from 'react';
 import { PreferencesService } from '@/services/preferences';
+import { Analytics } from '@/services/analytics';
 
 export type HapticPattern = 'success' | 'warning' | 'hazardPulse' | 'turnCue' | 'cameraAlert';
 
@@ -78,6 +79,9 @@ export function useHaptics() {
       if (success) {
         lastHapticTime.current.set(pattern, now);
         console.log(`[Haptics] Triggered ${pattern} (base: ${intensityMultiplier}, user: ${preferences.hapticsIntensity}, final: ${finalIntensity})`);
+        
+        // Track haptics event
+        Analytics.trackHapticsFired(pattern, finalIntensity);
       }
       return success;
     } catch (error) {

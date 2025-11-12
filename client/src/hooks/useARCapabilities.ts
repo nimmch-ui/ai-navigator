@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Analytics } from '@/services/analytics';
 
 export interface ARCapabilities {
   isSupported: boolean;
@@ -91,13 +92,18 @@ export function useARCapabilities(): ARCapabilities & ARPermissionRequest {
       const err = error as Error;
       console.error('[AR] Camera permission denied:', err);
       
+      const errorMessage = err.name === 'NotAllowedError'
+        ? 'Camera permission denied'
+        : 'Camera not available';
+      
       setCapabilities(prev => ({
         ...prev,
         cameraPermission: 'denied',
-        errorMessage: err.name === 'NotAllowedError'
-          ? 'Camera permission denied'
-          : 'Camera not available'
+        errorMessage
       }));
+      
+      // Track AR permission denied event
+      Analytics.trackARPermissionDenied(errorMessage);
 
       return false;
     }

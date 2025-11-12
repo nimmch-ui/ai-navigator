@@ -10,6 +10,7 @@ import { SharedNavigationState } from './SharedNavigationState';
 import type { IRouteView } from '@shared/interfaces';
 import { getDeviceCapabilities } from '@/services/map/webglCapability';
 import { getBestSupportedMode } from '@/services/map/modeCapabilities';
+import { Analytics } from '@/services/analytics';
 
 export interface ModeDescriptor {
   mode: UiMode;
@@ -81,11 +82,20 @@ class ModeManagerImpl {
 
         if (bestMode !== mode) {
           console.log(`[ModeManager] Mode ${mode} unsupported, falling back to ${bestMode}`);
+          
+          // Track fallback event
+          const reason = capabilities.webglSupported 
+            ? `Mode ${mode} not supported by device` 
+            : 'WebGL not available';
+          Analytics.trackModeFallback(mode, bestMode, reason);
         }
 
         // Always delegate to ModeService - it will trigger handleModeChange via EventBus
         // This ensures mode persistence, EventBus events, and proper state management
         ModeService.setMode(bestMode);
+        
+        // Start analytics session for this mode
+        Analytics.startModeSession(bestMode);
         
         this.debounceTimer = null;
         resolve();

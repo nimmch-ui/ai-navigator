@@ -3,6 +3,8 @@
  * Manages visual pulse animations for radar/camera warnings
  */
 
+import { Analytics } from './analytics';
+
 interface PulseState {
   element: HTMLElement | null;
   pulseCount: number;
@@ -130,6 +132,15 @@ export function announceWithCooldown(
   // Make announcement
   speakFunction(message);
   voiceCooldown.lastAnnouncedId = hazardId;
+  
+  // Track announcement based on message content
+  if (message.toLowerCase().includes('camera') || message.toLowerCase().includes('radar')) {
+    Analytics.trackRadarAnnounced(hazardId);
+  } else {
+    // Extract hazard type from message or ID
+    const hazardType = message.split(' ')[0].toLowerCase(); // First word is usually hazard type
+    Analytics.trackHazardAnnounced(hazardType, hazardId);
+  }
 
   // Clear any existing cooldown
   if (voiceCooldown.cooldownTimeout !== null) {

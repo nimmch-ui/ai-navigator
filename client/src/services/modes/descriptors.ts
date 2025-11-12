@@ -8,6 +8,7 @@ import type { ModeDescriptor } from '@/services/ui/ModeManager';
 import { SharedNavigationState } from '@/services/ui/SharedNavigationState';
 import { PreferencesService } from '@/services/preferences';
 import { EventBus } from '@/services/eventBus';
+import { Analytics } from '@/services/analytics';
 
 /**
  * CLASSIC Mode
@@ -72,6 +73,9 @@ export const CINEMATIC_MODE: ModeDescriptor = {
     
     // Emit event to notify listeners (voiceGuidance service)
     EventBus.emit('preferences:voiceStyleChanged', { voiceStyle: 'warm' });
+    
+    // Track TTS style change
+    Analytics.trackTTSStyleChanged('warm', UiMode.CINEMATIC);
   },
   onExit: async () => {
     console.log('[Mode:CINEMATIC] Exiting Cinematic mode - resetting voice to neutral');
@@ -81,6 +85,9 @@ export const CINEMATIC_MODE: ModeDescriptor = {
     
     // Emit event to notify listeners
     EventBus.emit('preferences:voiceStyleChanged', { voiceStyle: 'neutral' });
+    
+    // Track TTS style reset
+    Analytics.trackTTSStyleChanged('neutral', UiMode.CINEMATIC);
   }
 };
 
