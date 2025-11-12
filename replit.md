@@ -7,6 +7,7 @@ AI Navigator is a map-first navigation application that integrates AI assistance
 Key capabilities include:
 - Multimodal navigation (car, bike, walk, transit)
 - Smart search with route preferences (Fastest, Shortest, Eco)
+- Smart Rerouting with GPS deviation detection, traffic incident awareness, and ETA monitoring
 - Lane-Level Guidance (LLG) with visual lane indicators for complex intersections
 - AR Preview Mode with camera-based navigation overlay and sensor fusion
 - Speed camera radar system with visual alerts and configurable display
@@ -110,6 +111,18 @@ Preferred communication style: Simple, everyday language.
 - Sensor fallback chain: WebXR (best) → DeviceOrientation → manual HUD (no sensors).
 - AR settings persist via PreferencesService (enabled flag, permission status, sensor capabilities).
 - TODO: Add AR chevron rendering aligned with real-world directions via sensor fusion validation.
+- Smart Rerouting monitors GPS position, traffic incidents, and ETA changes during active navigation.
+- TrafficService provides mock incident data (ready for Mapbox Traffic API integration).
+- ReroutingService detects GPS deviation (configurable off-route distance threshold), ETA increases (configurable %), and traffic impacts.
+- useRerouting custom hook encapsulates rerouting state and effects, preventing Home.tsx bloat.
+- RerouteBanner displays time savings, reason (traffic/GPS/ETA/manual), and Accept/Ignore buttons.
+- Ref-based auto-accept timeout guards prevent unintended forced reroutes after user dismisses or navigation stops.
+- Auto-accept configurable via preferences (2s delay when enabled, respects user dismissal).
+- Reroute settings: enabled/disabled, ETA increase threshold (default 15%), off-route distance (default 100m), auto-accept (default off), minimum time savings (default 2min).
+- Traffic incident polling every 30s, GPS deviation checks every 5s during active navigation.
+- Position simulation for demo (steps through route geometry every 10s).
+- TODO: Integrate real traffic data from Mapbox Traffic API instead of mock incidents.
+- TODO: Add voice announcements for reroute suggestions ("Faster route available, saving 5 minutes").
 
 ### Performance Optimizations
 
