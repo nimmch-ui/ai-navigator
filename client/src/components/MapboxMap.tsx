@@ -291,6 +291,36 @@ export default function MapboxMap({
   }, [is3DMode, mapLoaded]);
 
   /**
+   * Helper: Find closest point on route to current position
+   */
+  const findClosestRouteIndex = (
+    position: [number, number],
+    routePoints: [number, number][]
+  ): number => {
+    if (!routePoints || routePoints.length === 0) return 0;
+    
+    let closestIndex = 0;
+    let minDistance = Infinity;
+    
+    for (let i = 0; i < routePoints.length; i++) {
+      const [lat, lng] = routePoints[i];
+      const [posLat, posLng] = position;
+      
+      // Simple distance calculation (good enough for nearby points)
+      const latDiff = lat - posLat;
+      const lngDiff = lng - posLng;
+      const distance = latDiff * latDiff + lngDiff * lngDiff;
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = i;
+      }
+    }
+    
+    return closestIndex;
+  };
+
+  /**
    * AI-Assisted Camera Control System
    * Replaces legacy cinematic follow with intelligent state-based camera
    */
@@ -319,12 +349,19 @@ export default function MapboxMap({
       turnDensity = 'medium';
     }
 
+    // Slice route geometry from current position
+    let slicedRoute = route;
+    if (currentPosition && route && route.length > 0) {
+      const closestIndex = findClosestRouteIndex(currentPosition, route);
+      slicedRoute = route.slice(closestIndex);
+    }
+
     const initialContext: CameraContext = {
       currentStep: routeSteps?.[0],
       nextStep: routeSteps?.[1],
       distanceToNextStep,
       distanceToStepAfterNext,
-      routeGeometry: route,
+      routeGeometry: slicedRoute,
       speed,
       currentBearing,
       weather,
@@ -348,13 +385,20 @@ export default function MapboxMap({
       const deltaTime = now - lastCameraUpdateRef.current;
       lastCameraUpdateRef.current = now;
 
-      // Build current context
+      // Slice route geometry from current position for accurate bearing
+      let activeRouteSegment = route;
+      if (currentPosition && route && route.length > 0) {
+        const closestIndex = findClosestRouteIndex(currentPosition, route);
+        activeRouteSegment = route.slice(closestIndex);
+      }
+
+      // Build current context with live route segment
       const context: CameraContext = {
         currentStep: routeSteps?.[0],
         nextStep: routeSteps?.[1],
         distanceToNextStep,
         distanceToStepAfterNext,
-        routeGeometry: route,
+        routeGeometry: activeRouteSegment, // Use sliced geometry from current position
         speed,
         currentBearing: map.current.getBearing(),
         weather,
