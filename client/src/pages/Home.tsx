@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { MessageSquare, Box, Map, Video, Sun, Moon } from 'lucide-react';
+import { MessageSquare, Box, Map, Video, Sun, Moon, Cloud, CloudOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import MapboxMap from '@/components/MapboxMap';
 import SearchBar from '@/components/SearchBar';
@@ -105,6 +107,8 @@ export default function Home() {
   const [is3DMode, setIs3DMode] = useState(true);
   const [cinematicMode, setCinematicMode] = useState(false);
   const [mapTheme, setMapTheme] = useState<MapTheme>('auto');
+  const [radarEnabled, setRadarEnabled] = useState(false);
+  const [radarOpacity, setRadarOpacity] = useState(0.6);
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -137,6 +141,8 @@ export default function Home() {
     setSpeedUnit(prefs.speedUnit);
     setCinematicMode(prefs.cinematicMode);
     setMapTheme(prefs.mapTheme);
+    setRadarEnabled(prefs.radarEnabled);
+    setRadarOpacity(prefs.radarOpacity);
 
     getSpeedCameras().then(cameras => {
       setSpeedCameras(cameras);
@@ -219,6 +225,30 @@ export default function Home() {
       description: nextTheme === 'auto' 
         ? `Automatically switching to ${resolvedTheme} mode based on time of day`
         : `Manually set to ${nextTheme} mode`
+    });
+  };
+
+  const handleRadarToggle = () => {
+    const newValue = !radarEnabled;
+    setRadarEnabled(newValue);
+    PreferencesService.updatePreference('radarEnabled', newValue);
+    toast({
+      title: newValue ? "Weather Radar ON" : "Weather Radar OFF",
+      description: newValue ? "Live weather radar overlay enabled" : "Weather radar overlay disabled"
+    });
+  };
+
+  const handleRadarOpacityChange = (value: number[]) => {
+    const newOpacity = value[0];
+    setRadarOpacity(newOpacity);
+    PreferencesService.updatePreference('radarOpacity', newOpacity);
+  };
+
+  const handleRadarError = (error: string) => {
+    toast({
+      title: "Weather Radar Unavailable",
+      description: error,
+      variant: "destructive"
     });
   };
 
@@ -682,6 +712,9 @@ export default function Home() {
           is3DMode={is3DMode}
           cinematicMode={cinematicMode}
           mapTheme={mapTheme}
+          radarEnabled={radarEnabled}
+          radarOpacity={radarOpacity}
+          onRadarError={handleRadarError}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-30">
@@ -769,14 +802,41 @@ export default function Home() {
           })}
         </div>
 
-        <div className="absolute top-24 left-4 z-20">
+        <div className="absolute top-24 left-4 z-20 space-y-2">
           <SpeedLimitHUD
             speedLimit={currentSpeedLimit}
             transportMode={transportMode}
           />
+          {radarEnabled && (
+            <div className="bg-card/95 backdrop-blur-sm border rounded-lg p-3 shadow-lg max-w-xs">
+              <Label htmlFor="radar-opacity" className="text-sm font-medium mb-2 block">
+                Radar Opacity: {Math.round(radarOpacity * 100)}%
+              </Label>
+              <Slider
+                id="radar-opacity"
+                min={0.3}
+                max={0.8}
+                step={0.1}
+                value={[radarOpacity]}
+                onValueChange={handleRadarOpacityChange}
+                className="w-full"
+                data-testid="slider-radar-opacity"
+              />
+            </div>
+          )}
         </div>
 
         <div className="absolute bottom-6 right-6 z-30 flex flex-col gap-2">
+          <Button
+            size="icon"
+            variant={radarEnabled ? "default" : "outline"}
+            className="rounded-full shadow-lg"
+            onClick={handleRadarToggle}
+            title={radarEnabled ? "Weather Radar ON" : "Weather Radar OFF"}
+            data-testid="button-toggle-radar"
+          >
+            {radarEnabled ? <Cloud className="h-5 w-5" /> : <CloudOff className="h-5 w-5" />}
+          </Button>
           <Button
             size="icon"
             variant="outline"

@@ -87,6 +87,12 @@ Preferred communication style: Simple, everyday language.
 - Style switching re-adds terrain, sky, and 3D buildings layers after load completes.
 - Theme preference persists via PreferencesService and cycles through auto/day/night via Sun/Moon button.
 - Sunrise/sunset calculations use simplified solar declination algorithm based on latitude/longitude.
+- Weather radar overlay using RainViewer API for live precipitation data.
+- Radar layer positioned above roads but below labels for optimal visibility.
+- Auto-refresh every 5 minutes to show latest radar frames.
+- Radar toggle and opacity slider (30-80%) with persistence via PreferencesService.
+- Graceful failure handling with non-blocking toast notifications for service unavailability.
+- No API key required for RainViewer basic usage.
 
 ## External Dependencies
 

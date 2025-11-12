@@ -16,6 +16,8 @@ export interface UserPreferences {
   speedUnit: SpeedUnit;
   cinematicMode: boolean;
   mapTheme: MapTheme;
+  radarEnabled: boolean;
+  radarOpacity: number;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -29,7 +31,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   speedWarnings: true,
   speedUnit: "kmh",
   cinematicMode: false,
-  mapTheme: "auto"
+  mapTheme: "auto",
+  radarEnabled: false,
+  radarOpacity: 0.6
 };
 
 const PREFERENCES_KEY = "ai_navigator_preferences";

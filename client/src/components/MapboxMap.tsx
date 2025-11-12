@@ -13,6 +13,7 @@ import { formatSpeedLimit } from '@/services/radar';
 import { toggle3DMode } from '@/services/map/visual3d';
 import { startCinematicFollow, stopCinematicFollow } from '@/services/map/camera';
 import { resolveTheme, getStyleUrl, type MapTheme } from '@/services/map/theme';
+import { fetchRadarData, getMostRecentRadarTileUrl } from '@/services/weatherRadar';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -28,6 +29,9 @@ interface MapboxMapProps {
   is3DMode?: boolean;
   cinematicMode?: boolean;
   mapTheme?: MapTheme;
+  radarEnabled?: boolean;
+  radarOpacity?: number;
+  onRadarError?: (error: string) => void;
 }
 
 export default function MapboxMap({
@@ -41,12 +45,17 @@ export default function MapboxMap({
   showSpeedCameras = true,
   is3DMode = true,
   cinematicMode = false,
-  mapTheme = 'auto'
+  mapTheme = 'auto',
+  radarEnabled = false,
+  radarOpacity = 0.6,
+  onRadarError
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const currentStyleUrl = useRef<string>('');
+  const radarRefreshInterval = useRef<number | null>(null);
+  const radarEnabledRef = useRef<boolean>(radarEnabled);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tokenError, setTokenError] = useState(false);
   const [webglError, setWebglError] = useState(false);
@@ -266,6 +275,122 @@ export default function MapboxMap({
       stopCinematicFollow();
     };
   }, [cinematicMode, mapLoaded, route]);
+
+  /**
+   * Weather radar layer management with auto-refresh
+   */
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    // Update ref to track current radarEnabled state
+    radarEnabledRef.current = radarEnabled;
+
+    const RADAR_SOURCE_ID = 'weather_radar';
+    const RADAR_LAYER_ID = 'weather_radar_layer';
+    const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+    async function updateRadarLayer() {
+      if (!map.current) return;
+
+      try {
+        const radarData = await fetchRadarData();
+        
+        if (!radarData) {
+          onRadarError?.('Failed to fetch weather radar data');
+          return;
+        }
+
+        // Guard: Check if radar is still enabled after async fetch
+        // This prevents race condition where fetch completes after toggle off
+        if (!radarEnabledRef.current) {
+          return;
+        }
+
+        const tileUrl = getMostRecentRadarTileUrl(radarData);
+
+        // Check if source exists
+        const source = map.current.getSource(RADAR_SOURCE_ID);
+        
+        if (source) {
+          // Update existing source tiles
+          if (source.type === 'raster') {
+            (source as mapboxgl.RasterTileSource).setTiles([tileUrl]);
+          }
+        } else {
+          // Add new source and layer
+          map.current.addSource(RADAR_SOURCE_ID, {
+            type: 'raster',
+            tiles: [tileUrl],
+            tileSize: 256,
+            attribution: '<a href="https://www.rainviewer.com/">RainViewer</a>'
+          });
+
+          // Find the first label layer to insert radar below it
+          const layers = map.current.getStyle().layers;
+          const labelLayerId = layers?.find(
+            (layer) => layer.type === 'symbol' && layer.layout && 'text-field' in layer.layout
+          )?.id;
+
+          map.current.addLayer(
+            {
+              id: RADAR_LAYER_ID,
+              type: 'raster',
+              source: RADAR_SOURCE_ID,
+              paint: {
+                'raster-opacity': radarOpacity,
+                'raster-fade-duration': 300
+              }
+            },
+            labelLayerId // Insert before labels
+          );
+        }
+
+        // Update opacity
+        if (map.current.getLayer(RADAR_LAYER_ID)) {
+          map.current.setPaintProperty(RADAR_LAYER_ID, 'raster-opacity', radarOpacity);
+        }
+      } catch (error) {
+        console.error('Error updating radar layer:', error);
+        onRadarError?.('Weather radar service temporarily unavailable');
+      }
+    }
+
+    function removeRadarLayer() {
+      if (!map.current) return;
+
+      if (map.current.getLayer(RADAR_LAYER_ID)) {
+        map.current.removeLayer(RADAR_LAYER_ID);
+      }
+      if (map.current.getSource(RADAR_SOURCE_ID)) {
+        map.current.removeSource(RADAR_SOURCE_ID);
+      }
+    }
+
+    if (radarEnabled) {
+      // Add/update radar layer immediately
+      updateRadarLayer();
+
+      // Set up auto-refresh interval
+      radarRefreshInterval.current = window.setInterval(updateRadarLayer, REFRESH_INTERVAL);
+    } else {
+      // Remove radar layer
+      removeRadarLayer();
+      
+      // Clear refresh interval
+      if (radarRefreshInterval.current !== null) {
+        clearInterval(radarRefreshInterval.current);
+        radarRefreshInterval.current = null;
+      }
+    }
+
+    return () => {
+      // Cleanup on unmount
+      if (radarRefreshInterval.current !== null) {
+        clearInterval(radarRefreshInterval.current);
+        radarRefreshInterval.current = null;
+      }
+    };
+  }, [radarEnabled, radarOpacity, mapLoaded, onRadarError]);
 
   /**
    * Update markers, hazards, cameras, and route
