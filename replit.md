@@ -27,6 +27,7 @@ The design system employs the Inter font family, a hierarchical sizing scale, an
 - **Navigation:** Multimodal support, smart search with route preferences, real-time rerouting based on GPS deviation, traffic incidents, and ETA changes. Lane-Level Guidance provides visual indicators.
 - **Mapping:** Mapbox GL JS delivers premium 3D maps with terrain, sky, buildings, and automatic day/night style switching based on local time. Supports 2D/3D toggling and cinematic camera follow mode. Favorites use Mapbox Geocoding.
 - **AR Preview Mode:** Uses `getUserMedia` for camera access and `WebXR`/`DeviceOrientation` APIs for sensor fusion, overlaying navigation data onto the live camera feed.
+- **AR Mode (Full Implementation):** Production-ready augmented reality navigation overlay activated via UiMode.AR. Features live camera feed with canvas-based AR overlays including: speed badge with limit display, next maneuver arrow with distance countdown, and radar icons for speed cameras with distance indicators. Implements comprehensive safety system with automatic dash-mount warning at speeds >30 km/h and UI simplification at high speeds. Utilizes multi-tier fallback hierarchy: full AR (WebXR + camera + orientation) → pseudo-AR (camera + DeviceOrientation) → 3D mode (graceful degradation). Camera permission handling includes user-friendly error messages and automatic fallback on denial. Browser compatibility: Chrome/Edge (full AR), Safari iOS (pseudo-AR), Firefox (pseudo-AR). Mobile requirements: HTTPS required for camera access, rear camera preferred, gyroscope/accelerometer for orientation. Performance optimizations include Page Visibility API integration (pauses rendering when hidden), projection smoothing with low-pass filter to prevent jitter, and RAF-based rendering loop. Projection engine uses Haversine formula for distance calculation, bearing-based visibility detection (±90° camera FOV), and GPS-to-screen coordinate transformation. Safety features: handheld use discouraged via persistent warning overlay, automatic mode exit on camera failure, and simplified UI at high speeds. All AR features implemented in: `useARCapabilities.ts` (capability detection), `ProjectToScreen.ts` (GPS projection service), `ARView.tsx` (camera + canvas overlay component), integrated into `Home.tsx` with conditional rendering and UiMode state machine.
 - **Weather & Alerts:** Integrates weather awareness with origin/destination forecasts, severe weather alerts via OpenWeatherMap, and a RainViewer API for live radar overlay. Speed camera radar system with visual alerts and configurable display.
 - **Voice Guidance:** Web Speech API (SpeechSynthesis) provides turn-by-turn instructions and camera warnings. Hazard throttling prevents repetitive announcements.
 - **Performance:** Employs debouncing for API requests (geocoding, routing) with AbortController, `React.memo` for component optimization, and lazy loading for faster initial renders. Map performance is optimized with pre-warmed styles and throttled camera updates.
@@ -67,6 +68,10 @@ The design system employs the Inter font family, a hierarchical sizing scale, an
 - **Web Speech API (SpeechSynthesis):** Voice guidance
 - **Service Worker API:** PWA offline caching, update notifications
 - **Web App Manifest:** PWA installation and configuration
+- **getUserMedia API:** Camera access for AR mode with rear camera preference
+- **WebXR Device API:** Full AR capabilities with position tracking and sensor fusion
+- **DeviceOrientation API:** Gyroscope/accelerometer data for pseudo-AR mode fallback
+- **Page Visibility API:** AR rendering pause when app is hidden to save battery
 
 ### Form Management
 
