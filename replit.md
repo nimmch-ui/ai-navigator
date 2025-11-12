@@ -7,6 +7,8 @@ AI Navigator is a map-first navigation application that integrates AI assistance
 Key capabilities include:
 - Multimodal navigation (car, bike, walk, transit)
 - Smart search with route preferences (Fastest, Shortest, Eco)
+- Lane-Level Guidance (LLG) with visual lane indicators for complex intersections
+- AR Preview Mode with camera-based navigation overlay and sensor fusion
 - Speed camera radar system with visual alerts and configurable display
 - Real-time speed limit display and eco-consumption estimates
 - Weather awareness with origin/destination forecasts and severe weather alerts
@@ -93,6 +95,21 @@ Preferred communication style: Simple, everyday language.
 - Radar toggle and opacity slider (30-80%) with persistence via PreferencesService.
 - Graceful failure handling with non-blocking toast notifications for service unavailability.
 - No API key required for RainViewer basic usage.
+- Lane-Level Guidance (LLG) displays visual lane indicators 200-300m before maneuvers.
+- Mock lane data service generates typical intersection configurations (2-5 lanes) for demo.
+- LaneBar component renders arrow icons (↑↗→↘↓) with recommended lane highlighting.
+- Lane data schema extends route model with LaneSegment (start/end points, lane configs per segment).
+- Distance-based logic triggers lane bar visibility automatically during active navigation.
+- TODO: Integrate real lane metadata from traffic API providers (Mapbox Traffic/Lanes, HERE, TomTom).
+- AR Preview Mode uses getUserMedia for camera access with privacy-first local processing.
+- WebXR and DeviceOrientation APIs provide sensor fusion for heading/tilt tracking.
+- ARExperienceProvider context manages camera/orientation lifecycle and permissions globally.
+- AR overlay components: CameraOverlay (video feed), HUDOverlay (navigation data), ARPreviewOverlay (container).
+- ARToggleButton includes privacy modal explaining camera usage before first permission request.
+- AR mode requires active route with valid steps; displays next maneuver, distance, and direction.
+- Sensor fallback chain: WebXR (best) → DeviceOrientation → manual HUD (no sensors).
+- AR settings persist via PreferencesService (enabled flag, permission status, sensor capabilities).
+- TODO: Add AR chevron rendering aligned with real-world directions via sensor fusion validation.
 
 ### Performance Optimizations
 
