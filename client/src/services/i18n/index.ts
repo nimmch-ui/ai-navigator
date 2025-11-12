@@ -62,15 +62,17 @@ const REGION_DEFAULT_LOCALES: Record<Region, Locale> = {
   LATAM: "es",
 };
 
-const IMPERIAL_LOCALES: Locale[] = ["en"];
+const IMPERIAL_REGIONS: Region[] = ["US"];
 
 class I18nService {
   private currentLocale: Locale = "en";
+  private currentRegion: Region = "EU";
   private translations = new Map<Locale, TranslationDict>();
   private loadedLocales = new Set<Locale>();
   private readonly STORAGE_KEY = "ai-navigator-locale";
 
   async initialize(userRegion?: Region): Promise<void> {
+    this.currentRegion = userRegion || "EU";
     const locale = this.detectLocale(userRegion);
     await this.setLocale(locale);
   }
@@ -172,7 +174,7 @@ class I18nService {
   }
 
   getUnitSystem(): UnitSystem {
-    return IMPERIAL_LOCALES.includes(this.currentLocale) ? "imperial" : "metric";
+    return IMPERIAL_REGIONS.includes(this.currentRegion) ? "imperial" : "metric";
   }
 
   isRTL(locale?: Locale): boolean {
