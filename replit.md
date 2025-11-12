@@ -173,15 +173,27 @@ The app now supports 14 languages with automatic locale detection, unit conversi
 **Translation System:**
 - Lightweight custom i18n implementation (no external dependencies)
 - JSON-based language packs in `client/src/services/i18n/locales/`
-- 33 translation keys covering all UI elements:
+- 80+ translation keys covering comprehensive UI elements:
   - App: title, subtitle
   - Navigation: start, end, recenter, follow
   - Speed: limit, current, average
   - Alerts: camera_ahead, hazard, slowdown, speeding
   - Weather: rain, snow, clear
   - Eco: saving, route, score
-  - Modes: classic, 3d, cinematic, ar, vr, eco
-  - Settings: language, units, theme
+  - Modes: classic, 3d, 3d_mode, cinematic, ar, ar_preview, vr, vr_future, eco, eco_optimized
+  - Settings: 60+ keys including:
+    - General: title, description, language, language_placeholder
+    - Immersive: immersive_experience, immersive_description, ui_mode
+    - Audio: spatial_audio, spatial_audio_desc, ambient_music, ambient_music_desc
+    - Transport: transport_mode, transport_car/bike/walk/transit
+    - Routes: route_preference, route_fastest/shortest/eco
+    - Vehicles: vehicle_type, vehicle_car/ev
+    - Eco: eco_mode, eco_mode_desc
+    - Voice: voice_guidance, voice_guidance_desc, voice_not_supported, voice_volume, voice_style, voice_neutral/warm/energetic, emotion_adaptive, emotion_adaptive_desc, voice_announcements_enabled, voice_not_available
+    - Haptics: haptic_feedback, haptic_feedback_desc, haptic_not_supported, haptic_intensity
+    - Alerts: hazard_alerts, hazard_alerts_desc, show_cameras, show_cameras_desc, speed_warnings, speed_warnings_desc
+    - Units: speed_unit, speed_unit_kmh/mph
+    - Realism: realism_pack, realism_pack_desc, weather_lighting, weather_lighting_desc, motion_polish, motion_polish_desc, radar_pulse, radar_pulse_desc
   - Voice: style, muted, enabled
 
 **Unit System:**
@@ -199,12 +211,28 @@ The app now supports 14 languages with automatic locale detection, unit conversi
 **React Integration:**
 - `useTranslation()` hook for components
 - Real-time locale switching without page reload
-- Unit formatting functions: `formatSpeed()`, `formatDistance()`
+- Unit formatting functions: `formatSpeed()`, `formatDistance()`, `formatTime()`
+- TTS voice locale mapping via `findBestVoice()` with fallback chains
 - Available locales list with native names
+- Fully translated Settings UI with 60+ keys across all sections
 
 **Technical Implementation:**
-- `i18n` service: Core translation engine
+- `i18n` service: Core translation engine integrated with PreferencesService
 - Dynamic import of language packs (code splitting)
-- Custom event system for locale changes
+- EventBus integration for i18n:changed events
+- Locale persistence via localStorage with PreferencesService
+- TTS voice mappings for all 14 locales with smart fallback (sq-AL→sq, sr→sr-RS, ar→ar-SA, etc.)
+- Time formatting with 12h/24h support based on locale preferences
+- Language selector in Settings UI with native locale names
 - TypeScript-first with strongly typed keys
 - Zero external i18n library dependencies
+
+**Q3-A3: Enhanced Translation Coverage (Completed)**
+Expanded from 33 to 80+ translation keys with comprehensive Settings UI integration:
+- All Settings panel sections fully translated (titles, descriptions, options)
+- Language selector dropdown with native locale names
+- Real-time UI updates on language change via EventBus
+- Preference persistence integrated with PreferencesService
+- TTS voice locale mappings for natural voice guidance
+- Time formatting utilities for 12h/24h based on locale
+- Successfully tested across 6 languages (English, Albanian, German, Arabic RTL, Hindi, Spanish)
