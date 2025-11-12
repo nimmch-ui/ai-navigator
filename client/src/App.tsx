@@ -43,6 +43,11 @@ function App() {
       // Initialize i18n with detected region
       i18n.initialize(location.region).then(() => {
         console.log('[App] i18n initialized:', i18n.getLocale(), i18n.getUnitSystem());
+        
+        // Expose i18n globally for testing
+        if (typeof window !== 'undefined') {
+          (window as any).__i18n = i18n;
+        }
       });
     });
 
