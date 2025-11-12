@@ -122,6 +122,8 @@ export default function ARView({
 
   /**
    * Initialize device orientation tracking
+   * Note: On iOS 13+, requestOrientation() must be called from a user gesture.
+   * This is now handled in the Settings component when AR mode is selected.
    */
   useEffect(() => {
     const handleOrientation = (event: DeviceOrientationEvent) => {
@@ -140,18 +142,20 @@ export default function ARView({
       setDeviceOrientation(smoothed);
     };
 
-    if (hasDeviceOrientation) {
-      requestOrientation().then(permitted => {
-        if (permitted) {
-          window.addEventListener('deviceorientation', handleOrientation);
-        }
-      });
+    if (hasDeviceOrientation && orientationPermission === 'granted') {
+      // Permission already granted, just add listener
+      window.addEventListener('deviceorientation', handleOrientation);
+    } else if (hasDeviceOrientation && orientationPermission === 'denied') {
+      // Permission denied - fallback to 3D mode
+      console.warn('[AR] Orientation permission denied - falling back to 3D mode');
+      setCameraError('Orientation sensors unavailable');
+      setTimeout(() => onFallbackTo3D(), 1500);
     }
 
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation);
     };
-  }, [hasDeviceOrientation, requestOrientation]);
+  }, [hasDeviceOrientation, orientationPermission, onFallbackTo3D]);
 
   /**
    * Initialize camera on mount

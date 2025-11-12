@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import type { TransportMode, RoutePreference, VehicleType, SpeedUnit } from '@/services/preferences';
 import { UiMode } from '@/types/ui';
+import { useToast } from '@/hooks/use-toast';
 
 interface SettingsProps {
   // Immersive Experience
@@ -93,6 +94,52 @@ export default function Settings({
   radarPulse,
   onRadarPulseChange
 }: SettingsProps) {
+  const { toast } = useToast();
+
+  /**
+   * Handle UI Mode change with AR permission request for iOS compatibility
+   * iOS 13+ requires DeviceOrientation permission from user gesture
+   */
+  const handleUiModeChange = async (value: string) => {
+    const newMode = value as UiMode;
+    
+    // If switching to AR mode, request orientation permission first (iOS requirement)
+    if (newMode === UiMode.AR) {
+      try {
+        // Check if DeviceOrientationEvent.requestPermission exists (iOS 13+)
+        if (typeof DeviceOrientationEvent !== 'undefined' && 
+            typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+          const permission = await (DeviceOrientationEvent as any).requestPermission();
+          
+          if (permission !== 'granted') {
+            toast({
+              title: 'AR Mode Unavailable',
+              description: 'Orientation sensors are required for AR mode. Please grant permission.',
+              variant: 'destructive',
+            });
+            // Stay in current mode
+            return;
+          }
+        }
+        
+        // Permission granted or not needed (non-iOS), proceed to AR mode
+        onUiModeChange(newMode);
+      } catch (error) {
+        console.error('[Settings] Failed to request orientation permission:', error);
+        toast({
+          title: 'AR Mode Error',
+          description: 'Failed to access device sensors. Switching to 3D mode instead.',
+          variant: 'destructive',
+        });
+        // Fallback to 3D mode on error
+        onUiModeChange(UiMode.THREED);
+      }
+    } else {
+      // For non-AR modes, switch directly
+      onUiModeChange(newMode);
+    }
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -127,7 +174,7 @@ export default function Settings({
             <Label className="text-sm font-medium">UI Mode</Label>
             <RadioGroup
               value={uiMode}
-              onValueChange={(value) => onUiModeChange(value as UiMode)}
+              onValueChange={handleUiModeChange}
               data-testid="radio-ui-mode"
             >
               <div className="flex items-center space-x-2">
