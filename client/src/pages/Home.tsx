@@ -7,6 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 import MapboxMap from '@/components/MapboxMap';
 import SearchBar from '@/components/SearchBar';
 import MapControls from '@/components/MapControls';
+import { useARExperience } from '@/contexts/ARExperienceProvider';
+import ARToggleButton from '@/components/ar/ARToggleButton';
+import ARPreviewOverlay from '@/components/ar/ARPreviewOverlay';
 
 const ChatPanel = lazy(() => import('@/components/ChatPanel'));
 import RoutePanel from '@/components/RoutePanel';
@@ -79,6 +82,7 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const { toast } = useToast();
+  const { isARActive, toggleAR, isInitializing } = useARExperience();
   const routeAbortControllerRef = useRef<AbortController | null>(null);
   const geocodeFetcher = useRef(new DebouncedFetcher(300));
   const routeFetcher = useRef(new DebouncedFetcher(150));
@@ -846,6 +850,11 @@ export default function Home() {
           >
             {is3DMode ? <Box className="h-5 w-5" /> : <Map className="h-5 w-5" />}
           </Button>
+          <ARToggleButton
+            isActive={isARActive}
+            onToggle={toggleAR}
+            disabled={isInitializing}
+          />
           <MapControls
             onZoomIn={() => setMapZoom((z) => Math.min(z + 1, 18))}
             onZoomOut={() => setMapZoom((z) => Math.max(z - 1, 3))}
@@ -936,6 +945,20 @@ export default function Home() {
           />
         </Suspense>
       </div>
+
+      {/* AR Preview Overlay */}
+      {isARActive && routeResult && routeResult.steps.length > 0 && (
+        <ARPreviewOverlay
+          nextManeuver={routeResult.steps[0].instruction}
+          distance={formatDistance(routeResult.steps[0].distance)}
+          direction={
+            routeResult.steps[0].maneuver.modifier?.includes('left') ? 'left' :
+            routeResult.steps[0].maneuver.modifier?.includes('right') ? 'right' :
+            'straight'
+          }
+          onClose={() => toggleAR(false)}
+        />
+      )}
     </div>
   );
 }

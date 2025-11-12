@@ -3,6 +3,13 @@ export type RoutePreference = "fastest" | "shortest" | "eco";
 export type VehicleType = "car" | "ev" | "bike" | "walk";
 export type SpeedUnit = "kmh" | "mph";
 export type MapTheme = "auto" | "day" | "night";
+export type ARPermissionStatus = "granted" | "denied" | "prompt" | "unknown";
+
+export interface ARSensorCapabilities {
+  hasWebXR: boolean;
+  hasDeviceOrientation: boolean;
+  hasCamera: boolean;
+}
 
 export interface UserPreferences {
   transportMode: TransportMode;
@@ -18,6 +25,9 @@ export interface UserPreferences {
   mapTheme: MapTheme;
   radarEnabled: boolean;
   radarOpacity: number;
+  arPreviewEnabled: boolean;
+  arPermissionStatus: ARPermissionStatus;
+  arSensorCapabilities: ARSensorCapabilities;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -33,7 +43,14 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   cinematicMode: false,
   mapTheme: "auto",
   radarEnabled: false,
-  radarOpacity: 0.6
+  radarOpacity: 0.6,
+  arPreviewEnabled: false,
+  arPermissionStatus: "unknown",
+  arSensorCapabilities: {
+    hasWebXR: false,
+    hasDeviceOrientation: false,
+    hasCamera: false,
+  },
 };
 
 const PREFERENCES_KEY = "ai_navigator_preferences";

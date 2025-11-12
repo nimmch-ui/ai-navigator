@@ -38,6 +38,12 @@ A world-class AI-powered navigation application built with React, TypeScript, Ma
 
 ### Smart Features
 - **AI Chat Assistant**: Context-aware navigation help powered by OpenAI
+- **AR Preview Mode (Beta)**: Augmented reality navigation overlay
+  - Camera-based HUD with turn-by-turn guidance
+  - WebXR and DeviceOrientation sensor fusion for enhanced AR
+  - Fallback HUD overlay for devices without advanced sensors
+  - Privacy-first: camera processed locally, never transmitted
+  - **TODO**: Add chevron rendering aligned with real-world directions
 - **Favorites Management**: Save locations with geocoding
 - **Trip History**: View and replay previous routes
 - **Eco Mode**: Battery/fuel consumption estimates for electric and gas vehicles
