@@ -121,6 +121,12 @@ Preferred communication style: Simple, everyday language.
 - Reroute settings: enabled/disabled, ETA increase threshold (default 15%), off-route distance (default 100m), auto-accept (default off), minimum time savings (default 2min).
 - Traffic incident polling every 30s, GPS deviation checks every 5s during active navigation.
 - Position simulation for demo (steps through route geometry every 10s).
+- Traffic Test Mode available via window.__enableTrafficTestMode(severity, delayMinutes) for deterministic testing with synthetic incidents along route geometry.
+- Test mode generates 2 incidents at route midpoint and quarter-point with configurable severity ('minor'|'moderate'|'severe') and time delay impact.
+- Disable test mode with window.__disableTrafficTestMode() to restore normal mock behavior.
+- useEffect pattern triggers traffic checks when currentPosition updates during navigation, ensuring state synchronization.
+- Stop Navigation flow properly clears all intervals and resets rerouting state via useRerouting.stopNavigation().
+- RoutePanel toggles between Start/Stop navigation buttons based on isNavigating state from useRerouting hook.
 - TODO: Integrate real traffic data from Mapbox Traffic API instead of mock incidents.
 - TODO: Add voice announcements for reroute suggestions ("Faster route available, saving 5 minutes").
 
