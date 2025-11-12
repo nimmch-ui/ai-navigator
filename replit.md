@@ -76,6 +76,11 @@ Preferred communication style: Simple, everyday language.
 - Sky layer provides atmospheric rendering for realistic horizon when camera is pitched.
 - 2D/3D toggle button switches between flat (pitch 0) and cinematic 3D view (pitch 45).
 - Visual3D service in services/map/visual3d.ts manages terrain, sky, and camera transitions.
+- Cinematic camera follow mode provides smooth 60fps tracking with auto-bearing alignment.
+- Camera service uses requestAnimationFrame for fluid camera movement with easing.
+- Motion sickness prevention: max 5° bearing delta per frame, zoom clamped to 10-18.
+- Cinematic defaults: pitch 62°, zoom 15.5 (city) / 12.5 (highway), bearing follows route heading.
+- Cinematic mode persists via PreferencesService and toggles via Video icon button.
 
 ## External Dependencies
 

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { MessageSquare, Box, Map } from 'lucide-react';
+import { MessageSquare, Box, Map, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import MapboxMap from '@/components/MapboxMap';
@@ -102,6 +102,7 @@ export default function Home() {
   const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [severeWeatherDismissed, setSevereWeatherDismissed] = useState(false);
   const [is3DMode, setIs3DMode] = useState(true);
+  const [cinematicMode, setCinematicMode] = useState(false);
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -132,6 +133,7 @@ export default function Home() {
     setShowSpeedCameras(prefs.showSpeedCameras);
     setSpeedWarnings(prefs.speedWarnings);
     setSpeedUnit(prefs.speedUnit);
+    setCinematicMode(prefs.cinematicMode);
 
     getSpeedCameras().then(cameras => {
       setSpeedCameras(cameras);
@@ -190,6 +192,17 @@ export default function Home() {
   const handleSpeedUnitChange = (unit: SpeedUnit) => {
     setSpeedUnit(unit);
     PreferencesService.updatePreference('speedUnit', unit);
+  };
+
+  const handleCinematicModeChange = (enabled: boolean) => {
+    setCinematicMode(enabled);
+    PreferencesService.updatePreference('cinematicMode', enabled);
+    toast({
+      title: enabled ? "Cinematic Mode ON" : "Cinematic Mode OFF",
+      description: enabled 
+        ? "Smooth camera follow with auto-bearing alignment" 
+        : "Camera follow disabled"
+    });
   };
 
   const handleSelectFavorite = (favorite: Favorite) => {
@@ -650,6 +663,7 @@ export default function Home() {
           speedCameras={speedCameras}
           showSpeedCameras={showSpeedCameras}
           is3DMode={is3DMode}
+          cinematicMode={cinematicMode}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-30">
@@ -745,6 +759,16 @@ export default function Home() {
         </div>
 
         <div className="absolute bottom-6 right-6 z-30 flex flex-col gap-2">
+          <Button
+            size="icon"
+            variant={cinematicMode ? "default" : "outline"}
+            className="rounded-full shadow-lg"
+            onClick={() => handleCinematicModeChange(!cinematicMode)}
+            title={cinematicMode ? "Cinematic Mode ON" : "Cinematic Mode OFF"}
+            data-testid="button-toggle-cinematic"
+          >
+            <Video className="h-5 w-5" />
+          </Button>
           <Button
             size="icon"
             variant="outline"

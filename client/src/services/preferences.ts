@@ -13,6 +13,7 @@ export interface UserPreferences {
   showSpeedCameras: boolean;
   speedWarnings: boolean;
   speedUnit: SpeedUnit;
+  cinematicMode: boolean;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -24,7 +25,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   vehicleType: "car",
   showSpeedCameras: true,
   speedWarnings: true,
-  speedUnit: "kmh"
+  speedUnit: "kmh",
+  cinematicMode: false
 };
 
 const PREFERENCES_KEY = "ai_navigator_preferences";

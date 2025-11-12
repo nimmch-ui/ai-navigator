@@ -11,6 +11,7 @@ import { getHazardMetadata } from '@/data/hazards';
 import type { SpeedCamera } from '@/data/speedCameras';
 import { formatSpeedLimit } from '@/services/radar';
 import { toggle3DMode } from '@/services/map/visual3d';
+import { startCinematicFollow, stopCinematicFollow } from '@/services/map/camera';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -24,6 +25,7 @@ interface MapboxMapProps {
   speedCameras?: SpeedCamera[];
   showSpeedCameras?: boolean;
   is3DMode?: boolean;
+  cinematicMode?: boolean;
 }
 
 export default function MapboxMap({
@@ -35,7 +37,8 @@ export default function MapboxMap({
   hazards = [],
   speedCameras = [],
   showSpeedCameras = true,
-  is3DMode = true
+  is3DMode = true,
+  cinematicMode = false
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -183,6 +186,26 @@ export default function MapboxMap({
 
     toggle3DMode(map.current, is3DMode);
   }, [is3DMode, mapLoaded]);
+
+  /**
+   * Cinematic camera follow mode
+   */
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    if (cinematicMode) {
+      // Function to get the current route for bearing calculation
+      const getRoute = () => route;
+
+      startCinematicFollow(map.current, getRoute);
+    } else {
+      stopCinematicFollow();
+    }
+
+    return () => {
+      stopCinematicFollow();
+    };
+  }, [cinematicMode, mapLoaded, route]);
 
   /**
    * Update markers, hazards, cameras, and route
