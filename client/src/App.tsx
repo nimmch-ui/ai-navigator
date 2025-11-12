@@ -9,12 +9,14 @@ import { ARExperienceProvider } from "@/contexts/ARExperienceProvider";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { CarModeProvider } from "@/contexts/CarModeContext";
 import { PWAUpdateNotification } from "@/components/PWAUpdateNotification";
+import { RegionFallbackBanner } from "@/components/RegionFallbackBanner";
 import { registerServiceWorker } from "@/lib/serviceWorker";
 import { initializeSubscriptions, cleanupSubscriptions } from "@/services/subscriptions";
 import { ModeManager } from "@/services/ui/ModeManager";
 import { MODE_DESCRIPTORS } from "@/services/modes/descriptors";
 import { DeepLinks } from "@/services/deepLinks";
 import { Analytics } from "@/services/analytics";
+import { regionRouter } from "@/services/regionRouter";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 
@@ -29,6 +31,11 @@ function Router() {
 
 function App() {
   useEffect(() => {
+    // Initialize region router for global availability
+    regionRouter.initialize().then(() => {
+      console.log('[App] Region router initialized:', regionRouter.getState());
+    });
+
     registerServiceWorker().then((registration) => {
       if (registration) {
         console.log('[App] Service Worker registered successfully');
@@ -66,6 +73,7 @@ function App() {
               <ARExperienceProvider>
                 <Toaster />
                 <PWAUpdateNotification />
+                <RegionFallbackBanner />
                 <Router />
               </ARExperienceProvider>
             </OfflineProvider>

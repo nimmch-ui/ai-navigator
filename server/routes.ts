@@ -7,6 +7,18 @@ import { insertCommunityReportSchema, voteSchema } from "@shared/schema";
 const REPORT_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes cooldown
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.head("/api/health", (_req, res) => {
+    res.status(200).end();
+  });
+
+  app.get("/api/health", (_req, res) => {
+    res.status(200).json({ 
+      status: "healthy",
+      timestamp: Date.now(),
+      version: "1.0.0"
+    });
+  });
+
   app.post("/api/chat", async (req, res) => {
     try {
       const { message, history, context } = req.body as {
