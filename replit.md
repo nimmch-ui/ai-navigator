@@ -81,6 +81,12 @@ Preferred communication style: Simple, everyday language.
 - Motion sickness prevention: max 5° bearing delta per frame, zoom clamped to 10-18.
 - Cinematic defaults: pitch 62°, zoom 15.5 (city) / 12.5 (highway), bearing follows route heading.
 - Cinematic mode persists via PreferencesService and toggles via Video icon button.
+- Day/Night theming with auto-detection based on local time and optional sunrise/sunset calculation.
+- Theme service supports three modes: auto (time-based), day (manual light), night (manual dark).
+- Map styles switch between Mapbox Streets (day) and Dark (night) with smooth transitions.
+- Style switching re-adds terrain, sky, and 3D buildings layers after load completes.
+- Theme preference persists via PreferencesService and cycles through auto/day/night via Sun/Moon button.
+- Sunrise/sunset calculations use simplified solar declination algorithm based on latitude/longitude.
 
 ## External Dependencies
 

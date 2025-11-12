@@ -2,6 +2,7 @@ export type TransportMode = "car" | "bike" | "walk" | "transit";
 export type RoutePreference = "fastest" | "shortest" | "eco";
 export type VehicleType = "car" | "ev" | "bike" | "walk";
 export type SpeedUnit = "kmh" | "mph";
+export type MapTheme = "auto" | "day" | "night";
 
 export interface UserPreferences {
   transportMode: TransportMode;
@@ -14,6 +15,7 @@ export interface UserPreferences {
   speedWarnings: boolean;
   speedUnit: SpeedUnit;
   cinematicMode: boolean;
+  mapTheme: MapTheme;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -26,7 +28,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   showSpeedCameras: true,
   speedWarnings: true,
   speedUnit: "kmh",
-  cinematicMode: false
+  cinematicMode: false,
+  mapTheme: "auto"
 };
 
 const PREFERENCES_KEY = "ai_navigator_preferences";

@@ -12,6 +12,7 @@ import type { SpeedCamera } from '@/data/speedCameras';
 import { formatSpeedLimit } from '@/services/radar';
 import { toggle3DMode } from '@/services/map/visual3d';
 import { startCinematicFollow, stopCinematicFollow } from '@/services/map/camera';
+import { resolveTheme, getStyleUrl, type MapTheme } from '@/services/map/theme';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -26,6 +27,7 @@ interface MapboxMapProps {
   showSpeedCameras?: boolean;
   is3DMode?: boolean;
   cinematicMode?: boolean;
+  mapTheme?: MapTheme;
 }
 
 export default function MapboxMap({
@@ -38,11 +40,13 @@ export default function MapboxMap({
   speedCameras = [],
   showSpeedCameras = true,
   is3DMode = true,
-  cinematicMode = false
+  cinematicMode = false,
+  mapTheme = 'auto'
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const currentStyleUrl = useRef<string>('');
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tokenError, setTokenError] = useState(false);
   const [webglError, setWebglError] = useState(false);
@@ -61,57 +65,16 @@ export default function MapboxMap({
   };
 
   /**
-   * Determine if it's nighttime for day/night style switching
+   * Add 3D buildings layer to the map
    */
-  const isNightTime = (): boolean => {
-    const hour = new Date().getHours();
-    return hour >= 19 || hour < 6;
-  };
+  const add3DBuildingsLayer = (mapInstance: mapboxgl.Map) => {
+    const layers = mapInstance.getStyle().layers;
+    const labelLayerId = layers?.find(
+      (layer) => layer.type === 'symbol' && layer.layout && 'text-field' in layer.layout
+    )?.id;
 
-  /**
-   * Initialize the map with 3D buildings and smooth controls
-   */
-  useEffect(() => {
-    if (!mapContainer.current || map.current) return;
-
-    // Check for Mapbox token
-    if (!MAPBOX_TOKEN) {
-      console.error('Mapbox token not found. Please set VITE_MAPBOX_TOKEN in your environment.');
-      setTokenError(true);
-      return;
-    }
-
-    // Check for WebGL support
-    if (!isWebGLSupported()) {
-      console.warn('WebGL is not supported in this browser. Mapbox GL JS requires WebGL.');
-      setWebglError(true);
-      return;
-    }
-
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-
-    const mapStyle = isNightTime() ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11';
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: mapStyle,
-      center: [center[1], center[0]], // Convert [lat, lng] to [lng, lat] for Mapbox
-      zoom: zoom,
-      pitch: is3DMode ? 45 : 0,
-      bearing: 0,
-      antialias: true // Smooth rendering
-    });
-
-    map.current.on('load', () => {
-      if (!map.current) return;
-
-      // Add 3D buildings layer
-      const layers = map.current.getStyle().layers;
-      const labelLayerId = layers?.find(
-        (layer) => layer.type === 'symbol' && layer.layout && 'text-field' in layer.layout
-      )?.id;
-
-      map.current.addLayer(
+    if (!mapInstance.getLayer('3d-buildings')) {
+      mapInstance.addLayer(
         {
           'id': '3d-buildings',
           'source': 'composite',
@@ -144,6 +107,51 @@ export default function MapboxMap({
         },
         labelLayerId
       );
+    }
+  };
+
+  /**
+   * Initialize the map with 3D buildings and smooth controls
+   */
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+
+    // Check for Mapbox token
+    if (!MAPBOX_TOKEN) {
+      console.error('Mapbox token not found. Please set VITE_MAPBOX_TOKEN in your environment.');
+      setTokenError(true);
+      return;
+    }
+
+    // Check for WebGL support
+    if (!isWebGLSupported()) {
+      console.warn('WebGL is not supported in this browser. Mapbox GL JS requires WebGL.');
+      setWebglError(true);
+      return;
+    }
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+
+    // Resolve theme to get initial style
+    const resolvedTheme = resolveTheme(mapTheme, center[0], center[1]);
+    const initialStyle = getStyleUrl(resolvedTheme);
+    currentStyleUrl.current = initialStyle;
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: initialStyle,
+      center: [center[1], center[0]], // Convert [lat, lng] to [lng, lat] for Mapbox
+      zoom: zoom,
+      pitch: is3DMode ? 45 : 0,
+      bearing: 0,
+      antialias: true // Smooth rendering
+    });
+
+    map.current.on('load', () => {
+      if (!map.current) return;
+
+      // Add 3D buildings layer
+      add3DBuildingsLayer(map.current);
 
       setMapLoaded(true);
     });
@@ -163,6 +171,58 @@ export default function MapboxMap({
       map.current = null;
     };
   }, []);
+
+  /**
+   * Handle theme switching with smooth transitions
+   */
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    // Resolve the theme based on current settings and location
+    const resolvedTheme = resolveTheme(mapTheme, center[0], center[1]);
+    const newStyleUrl = getStyleUrl(resolvedTheme);
+    
+    // Check if style needs to change by comparing actual URLs
+    const needsStyleChange = currentStyleUrl.current !== newStyleUrl;
+
+    if (needsStyleChange) {
+      // Store current camera position
+      const currentCenter = map.current.getCenter();
+      const currentZoom = map.current.getZoom();
+      const currentPitch = map.current.getPitch();
+      const currentBearing = map.current.getBearing();
+
+      // Set up listener for when new style is loaded
+      const onStyleLoad = () => {
+        if (!map.current) return;
+
+        // Re-add 3D buildings layer
+        add3DBuildingsLayer(map.current);
+
+        // Re-apply 3D mode (terrain and sky)
+        toggle3DMode(map.current, is3DMode);
+
+        // Restore camera position
+        map.current.easeTo({
+          center: currentCenter,
+          zoom: currentZoom,
+          pitch: currentPitch,
+          bearing: currentBearing,
+          duration: 500
+        });
+
+        // Remove listener after execution
+        map.current?.off('styledata', onStyleLoad);
+      };
+
+      // Add listener before changing style
+      map.current.on('styledata', onStyleLoad);
+
+      // Change the style and update ref
+      map.current.setStyle(newStyleUrl);
+      currentStyleUrl.current = newStyleUrl;
+    }
+  }, [mapTheme, mapLoaded, center, is3DMode]);
 
   /**
    * Smooth camera animation when center/zoom changes

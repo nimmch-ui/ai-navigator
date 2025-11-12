@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { MessageSquare, Box, Map, Video } from 'lucide-react';
+import { MessageSquare, Box, Map, Video, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import MapboxMap from '@/components/MapboxMap';
@@ -26,11 +26,12 @@ import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled } from '@/services/voiceGuidance';
 import { calculateTripEstimate, type VehicleType } from '@/services/tripEstimates';
 import type { TripEstimate } from '@/services/tripEstimates';
-import { PreferencesService, type TransportMode, type RoutePreference, type SpeedUnit } from '@/services/preferences';
+import { PreferencesService, type TransportMode, type RoutePreference, type SpeedUnit, type MapTheme } from '@/services/preferences';
 import { TripHistoryService, type TripRecord } from '@/services/tripHistory';
 import { FavoritesService, type Favorite } from '@/services/favorites';
 import { sendChatMessage, type ChatContext } from '@/services/chatApi';
 import { calculateRoute, formatDistance, formatDuration, getManeuverIcon, type RouteResult } from '@/services/routing';
+import { getNextTheme, getThemeLabel, resolveTheme } from '@/services/map/theme';
 import { getSpeedCameras } from '@/services/radar';
 import type { SpeedCamera } from '@/data/speedCameras';
 import { detectCamerasOnRoute, getCurrentSpeedLimit, type CameraProximityWarning } from '@/services/cameraProximity';
@@ -103,6 +104,7 @@ export default function Home() {
   const [severeWeatherDismissed, setSevereWeatherDismissed] = useState(false);
   const [is3DMode, setIs3DMode] = useState(true);
   const [cinematicMode, setCinematicMode] = useState(false);
+  const [mapTheme, setMapTheme] = useState<MapTheme>('auto');
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -134,6 +136,7 @@ export default function Home() {
     setSpeedWarnings(prefs.speedWarnings);
     setSpeedUnit(prefs.speedUnit);
     setCinematicMode(prefs.cinematicMode);
+    setMapTheme(prefs.mapTheme);
 
     getSpeedCameras().then(cameras => {
       setSpeedCameras(cameras);
@@ -202,6 +205,20 @@ export default function Home() {
       description: enabled 
         ? "Smooth camera follow with auto-bearing alignment" 
         : "Camera follow disabled"
+    });
+  };
+
+  const handleMapThemeChange = () => {
+    const nextTheme = getNextTheme(mapTheme);
+    setMapTheme(nextTheme);
+    PreferencesService.updatePreference('mapTheme', nextTheme);
+    
+    const resolvedTheme = resolveTheme(nextTheme, mapCenter[0], mapCenter[1]);
+    toast({
+      title: `Map Theme: ${getThemeLabel(nextTheme, resolvedTheme)}`,
+      description: nextTheme === 'auto' 
+        ? `Automatically switching to ${resolvedTheme} mode based on time of day`
+        : `Manually set to ${nextTheme} mode`
     });
   };
 
@@ -664,6 +681,7 @@ export default function Home() {
           showSpeedCameras={showSpeedCameras}
           is3DMode={is3DMode}
           cinematicMode={cinematicMode}
+          mapTheme={mapTheme}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-30">
@@ -759,6 +777,26 @@ export default function Home() {
         </div>
 
         <div className="absolute bottom-6 right-6 z-30 flex flex-col gap-2">
+          <Button
+            size="icon"
+            variant="outline"
+            className="rounded-full shadow-lg"
+            onClick={handleMapThemeChange}
+            title={`Map Theme: ${getThemeLabel(mapTheme, resolveTheme(mapTheme, mapCenter[0], mapCenter[1]))}`}
+            data-testid="button-toggle-theme"
+          >
+            {mapTheme === 'night' ? (
+              <Moon className="h-5 w-5" />
+            ) : mapTheme === 'day' ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              resolveTheme(mapTheme, mapCenter[0], mapCenter[1]) === 'day' ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )
+            )}
+          </Button>
           <Button
             size="icon"
             variant={cinematicMode ? "default" : "outline"}
