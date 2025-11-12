@@ -37,6 +37,13 @@ interface SettingsProps {
   onSpeedWarningsChange: (enabled: boolean) => void;
   speedUnit: SpeedUnit;
   onSpeedUnitChange: (unit: SpeedUnit) => void;
+  // Realism Pack
+  weatherLighting: boolean;
+  onWeatherLightingChange: (enabled: boolean) => void;
+  motionPolish: boolean;
+  onMotionPolishChange: (enabled: boolean) => void;
+  radarPulse: boolean;
+  onRadarPulseChange: (enabled: boolean) => void;
 }
 
 export default function Settings({
@@ -63,7 +70,13 @@ export default function Settings({
   speedWarnings,
   onSpeedWarningsChange,
   speedUnit,
-  onSpeedUnitChange
+  onSpeedUnitChange,
+  weatherLighting,
+  onWeatherLightingChange,
+  motionPolish,
+  onMotionPolishChange,
+  radarPulse,
+  onRadarPulseChange
 }: SettingsProps) {
   return (
     <Popover>
@@ -344,6 +357,66 @@ export default function Settings({
                 </Label>
               </div>
             </RadioGroup>
+          </div>
+
+          <Separator />
+
+          <div>
+            <h3 className="font-semibold text-sm mb-1">Realism Pack</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Advanced visual and audio enhancements
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="weather-lighting" className="text-sm font-medium">
+                Weather Lighting
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Adjust map based on weather conditions
+              </p>
+            </div>
+            <Switch
+              id="weather-lighting"
+              checked={weatherLighting}
+              onCheckedChange={onWeatherLightingChange}
+              data-testid="switch-weather-lighting"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="motion-polish" className="text-sm font-medium">
+                Motion Polish
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Breathing glow and motion effects
+              </p>
+            </div>
+            <Switch
+              id="motion-polish"
+              checked={motionPolish}
+              onCheckedChange={onMotionPolishChange}
+              data-testid="switch-motion-polish"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="radar-pulse" className="text-sm font-medium">
+                Radar Pulse
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Pulse camera icons when nearby
+              </p>
+            </div>
+            <Switch
+              id="radar-pulse"
+              checked={radarPulse}
+              onCheckedChange={onRadarPulseChange}
+              data-testid="switch-radar-pulse"
+            />
           </div>
 
           {voiceEnabled && voiceSupported && (
