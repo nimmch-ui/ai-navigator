@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge, Vibrate } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge, Vibrate, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -11,8 +11,17 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import type { TransportMode, RoutePreference, VehicleType, SpeedUnit } from '@/services/preferences';
+import { UiMode } from '@/types/ui';
 
 interface SettingsProps {
+  // Immersive Experience
+  uiMode: UiMode;
+  onUiModeChange: (mode: UiMode) => void;
+  spatialAudio: boolean;
+  onSpatialAudioChange: (enabled: boolean) => void;
+  ambientMusic: boolean;
+  onAmbientMusicChange: (enabled: boolean) => void;
+  // Navigation
   transportMode: TransportMode;
   onTransportModeChange: (mode: TransportMode) => void;
   routePreference: RoutePreference;
@@ -47,6 +56,12 @@ interface SettingsProps {
 }
 
 export default function Settings({
+  uiMode,
+  onUiModeChange,
+  spatialAudio,
+  onSpatialAudioChange,
+  ambientMusic,
+  onAmbientMusicChange,
   transportMode,
   onTransportModeChange,
   routePreference,
@@ -94,6 +109,98 @@ export default function Settings({
           <div>
             <h3 className="font-semibold text-sm mb-1">Navigation Settings</h3>
             <p className="text-xs text-muted-foreground">Customize your navigation experience</p>
+          </div>
+
+          <Separator />
+
+          <div>
+            <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" />
+              Immersive Experience
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Choose your navigation mode
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">UI Mode</Label>
+            <RadioGroup
+              value={uiMode}
+              onValueChange={(value) => onUiModeChange(value as UiMode)}
+              data-testid="radio-ui-mode"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={UiMode.CLASSIC} id="ui-classic" data-testid="radio-ui-classic" />
+                <Label htmlFor="ui-classic" className="text-sm font-normal cursor-pointer">
+                  Classic
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={UiMode.THREED} id="ui-threed" data-testid="radio-ui-threed" />
+                <Label htmlFor="ui-threed" className="text-sm font-normal cursor-pointer">
+                  3D Mode
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={UiMode.CINEMATIC} id="ui-cinematic" data-testid="radio-ui-cinematic" />
+                <Label htmlFor="ui-cinematic" className="text-sm font-normal cursor-pointer">
+                  Cinematic
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={UiMode.AR} id="ui-ar" data-testid="radio-ui-ar" />
+                <Label htmlFor="ui-ar" className="text-sm font-normal cursor-pointer">
+                  AR Preview
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={UiMode.VR} id="ui-vr" data-testid="radio-ui-vr" />
+                <Label htmlFor="ui-vr" className="text-sm font-normal cursor-pointer">
+                  VR (Future)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={UiMode.ECO} id="ui-eco" data-testid="radio-ui-eco" />
+                <Label htmlFor="ui-eco" className="text-sm font-normal cursor-pointer">
+                  Eco Optimized
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="spatial-audio" className="text-sm font-medium">
+                Spatial Audio
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                3D positional sound effects
+              </p>
+            </div>
+            <Switch
+              id="spatial-audio"
+              checked={spatialAudio}
+              onCheckedChange={onSpatialAudioChange}
+              data-testid="switch-spatial-audio"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="ambient-music" className="text-sm font-medium">
+                Ambient Music
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Background music for navigation
+              </p>
+            </div>
+            <Switch
+              id="ambient-music"
+              checked={ambientMusic}
+              onCheckedChange={onAmbientMusicChange}
+              data-testid="switch-ambient-music"
+            />
           </div>
 
           <Separator />

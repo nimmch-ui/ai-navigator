@@ -1,3 +1,5 @@
+import { UiMode } from "@/types/ui";
+
 export type TransportMode = "car" | "bike" | "walk" | "transit";
 export type RoutePreference = "fastest" | "shortest" | "eco";
 export type VehicleType = "car" | "ev" | "bike" | "walk";
@@ -26,6 +28,7 @@ export interface RealismPackSettings {
 }
 
 export interface UserPreferences {
+  schemaVersion?: number;
   transportMode: TransportMode;
   routePreference: RoutePreference;
   voiceGuidance: boolean;
@@ -46,9 +49,16 @@ export interface UserPreferences {
   arSensorCapabilities: ARSensorCapabilities;
   rerouteSettings: RerouteSettings;
   realismPack: RealismPackSettings;
+  uiMode: UiMode;
+  spatialAudio: boolean;
+  ambientMusic: boolean;
+  is3DMode?: boolean;
 }
 
+const CURRENT_SCHEMA_VERSION = 1;
+
 const DEFAULT_PREFERENCES: UserPreferences = {
+  schemaVersion: CURRENT_SCHEMA_VERSION,
   transportMode: "car",
   routePreference: "fastest",
   voiceGuidance: true,
@@ -83,6 +93,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     motionPolish: true,
     radarPulse: true,
   },
+  uiMode: UiMode.THREED,
+  spatialAudio: false,
+  ambientMusic: false,
+  is3DMode: true,
 };
 
 const PREFERENCES_KEY = "ai_navigator_preferences";

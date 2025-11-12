@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
+import { useUiMode } from '@/contexts/UiModeContext';
 import MapboxMap from '@/components/MapboxMap';
 import SearchBar from '@/components/SearchBar';
 import MapControls from '@/components/MapControls';
@@ -109,6 +110,7 @@ export default function Home() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const { toast } = useToast();
   const { isARActive, toggleAR, isInitializing } = useARExperience();
+  const { uiMode, setUiMode, spatialAudio, setSpatialAudio, ambientMusic, setAmbientMusic, hapticsEnabled, setHapticsEnabled: setHapticsEnabledPref } = useUiMode();
   const routeAbortControllerRef = useRef<AbortController | null>(null);
   const geocodeFetcher = useRef(new DebouncedFetcher(300));
   const routeFetcher = useRef(new DebouncedFetcher(150));
@@ -126,7 +128,6 @@ export default function Home() {
   const [vehicleType, setVehicleType] = useState<VehicleType>("car");
   const [voiceEnabled, setVoiceEnabledState] = useState(getVoiceEnabled());
   const [voiceVolume, setVoiceVolumeState] = useState(getVoiceVolume());
-  const [hapticsEnabled, setHapticsEnabledState] = useState(getHapticsEnabled());
   const [hazardAlertsEnabled, setHazardAlertsEnabled] = useState(true);
   const [showSpeedCameras, setShowSpeedCameras] = useState(true);
   const [speedWarnings, setSpeedWarnings] = useState(true);
@@ -239,7 +240,6 @@ export default function Home() {
     setVoiceEnabled(prefs.voiceGuidance);
     setVoiceVolumeState(prefs.voiceVolume);
     setVoiceVolume(prefs.voiceVolume);
-    setHapticsEnabledState(prefs.hapticsEnabled);
     setHapticsEnabled(prefs.hapticsEnabled);
     setHazardAlertsEnabled(prefs.hazardAlerts);
     setShowSpeedCameras(prefs.showSpeedCameras);
@@ -300,9 +300,8 @@ export default function Home() {
   };
 
   const handleHapticsEnabledChange = (enabled: boolean) => {
-    setHapticsEnabledState(enabled);
     setHapticsEnabled(enabled);
-    PreferencesService.updatePreference('hapticsEnabled', enabled);
+    setHapticsEnabledPref(enabled);
   };
 
   const handleHazardAlertsChange = (enabled: boolean) => {
@@ -893,6 +892,12 @@ export default function Home() {
                 <ReportButton currentLocation={mapCenter} />
               </div>
               <Settings
+                uiMode={uiMode}
+                onUiModeChange={setUiMode}
+                spatialAudio={spatialAudio}
+                onSpatialAudioChange={setSpatialAudio}
+                ambientMusic={ambientMusic}
+                onAmbientMusicChange={setAmbientMusic}
                 transportMode={transportMode}
                 onTransportModeChange={handleTransportModeChange}
                 routePreference={routePreference}
