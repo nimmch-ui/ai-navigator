@@ -99,7 +99,8 @@ export async function calculateRoute(
   origin: [number, number],
   destination: [number, number],
   mode: TransportMode,
-  routePreference: RoutePreference = 'fastest'
+  routePreference: RoutePreference = 'fastest',
+  signal?: AbortSignal
 ): Promise<RouteResult> {
   const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
   
@@ -131,7 +132,7 @@ export async function calculateRoute(
   });
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal });
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -177,6 +178,9 @@ export async function calculateRoute(
       profile
     };
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error;
+    }
     console.error('Route calculation error:', error);
     throw error instanceof Error ? error : new Error('Failed to calculate route');
   }

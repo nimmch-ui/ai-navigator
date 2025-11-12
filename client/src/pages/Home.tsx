@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { MessageSquare, Box, Map, Video, Sun, Moon, Cloud, CloudOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -7,7 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 import MapboxMap from '@/components/MapboxMap';
 import SearchBar from '@/components/SearchBar';
 import MapControls from '@/components/MapControls';
-import ChatPanel from '@/components/ChatPanel';
+
+const ChatPanel = lazy(() => import('@/components/ChatPanel'));
 import RoutePanel from '@/components/RoutePanel';
 import ThemeToggle from '@/components/ThemeToggle';
 import Settings from '@/components/Settings';
@@ -33,12 +34,14 @@ import { TripHistoryService, type TripRecord } from '@/services/tripHistory';
 import { FavoritesService, type Favorite } from '@/services/favorites';
 import { sendChatMessage, type ChatContext } from '@/services/chatApi';
 import { calculateRoute, formatDistance, formatDuration, getManeuverIcon, type RouteResult } from '@/services/routing';
+import { searchPlaces, type GeocodingResult } from '@/services/geocoding';
 import { getNextTheme, getThemeLabel, resolveTheme } from '@/services/map/theme';
 import { getSpeedCameras } from '@/services/radar';
 import type { SpeedCamera } from '@/data/speedCameras';
 import { detectCamerasOnRoute, getCurrentSpeedLimit, type CameraProximityWarning } from '@/services/cameraProximity';
 import { calculateEcoEstimate, type EcoEstimate } from '@/services/ecoEstimates';
 import { fetchWeather, getSevereWeatherWarning, type WeatherData } from '@/services/weather';
+import { DebouncedFetcher } from '@/lib/debounce';
 
 interface SearchResult {
   id: string;
@@ -77,6 +80,8 @@ export default function Home() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const { toast } = useToast();
   const routeAbortControllerRef = useRef<AbortController | null>(null);
+  const geocodeFetcher = useRef(new DebouncedFetcher(300));
+  const routeFetcher = useRef(new DebouncedFetcher(150));
   
   const [chatMessages, setChatMessages] = useState<Array<{
     id: string;
@@ -329,76 +334,42 @@ export default function Home() {
   const geocodeAddress = useCallback(async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
-      return;
-    }
-
-    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
-    if (!mapboxToken) {
-      toast({
-        title: 'Configuration Error',
-        description: 'Mapbox token is not configured',
-        variant: 'destructive'
-      });
+      geocodeFetcher.current.cancel();
       return;
     }
 
     setIsSearching(true);
-    try {
-      const proximity = `${mapCenter[1]},${mapCenter[0]}`;
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&limit=5&proximity=${proximity}`
-      );
-
-      if (!response.ok) {
-        console.error('[Search] Geocoding API error:', response.status, response.statusText);
-        toast({
-          title: 'Search Error',
-          description: 'Unable to search at this time. Please try again.',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      const data = await response.json();
-      
-      const results: SearchResult[] = data.features.map((feature: any) => {
-        const coords: [number, number] = [feature.center[1], feature.center[0]];
-        console.log('[Search] Feature:', {
-          name: feature.text,
-          place_name: feature.place_name,
-          center_raw: feature.center,
-          center_lng: feature.center[0],
-          center_lat: feature.center[1],
-          converted_coords: coords
-        });
-        return {
-          id: feature.id,
-          name: feature.text,
-          address: feature.place_name,
-          category: feature.place_type?.[0] || 'Location',
-          coordinates: coords
-        };
+    
+    const results = await geocodeFetcher.current.fetch<GeocodingResult[]>(async (signal) => {
+      return searchPlaces(query, {
+        signal,
+        limit: 5,
+        proximity: mapCenter
       });
+    });
 
-      if (results.length === 0) {
-        toast({
-          title: 'Location not found',
-          description: 'Please try another address or place name.',
-          variant: 'destructive'
-        });
-      }
-
-      setSearchResults(results);
-    } catch (error) {
-      console.error('[Search] Network error:', error);
-      toast({
-        title: 'Connection Error',
-        description: 'Unable to connect to search service. Please check your internet connection.',
-        variant: 'destructive'
-      });
-    } finally {
+    if (results === null) {
       setIsSearching(false);
+      return;
     }
+
+    const searchResults: SearchResult[] = results.map((result, index) => ({
+      id: `${result.placeName}-${index}`,
+      name: result.placeName,
+      address: result.address,
+      category: 'Location',
+      coordinates: result.coordinates
+    }));
+
+    if (searchResults.length === 0) {
+      toast({
+        title: 'Location not found',
+        description: 'Please try another address or place name.'
+      });
+    }
+
+    setSearchResults(searchResults);
+    setIsSearching(false);
   }, [mapCenter, toast]);
 
   const handleSearch = (query: string) => {
@@ -460,18 +431,22 @@ export default function Home() {
       destination: destinationCoords 
     });
     
-    try {
-      const result = await calculateRoute(
+    const result = await routeFetcher.current.fetch<RouteResult>(async (signal) => {
+      return calculateRoute(
         originCoords,
         destinationCoords,
         transportMode,
-        routePreference
+        routePreference,
+        signal
       );
+    });
 
-      if (abortController.signal.aborted) {
-        return;
-      }
+    if (result === null || abortController.signal.aborted) {
+      setIsCalculatingRoute(false);
+      return;
+    }
 
+    try {
       setRouteResult(result);
       setRoute(result.geometry);
       
@@ -508,10 +483,6 @@ export default function Home() {
       });
       setTripEstimate(estimate);
     } catch (error) {
-      if (abortController.signal.aborted) {
-        return;
-      }
-      
       console.error('Route calculation error:', error);
       toast({
         title: 'Route Error',
@@ -522,9 +493,7 @@ export default function Home() {
       setRoute(undefined);
       setShowRoute(false);
     } finally {
-      if (!abortController.signal.aborted) {
-        setIsCalculatingRoute(false);
-      }
+      setIsCalculatingRoute(false);
     }
   }, [originCoords, destinationCoords, transportMode, routePreference, origin, destination, vehicleType, ecoMode, speedCameras, toast]);
 
@@ -954,12 +923,18 @@ export default function Home() {
       </div>
 
       <div className={`${showChat ? 'fixed inset-0 z-[100] lg:relative lg:inset-auto' : 'hidden'} lg:flex lg:w-96`}>
-        <ChatPanel
-          onClose={() => setShowChat(false)}
-          onSendMessage={handleSendMessage}
-          messages={chatMessages}
-          isLoading={isChatLoading}
-        />
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-full w-full bg-card">
+            <div className="text-muted-foreground">Loading chat...</div>
+          </div>
+        }>
+          <ChatPanel
+            onClose={() => setShowChat(false)}
+            onSendMessage={handleSendMessage}
+            messages={chatMessages}
+            isLoading={isChatLoading}
+          />
+        </Suspense>
       </div>
     </div>
   );

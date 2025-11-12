@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Send, Bot, User, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,7 +26,7 @@ const suggestedPrompts = [
   "Find gas stations"
 ];
 
-export default function ChatPanel({
+const ChatPanel = memo(function ChatPanel({
   onClose,
   onSendMessage,
   messages = [],
@@ -181,4 +181,6 @@ export default function ChatPanel({
       </div>
     </div>
   );
-}
+});
+
+export default ChatPanel;

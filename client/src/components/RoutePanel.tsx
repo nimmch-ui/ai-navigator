@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Navigation, Clock, TrendingUp, MapPin, ArrowRight, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -26,7 +27,7 @@ interface RoutePanelProps {
   onStartNavigation?: () => void;
 }
 
-export default function RoutePanel({
+const RoutePanel = memo(function RoutePanel({
   origin,
   destination,
   route,
@@ -146,4 +147,6 @@ export default function RoutePanel({
       </div>
     </Card>
   );
-}
+});
+
+export default RoutePanel;

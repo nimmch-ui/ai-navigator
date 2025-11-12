@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Search, X, MapPin, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ interface SearchBarProps {
   isLoading?: boolean;
 }
 
-export default function SearchBar({
+const SearchBar = memo(function SearchBar({
   onSearch,
   onResultSelect,
   onSubmit,
@@ -138,4 +138,6 @@ export default function SearchBar({
       )}
     </div>
   );
-}
+});
+
+export default SearchBar;
