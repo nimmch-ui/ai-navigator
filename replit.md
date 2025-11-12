@@ -4,12 +4,14 @@
 
 AI Navigator is a map-first, AI-assisted navigation Progressive Web App (PWA) offering an interactive mapping experience with ChatGPT-style intelligence. It provides smart route planning, location discovery, and navigation guidance, aiming to redefine personal navigation by blending advanced AI with rich mapping features. Key capabilities include multimodal navigation, real-time rerouting, lane-level guidance, AR preview, speed camera alerts, voice navigation, premium 3D maps, offline downloads, and a dedicated Car Mode UI.
 
-**Recent Updates (Q2-A4 Visual Logic & Performance - Nov 12, 2025):**
-- Implemented mode descriptors with visual logic for all 6 UI modes (CLASSIC, THREED, CINEMATIC, AR, ECO, VR)
-- Added Cinematic voice tone system: warm voice (rate=0.95, pitch=1.05) activates on CINEMATIC mode entry
-- Conditional Eco UI: EcoSummary panel displays CO₂/fuel metrics only when uiMode === ECO
-- Performance optimizations: 250ms debouncing on mode changes, subscription service persistence (60fps maintained)
-- EventBus integration: preferences:voiceStyleChanged event for reactive UI updates
+**Recent Updates (Q2-A5 Telemetry, Deep Links & Analytics - Nov 12, 2025):**
+- Created production-ready analytics service with 8 event types: mode_selected, mode_fallback, ar_permission_denied, vr_unsupported, tts_style_changed, haptics_fired, hazard_announced, radar_announced
+- Implemented deep link support: URL query params (?mode=classic|3d|cinematic|ar|vr|eco) and hash routes (#nav:start=lat,lng&end=lat,lng&mode=...)
+- Added session summary tracking: time spent per mode, hazards announced count, radars announced count
+- Deep links auto-load on app startup, delegating to ModeManager for proper lifecycle, fallback, and analytics
+- Analytics integration: ModeManager (mode changes, fallbacks), AR capabilities (permission denied), mode capabilities (VR unsupported), radarPulse (explicit announcement types), useHaptics (tactile feedback), mode descriptors (voice style changes with redundancy guards)
+- Session lifecycle: handleModeChange() exclusively manages session start/end to prevent double-counting
+- Enhanced context: VR/AR unsupported events include full device capability flags for observability
 
 ## User Preferences
 
@@ -50,6 +52,8 @@ The design system features the Inter font family, a hierarchical sizing scale, a
 - **SharedNavigationState Service:** Centralized reactive state management consolidating radar data (speed cameras, hazards), speed tracking (current speed, speed limit), weather conditions (forecasts, radar), voice guidance settings (enabled, volume), and eco estimates. Provides type-safe get/set accessors, partial updates via `updateState()`, subscription API for listeners, and emits EventBus `navigation:stateChanged` events. Ensures navigation data persists across all mode switches without disruption.
 - **Service Persistence:** All subscription services (speedSubscription, weatherSubscription, voiceSubscription, ecoSubscription, radarSubscription, hazardSubscription) are singletons initialized once in App.tsx. Services listen to mode changes and adapt behavior (e.g., voice adjusts TTS, weather adapts display) but maintain state across transitions. ModeManager orchestrates view replacement without disrupting background services, ensuring seamless multimodal navigation.
 - **State Persistence:** User preferences are persisted via `PreferencesService` using `localStorage`.
+- **Telemetry & Analytics (Q2-A5):** Production-ready analytics service tracking 8 event types with console-based logging (extensible to Google Analytics/Mixpanel). Events: mode_selected (mode changes), mode_fallback (capability fallback), ar_permission_denied (camera permission denied), vr_unsupported (WebXR unavailable), tts_style_changed (voice style changes), haptics_fired (tactile feedback), hazard_announced (hazard voice alerts), radar_announced (speed camera alerts). Session tracking maintains in-memory counters for time per mode, hazards announced, and radars announced. ModeManager.handleModeChange() exclusively manages session lifecycle to prevent double-counting. All analytics events include rich context (device capabilities, mode transitions, announcement types) for observability.
+- **Deep Links & Shareability (Q2-A5):** URL-based navigation supporting query params (?mode=classic|3d|cinematic|ar|vr|eco) and hash routes (#nav:start=lat,lng&end=lat,lng&mode=...) for shareable navigation links. Deep links auto-load on app startup via DeepLinksService.applyDeepLinks() initialized in App.tsx. Delegates to ModeManager.enter() for proper lifecycle, capability fallback (VR→AR→3D→Classic), and analytics tracking. generateShareableURL() creates shareable links with current mode and optional navigation coordinates. Hash routes take precedence over query params for mode selection.
 
 ## External Dependencies
 
