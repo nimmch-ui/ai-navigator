@@ -120,6 +120,7 @@ export default function Home() {
     setEcoMode(prefs.ecoMode);
     setVehicleType(prefs.vehicleType);
     setVoiceEnabledState(prefs.voiceGuidance);
+    setVoiceEnabled(prefs.voiceGuidance);
     setHazardAlertsEnabled(prefs.hazardAlerts);
 
     getSpeedCameras().then(cameras => {
@@ -401,11 +402,6 @@ export default function Home() {
         ecoMode
       });
       setTripEstimate(estimate);
-
-      announce(
-        `Route calculated. Distance ${formatDistance(result.distance)}, duration ${formatDuration(result.duration)}.`,
-        { priority: 'normal' }
-      );
     } catch (error) {
       if (abortController.signal.aborted) {
         return;
@@ -451,6 +447,17 @@ export default function Home() {
 
   const activeWarning = cameraWarnings.find(w => !dismissedCameraIds.has(w.camera.id));
 
+  useEffect(() => {
+    if (activeWarning && voiceEnabled) {
+      const cameraMessage = `Speed camera ahead in ${Math.round(activeWarning.distance)} meters. Limit ${activeWarning.camera.speedLimitKmh} kilometers per hour.`;
+      announce(cameraMessage, { 
+        priority: 'high',
+        entityId: `camera-${activeWarning.camera.id}`,
+        throttleMs: 60000
+      });
+    }
+  }, [activeWarning?.camera.id, voiceEnabled]);
+
   const handleSendMessage = async (message: string) => {
     const userMessage = {
       id: Date.now().toString(),
@@ -465,12 +472,27 @@ export default function Home() {
     try {
       const currentHistory = [...chatMessages, userMessage];
       
+      const routeSummary = routeResult 
+        ? `${formatDistance(routeResult.distance)}, ETA ${formatDuration(routeResult.duration)}`
+        : undefined;
+      
+      const nearbyCameras = cameraWarnings.map(w => 
+        `Speed camera in ${Math.round(w.distance)}m, limit ${w.camera.speedLimitKmh} km/h`
+      );
+      
+      const weatherStatus = weatherData.length > 0
+        ? weatherData.map(w => `${w.location}: ${w.description}, ${Math.round(w.temperature)}°C`).join('; ')
+        : undefined;
+      
       const context: ChatContext = {
         origin,
         destination,
         transportMode,
         ecoMode,
-        hazardsOnRoute: nearbyHazards.map(h => h.description)
+        hazardsOnRoute: nearbyHazards.map(h => h.description),
+        routeSummary,
+        nearbyCameras,
+        weatherConditions: weatherStatus
       };
 
       const responseText = await sendChatMessage(
@@ -524,10 +546,29 @@ export default function Home() {
         duration: durationMin
       });
       
-      announce(
-        `Navigation started. Distance ${formatDistance(routeResult.distance)}, estimated time ${formatDuration(routeResult.duration)}.`,
-        { priority: 'high' }
-      );
+      if (voiceEnabled) {
+        announce(
+          `Navigation started. Distance ${formatDistance(routeResult.distance)}, estimated time ${formatDuration(routeResult.duration)}.`,
+          { priority: 'high' }
+        );
+      }
+
+      if (voiceEnabled && routeResult.steps.length > 0) {
+        const firstStep = routeResult.steps[0];
+        if (firstStep) {
+          setTimeout(() => {
+            announce(firstStep.instruction, { priority: 'normal' });
+          }, 3000);
+        }
+        
+        const secondStep = routeResult.steps[1];
+        if (secondStep && secondStep.distance > 100) {
+          setTimeout(() => {
+            const distance = Math.round(secondStep.distance);
+            announce(`In ${distance} meters, ${secondStep.instruction}`, { priority: 'normal' });
+          }, 8000);
+        }
+      }
 
       setSevereWeatherDismissed(false);
       

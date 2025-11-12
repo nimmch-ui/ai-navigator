@@ -10,6 +10,8 @@ export interface ChatContext {
   ecoMode?: boolean;
   hazardsOnRoute?: string[];
   weatherConditions?: string;
+  routeSummary?: string;
+  nearbyCameras?: string[];
 }
 
 export interface ChatRequest {

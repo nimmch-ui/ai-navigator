@@ -56,7 +56,7 @@ class VoiceGuidanceService {
       return false;
     }
 
-    if (!this.isEnabled && options.priority !== 'high') {
+    if (!this.isEnabled) {
       return false;
     }
 

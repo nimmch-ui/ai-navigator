@@ -10,6 +10,8 @@ export interface NavigationContext {
   ecoMode?: boolean;
   hazardsOnRoute?: string[];
   weatherConditions?: string;
+  routeSummary?: string;
+  nearbyCameras?: string[];
 }
 
 export async function getChatResponse(
@@ -57,6 +59,10 @@ function buildSystemPrompt(context?: NavigationContext): string {
       prompt += `Current Route: From ${context.origin} to ${context.destination}\n`;
     }
     
+    if (context.routeSummary) {
+      prompt += `Route Details: ${context.routeSummary}\n`;
+    }
+    
     if (context.transportMode) {
       prompt += `Transport Mode: ${context.transportMode}\n`;
     }
@@ -65,8 +71,12 @@ function buildSystemPrompt(context?: NavigationContext): string {
       prompt += `Eco Mode: ${context.ecoMode ? "ON - prioritizing fuel efficiency" : "OFF"}\n`;
     }
     
+    if (context.nearbyCameras && context.nearbyCameras.length > 0) {
+      prompt += `Speed Cameras on Route: ${context.nearbyCameras.join(", ")}\n`;
+    }
+    
     if (context.hazardsOnRoute && context.hazardsOnRoute.length > 0) {
-      prompt += `Hazards on Route: ${context.hazardsOnRoute.join(", ")}\n`;
+      prompt += `Other Hazards: ${context.hazardsOnRoute.join(", ")}\n`;
     }
     
     if (context.weatherConditions) {
