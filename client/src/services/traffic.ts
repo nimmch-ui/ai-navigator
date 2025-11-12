@@ -122,14 +122,23 @@ export class TrafficService {
   ): Promise<TrafficIncident[]> {
     await new Promise((resolve) => setTimeout(resolve, 300));
 
+    console.log('[TrafficService] getIncidentsAlongRoute called', {
+      testMode: this.config.testMode,
+      routeCoordinatesLength: routeCoordinates.length,
+    });
+
     if (this.config.testMode) {
-      return this.generateSyntheticIncidents(routeCoordinates);
+      const synthetic = this.generateSyntheticIncidents(routeCoordinates);
+      console.log('[TrafficService] Generated synthetic incidents:', synthetic);
+      return synthetic;
     }
 
-    return this.incidents.map((incident) => ({
+    const incidents = this.incidents.map((incident) => ({
       ...incident,
       affectsRoute: isPointNearPath(incident.location, routeCoordinates, 500),
     }));
+    console.log('[TrafficService] Returning mock incidents:', incidents.filter(i => i.affectsRoute));
+    return incidents;
   }
 
   async getIncidentById(incidentId: string): Promise<TrafficIncident | null> {

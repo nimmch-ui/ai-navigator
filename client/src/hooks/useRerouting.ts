@@ -43,16 +43,34 @@ export function useRerouting({
 
   const checkTrafficIncidents = useCallback(async () => {
     if (!routeResult || !rerouteSettings.enabled || !origin || !destination) {
+      console.log('[useRerouting] checkTrafficIncidents skipped:', {
+        hasRouteResult: !!routeResult,
+        reroutingEnabled: rerouteSettings.enabled,
+        hasOrigin: !!origin,
+        hasDestination: !!destination,
+      });
       return;
     }
+
+    console.log('[useRerouting] checkTrafficIncidents running', {
+      hasCurrentPosition: !!currentPosition,
+      hasRerouteOption: !!rerouteOption,
+      routeGeometryLength: routeResult.geometry.length,
+    });
 
     try {
       const incidents = await trafficService.getIncidentsAlongRoute(routeResult.geometry);
       setTrafficIncidents(incidents);
 
       const affectedIncidents = incidents.filter(inc => inc.affectsRoute);
+      console.log('[useRerouting] Traffic check complete:', {
+        totalIncidents: incidents.length,
+        affectedIncidents: affectedIncidents.length,
+        hasCurrentPosition: !!currentPosition,
+      });
       
       if (affectedIncidents.length > 0 && currentPosition) {
+        console.log('[useRerouting] Evaluating traffic incidents for reroute...');
         const alternative = await reroutingService.evaluateTrafficIncidents(
           currentPosition,
           destination,
@@ -61,7 +79,14 @@ export function useRerouting({
           incidents
         );
 
+        console.log('[useRerouting] Evaluation result:', {
+          hasAlternative: !!alternative,
+          hasExistingRerouteOption: !!rerouteOption,
+          timeSavings: alternative?.timeSavingsMinutes,
+        });
+
         if (alternative && !rerouteOption) {
+          console.log('[useRerouting] Setting new reroute option:', alternative);
           setRerouteOption(alternative);
           activeRerouteOption.current = alternative;
 
@@ -79,7 +104,7 @@ export function useRerouting({
         }
       }
     } catch (error) {
-      console.error('Failed to check traffic incidents:', error);
+      console.error('[useRerouting] Failed to check traffic incidents:', error);
     }
   }, [routeResult, rerouteSettings, origin, destination, currentPosition, transportMode, routePreference, rerouteOption]);
 
@@ -127,15 +152,24 @@ export function useRerouting({
   }, [routeResult, currentPosition, rerouteSettings, origin, destination, transportMode, routePreference, rerouteOption]);
 
   const startNavigation = useCallback(() => {
-    if (!routeResult) return;
+    console.log('[useRerouting] startNavigation called', {
+      hasRouteResult: !!routeResult,
+      hasOrigin: !!origin,
+      origin,
+    });
 
+    if (!routeResult) {
+      console.log('[useRerouting] startNavigation aborted - no route result');
+      return;
+    }
+
+    console.log('[useRerouting] Navigation starting with origin:', origin);
     setIsNavigating(true);
     isNavigatingRef.current = true;
     setCurrentPosition(origin);
+    console.log('[useRerouting] Current position set to:', origin);
     reroutingService.setInitialETA(routeResult.duration);
     reroutingService.updateCurrentETA(routeResult.duration);
-
-    checkTrafficIncidents();
 
     trafficCheckInterval.current = setInterval(() => {
       checkTrafficIncidents();
@@ -144,7 +178,16 @@ export function useRerouting({
     navigationCheckInterval.current = setInterval(() => {
       checkGPSDeviation();
     }, 5000);
+
+    console.log('[useRerouting] Navigation intervals started');
   }, [routeResult, origin, checkTrafficIncidents, checkGPSDeviation]);
+
+  useEffect(() => {
+    if (isNavigating && currentPosition && routeResult) {
+      console.log('[useRerouting] currentPosition updated during navigation, checking traffic:', currentPosition);
+      checkTrafficIncidents();
+    }
+  }, [isNavigating, currentPosition, routeResult, checkTrafficIncidents]);
 
   const stopNavigation = useCallback(() => {
     setIsNavigating(false);
