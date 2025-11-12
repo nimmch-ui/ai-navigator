@@ -1,4 +1,6 @@
 import { GlobalConfig, type Region } from "@shared/global.config";
+import { PreferencesService } from "@/services/preferences";
+import { EventBus } from "@/services/eventBus";
 
 export type Locale = 
   | "en"
@@ -64,6 +66,25 @@ const REGION_DEFAULT_LOCALES: Record<Region, Locale> = {
 
 const IMPERIAL_REGIONS: Region[] = ["US"];
 
+const TTS_VOICE_MAPPINGS: Record<Locale, string[]> = {
+  "en": ["en-US", "en-GB", "en"],
+  "sq-AL": ["sq-AL", "sq", "en"],
+  "sr": ["sr-RS", "sr", "en"],
+  "sl-SI": ["sl-SI", "sl", "en"],
+  "de-CH": ["de-CH", "de-DE", "de", "en"],
+  "fr-CH": ["fr-CH", "fr-FR", "fr", "en"],
+  "it-CH": ["it-CH", "it-IT", "it", "en"],
+  "tr": ["tr-TR", "tr", "en"],
+  "es": ["es-ES", "es-MX", "es", "en"],
+  "pt-BR": ["pt-BR", "pt-PT", "pt", "en"],
+  "hi": ["hi-IN", "hi", "en"],
+  "bn": ["bn-IN", "bn-BD", "bn", "en"],
+  "ar": ["ar-SA", "ar-EG", "ar", "en"],
+  "zh-CN": ["zh-CN", "zh-TW", "zh", "en"],
+};
+
+const TIME_12H_LOCALES: Locale[] = ["en"];
+
 class I18nService {
   private currentLocale: Locale = "en";
   private currentRegion: Region = "EU";
@@ -73,8 +94,14 @@ class I18nService {
 
   async initialize(userRegion?: Region): Promise<void> {
     this.currentRegion = userRegion || "EU";
-    const locale = this.detectLocale(userRegion);
-    await this.setLocale(locale);
+    
+    const prefs = PreferencesService.getPreferences();
+    if (prefs.language) {
+      await this.setLocale(prefs.language, false);
+    } else {
+      const locale = this.detectLocale(userRegion);
+      await this.setLocale(locale, true);
+    }
   }
 
   private detectLocale(userRegion?: Region): Locale {
@@ -116,7 +143,7 @@ class I18nService {
     return validLocales.includes(code as Locale);
   }
 
-  async setLocale(locale: Locale): Promise<void> {
+  async setLocale(locale: Locale, saveToPreferences: boolean = true): Promise<void> {
     if (!this.loadedLocales.has(locale)) {
       await this.loadTranslations(locale);
     }
@@ -124,11 +151,20 @@ class I18nService {
     this.currentLocale = locale;
     this.storeLocale(locale);
 
+    if (saveToPreferences) {
+      PreferencesService.updatePreference("language", locale);
+    }
+
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("locale-change", {
         detail: { locale },
       }));
     }
+
+    EventBus.emit("i18n:changed", {
+      locale,
+      unitSystem: this.getUnitSystem(),
+    });
 
     const isRTL = this.isRTL(locale);
     if (typeof document !== "undefined") {
@@ -213,6 +249,66 @@ class I18nService {
     
     const km = distanceMeters / 1000;
     return `${km.toFixed(1)} km`;
+  }
+
+  formatTime(timestamp: number | Date): string {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+    const prefs = PreferencesService.getPreferences();
+    const use12h = prefs.timeFormat === "12h" || TIME_12H_LOCALES.includes(this.currentLocale);
+    
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    
+    if (use12h) {
+      const period = hours >= 12 ? "PM" : "AM";
+      const hours12 = hours % 12 || 12;
+      return `${hours12}:${minutes} ${period}`;
+    }
+    
+    return `${hours.toString().padStart(2, "0")}:${minutes}`;
+  }
+
+  getTTSVoice(): string | null {
+    const voicePrefs = TTS_VOICE_MAPPINGS[this.currentLocale];
+    
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      return null;
+    }
+
+    const voices = window.speechSynthesis.getVoices();
+    
+    for (const preferredLang of voicePrefs) {
+      const voice = voices.find(v => 
+        v.lang.startsWith(preferredLang) || 
+        v.lang === preferredLang
+      );
+      if (voice) {
+        return voice.lang;
+      }
+    }
+    
+    return null;
+  }
+
+  findBestVoice(): SpeechSynthesisVoice | null {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      return null;
+    }
+
+    const voices = window.speechSynthesis.getVoices();
+    const voicePrefs = TTS_VOICE_MAPPINGS[this.currentLocale];
+    
+    for (const preferredLang of voicePrefs) {
+      const voice = voices.find(v => 
+        v.lang.startsWith(preferredLang) || 
+        v.lang === preferredLang
+      );
+      if (voice) {
+        return voice;
+      }
+    }
+    
+    return voices.find(v => v.lang.startsWith("en")) || voices[0] || null;
   }
 
   private getStoredLocale(): Locale | null {

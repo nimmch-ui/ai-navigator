@@ -1,4 +1,5 @@
 import { UiMode, DriverState } from "@/types/ui";
+import type { Locale } from "@/services/i18n";
 
 export interface EventPayloadMap {
   'uiMode:changed': { mode: UiMode; previousMode: UiMode };
@@ -7,6 +8,7 @@ export interface EventPayloadMap {
   'emotion:focusRegained': { timestamp: number };
   'navigation:stateChanged': { updates: Record<string, any> };
   'preferences:voiceStyleChanged': { voiceStyle: string };
+  'i18n:changed': { locale: Locale; unitSystem: string };
 }
 
 type EventName = keyof EventPayloadMap;

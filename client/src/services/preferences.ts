@@ -1,4 +1,5 @@
 import { UiMode } from "@/types/ui";
+import type { Locale } from "@/services/i18n";
 
 export type TransportMode = "car" | "bike" | "walk" | "transit";
 export type RoutePreference = "fastest" | "shortest" | "eco";
@@ -7,6 +8,7 @@ export type SpeedUnit = "kmh" | "mph";
 export type MapTheme = "auto" | "day" | "night";
 export type ARPermissionStatus = "granted" | "denied" | "prompt" | "unknown";
 export type VoiceStyle = "neutral" | "warm" | "energetic";
+export type TimeFormat = "24h" | "12h";
 
 export interface ARSensorCapabilities {
   hasWebXR: boolean;
@@ -30,6 +32,8 @@ export interface RealismPackSettings {
 
 export interface UserPreferences {
   schemaVersion?: number;
+  language: Locale;
+  timeFormat: TimeFormat;
   transportMode: TransportMode;
   routePreference: RoutePreference;
   voiceGuidance: boolean;
@@ -63,6 +67,8 @@ const CURRENT_SCHEMA_VERSION = 1;
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   schemaVersion: CURRENT_SCHEMA_VERSION,
+  language: "en",
+  timeFormat: "24h",
   transportMode: "car",
   routePreference: "fastest",
   voiceGuidance: true,

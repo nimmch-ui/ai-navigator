@@ -35,6 +35,14 @@ export function useTranslation() {
     return i18n.formatDistance(distanceMeters);
   };
 
+  const formatTime = (timestamp: number | Date): string => {
+    return i18n.formatTime(timestamp);
+  };
+
+  const findBestVoice = (): SpeechSynthesisVoice | null => {
+    return i18n.findBestVoice();
+  };
+
   const isRTL = i18n.isRTL();
 
   return {
@@ -45,6 +53,8 @@ export function useTranslation() {
     changeLocale,
     formatSpeed,
     formatDistance,
+    formatTime,
+    findBestVoice,
     availableLocales: i18n.getAvailableLocales(),
     getLocaleName: i18n.getLocaleName.bind(i18n),
   };
