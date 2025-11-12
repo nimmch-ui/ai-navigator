@@ -45,6 +45,11 @@ import { detectCamerasOnRoute, getCurrentSpeedLimit, type CameraProximityWarning
 import { calculateEcoEstimate, type EcoEstimate } from '@/services/ecoEstimates';
 import { fetchWeather, getSevereWeatherWarning, type WeatherData } from '@/services/weather';
 import { DebouncedFetcher } from '@/lib/debounce';
+import { trafficService } from '@/services/traffic';
+import { reroutingService } from '@/services/rerouting';
+import type { TrafficIncident, RerouteOption } from '@shared/schema';
+import { RerouteBanner } from '@/components/RerouteBanner';
+import { useRerouting } from '@/hooks/useRerouting';
 
 interface SearchResult {
   id: string;
@@ -118,6 +123,7 @@ export default function Home() {
   const [mapTheme, setMapTheme] = useState<MapTheme>('auto');
   const [radarEnabled, setRadarEnabled] = useState(false);
   const [radarOpacity, setRadarOpacity] = useState(0.6);
+  const [rerouteSettings, setRerouteSettings] = useState(PreferencesService.getPreferences().rerouteSettings);
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -125,6 +131,55 @@ export default function Home() {
   const [destinationCoords, setDestinationCoords] = useState<[number, number] | null>(null);
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+
+  const handleRouteUpdate = useCallback((newRoute: RouteResult) => {
+    setRouteResult(newRoute);
+    setRoute(newRoute.geometry);
+    setDismissedCameraIds(new Set());
+    
+    const distanceKm = newRoute.distance / 1000;
+    const durationMin = newRoute.duration / 60;
+    
+    const estimate = calculateTripEstimate({
+      distanceKm,
+      durationMin,
+      vehicleType,
+      ecoMode
+    });
+    setTripEstimate(estimate);
+
+    if (ecoMode && newRoute.geometry.length > 0) {
+      const eco = calculateEcoEstimate(
+        distanceKm,
+        durationMin,
+        vehicleType === 'ev',
+        routePreference
+      );
+      setEcoEstimate(eco);
+    } else {
+      setEcoEstimate(null);
+    }
+
+    if (newRoute.geometry.length > 0 && speedCameras.length > 0) {
+      const cameras = detectCamerasOnRoute(newRoute.geometry, speedCameras);
+      setCameraWarnings(cameras);
+    } else {
+      setCameraWarnings([]);
+    }
+
+    reroutingService.setInitialETA(newRoute.duration);
+    reroutingService.updateCurrentETA(newRoute.duration);
+  }, [vehicleType, ecoMode, routePreference, speedCameras]);
+
+  const rerouting = useRerouting({
+    routeResult,
+    origin: originCoords,
+    destination: destinationCoords,
+    transportMode,
+    routePreference,
+    rerouteSettings,
+    onRouteUpdate: handleRouteUpdate,
+  });
 
   const recentSearches: SearchResult[] = [];
 
@@ -152,6 +207,7 @@ export default function Home() {
     setMapTheme(prefs.mapTheme);
     setRadarEnabled(prefs.radarEnabled);
     setRadarOpacity(prefs.radarOpacity);
+    setRerouteSettings(prefs.rerouteSettings);
 
     getSpeedCameras().then(cameras => {
       setSpeedCameras(cameras);
@@ -610,6 +666,23 @@ export default function Home() {
     setNearbyHazards((prev) => prev.filter((h) => h.id !== hazardId));
   };
 
+  useEffect(() => {
+    if (rerouting.isNavigating && routeResult && routeResult.geometry.length > 0) {
+      let currentIndex = 0;
+      const interval = setInterval(() => {
+        if (currentIndex < routeResult.geometry.length) {
+          const position = routeResult.geometry[currentIndex];
+          rerouting.updatePosition(position);
+          currentIndex += Math.floor(routeResult.geometry.length / 20);
+        } else {
+          clearInterval(interval);
+        }
+      }, 10000);
+
+      return () => clearInterval(interval);
+    }
+  }, [rerouting.isNavigating, routeResult]);
+
   const handleStartNavigation = async () => {
     if (origin && destination && routeResult && originCoords && destinationCoords) {
       const distanceKm = routeResult.distance / 1000;
@@ -667,6 +740,10 @@ export default function Home() {
         console.log('[Weather] Weather data loaded:', { originWeather, destWeather });
       } catch (error) {
         console.error('[Weather] Failed to fetch weather:', error);
+      }
+
+      if (!rerouting.isNavigating) {
+        rerouting.startNavigation();
       }
     }
   };
@@ -740,6 +817,13 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Reroute Banner */}
+        <RerouteBanner
+          rerouteOption={rerouting.rerouteOption}
+          onAccept={() => rerouting.acceptReroute(rerouting.rerouteOption!)}
+          onIgnore={rerouting.ignoreReroute}
+        />
 
         <div className="absolute top-20 left-4 right-4 z-20 max-w-md mx-auto space-y-2">
           {!severeWeatherDismissed && weatherData.length > 0 && getSevereWeatherWarning(weatherData) && (
@@ -903,6 +987,7 @@ export default function Home() {
               } : null}
               isLoading={isCalculatingRoute}
               onClose={() => {
+                rerouting.stopNavigation();
                 setShowRoute(false);
                 setDestination('');
                 setDestinationCoords(null);
@@ -911,6 +996,8 @@ export default function Home() {
                 setTripEstimate(null);
                 setWeatherData([]);
                 setSevereWeatherDismissed(false);
+                setCameraWarnings([]);
+                setEcoEstimate(null);
               }}
               onStartNavigation={handleStartNavigation}
             />

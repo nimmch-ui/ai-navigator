@@ -11,6 +11,14 @@ export interface ARSensorCapabilities {
   hasCamera: boolean;
 }
 
+export interface RerouteSettings {
+  enabled: boolean;
+  etaIncreaseThresholdPercent: number;
+  offRouteDistanceMeters: number;
+  autoAccept: boolean;
+  minTimeSavingsMinutes: number;
+}
+
 export interface UserPreferences {
   transportMode: TransportMode;
   routePreference: RoutePreference;
@@ -28,6 +36,7 @@ export interface UserPreferences {
   arPreviewEnabled: boolean;
   arPermissionStatus: ARPermissionStatus;
   arSensorCapabilities: ARSensorCapabilities;
+  rerouteSettings: RerouteSettings;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -50,6 +59,13 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     hasWebXR: false,
     hasDeviceOrientation: false,
     hasCamera: false,
+  },
+  rerouteSettings: {
+    enabled: true,
+    etaIncreaseThresholdPercent: 15,
+    offRouteDistanceMeters: 100,
+    autoAccept: false,
+    minTimeSavingsMinutes: 2,
   },
 };
 

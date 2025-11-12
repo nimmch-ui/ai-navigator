@@ -32,3 +32,36 @@ export const laneSegmentSchema = z.object({
 
 export type Lane = z.infer<typeof laneSchema>;
 export type LaneSegment = z.infer<typeof laneSegmentSchema>;
+
+export const trafficIncidentSchema = z.object({
+  id: z.string(),
+  type: z.enum(['accident', 'construction', 'congestion', 'road_closure', 'other']),
+  severity: z.enum(['low', 'moderate', 'severe']),
+  location: z.tuple([z.number(), z.number()]),
+  description: z.string(),
+  delayMinutes: z.number(),
+  affectsRoute: z.boolean().optional(),
+});
+
+export const rerouteOptionSchema = z.object({
+  timeSavingsMinutes: z.number(),
+  newRoute: z.object({
+    distance: z.number(),
+    duration: z.number(),
+    coordinates: z.array(z.tuple([z.number(), z.number()])),
+  }),
+  reason: z.enum(['traffic_incident', 'gps_deviation', 'eta_increase', 'manual']),
+  incidentId: z.string().optional(),
+});
+
+export const rerouteSettingsSchema = z.object({
+  enabled: z.boolean(),
+  etaIncreaseThresholdPercent: z.number(),
+  offRouteDistanceMeters: z.number(),
+  autoAccept: z.boolean(),
+  minTimeSavingsMinutes: z.number(),
+});
+
+export type TrafficIncident = z.infer<typeof trafficIncidentSchema>;
+export type RerouteOption = z.infer<typeof rerouteOptionSchema>;
+export type RerouteSettings = z.infer<typeof rerouteSettingsSchema>;
