@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getChatResponse, type NavigationContext } from "./services/openai";
+import { insertCommunityReportSchema, voteSchema } from "@shared/schema";
+
+const REPORT_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes cooldown
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chat", async (req, res) => {
@@ -24,6 +27,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Failed to process chat request"
       });
+    }
+  });
+
+  app.get("/api/reports", async (req, res) => {
+    try {
+      const minTrustScore = req.query.minTrustScore 
+        ? parseInt(req.query.minTrustScore as string) 
+        : 0;
+      
+      let reports = await storage.getCommunityReports();
+      
+      if (minTrustScore > 0) {
+        reports = reports.filter(report => report.trustScore >= minTrustScore);
+      }
+      
+      res.json(reports);
+    } catch (error) {
+      console.error("Get reports error:", error);
+      res.status(500).json({ error: "Failed to fetch reports" });
+    }
+  });
+
+  app.post("/api/reports", async (req, res) => {
+    try {
+      const validatedData = insertCommunityReportSchema.parse(req.body);
+      
+      const lastReportTime = await storage.getLastReportTime(validatedData.reporterId);
+      const now = Date.now();
+      
+      if (lastReportTime && (now - lastReportTime) < REPORT_COOLDOWN_MS) {
+        const remainingMs = REPORT_COOLDOWN_MS - (now - lastReportTime);
+        const remainingSeconds = Math.ceil(remainingMs / 1000);
+        return res.status(429).json({ 
+          error: `Please wait ${remainingSeconds} seconds before submitting another report`,
+          remainingSeconds 
+        });
+      }
+      
+      const report = await storage.createCommunityReport(validatedData);
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Create report error:", error);
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ error: "Invalid report data" });
+      }
+      res.status(500).json({ error: "Failed to create report" });
+    }
+  });
+
+  app.post("/api/reports/:id/vote", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = voteSchema.parse({ ...req.body, reportId: id });
+      
+      const updatedReport = await storage.voteOnReport(
+        validatedData.reportId,
+        validatedData.voterId,
+        validatedData.voteType
+      );
+      
+      if (!updatedReport) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("Vote error:", error);
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ error: "Invalid vote data" });
+      }
+      res.status(500).json({ error: "Failed to record vote" });
     }
   });
 
