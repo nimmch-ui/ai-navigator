@@ -147,6 +147,9 @@ export default function Home() {
   const [radarEnabled, setRadarEnabled] = useState(false);
   const [radarOpacity, setRadarOpacity] = useState(0.6);
   const [rerouteSettings, setRerouteSettings] = useState(PreferencesService.getPreferences().rerouteSettings);
+  const [weatherLighting, setWeatherLighting] = useState(true);
+  const [motionPolish, setMotionPolish] = useState(true);
+  const [radarPulse, setRadarPulse] = useState(true);
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -247,6 +250,9 @@ export default function Home() {
     setRadarEnabled(prefs.radarEnabled);
     setRadarOpacity(prefs.radarOpacity);
     setRerouteSettings(prefs.rerouteSettings);
+    setWeatherLighting(prefs.realismPack.weatherLighting);
+    setMotionPolish(prefs.realismPack.motionPolish);
+    setRadarPulse(prefs.realismPack.radarPulse);
 
     getSpeedCameras().then(cameras => {
       setSpeedCameras(cameras);
@@ -317,6 +323,33 @@ export default function Home() {
   const handleSpeedUnitChange = (unit: SpeedUnit) => {
     setSpeedUnit(unit);
     PreferencesService.updatePreference('speedUnit', unit);
+  };
+
+  const handleWeatherLightingChange = (enabled: boolean) => {
+    setWeatherLighting(enabled);
+    const prefs = PreferencesService.getPreferences();
+    PreferencesService.updatePreference('realismPack', {
+      ...prefs.realismPack,
+      weatherLighting: enabled
+    });
+  };
+
+  const handleMotionPolishChange = (enabled: boolean) => {
+    setMotionPolish(enabled);
+    const prefs = PreferencesService.getPreferences();
+    PreferencesService.updatePreference('realismPack', {
+      ...prefs.realismPack,
+      motionPolish: enabled
+    });
+  };
+
+  const handleRadarPulseChange = (enabled: boolean) => {
+    setRadarPulse(enabled);
+    const prefs = PreferencesService.getPreferences();
+    PreferencesService.updatePreference('realismPack', {
+      ...prefs.realismPack,
+      radarPulse: enabled
+    });
   };
 
   const handleCinematicModeChange = (enabled: boolean) => {
@@ -632,6 +665,9 @@ export default function Home() {
 
   const activeWarning = cameraWarnings.find(w => !dismissedCameraIds.has(w.camera.id));
 
+  // Compute isDarkMode from mapTheme
+  const isDarkMode = mapTheme === 'night' || (mapTheme === 'auto' && resolveTheme(mapTheme, mapCenter[0], mapCenter[1]) === 'night');
+
   useEffect(() => {
     if (activeWarning && voiceEnabled) {
       const isCritical = activeWarning.distance < 300;
@@ -829,6 +865,9 @@ export default function Home() {
           weather={weatherData[0]}
           distanceToNextStep={routeResult?.steps?.[0]?.distance || Infinity}
           distanceToStepAfterNext={routeResult?.steps?.[1]?.distance}
+          weatherLightingEnabled={weatherLighting}
+          motionPolishEnabled={motionPolish}
+          isDarkMode={isDarkMode}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-30">
@@ -878,6 +917,12 @@ export default function Home() {
                 onSpeedUnitChange={handleSpeedUnitChange}
                 voiceSupported={isVoiceSupported()}
                 hapticsSupported={isHapticsSupported()}
+                weatherLighting={weatherLighting}
+                onWeatherLightingChange={handleWeatherLightingChange}
+                motionPolish={motionPolish}
+                onMotionPolishChange={handleMotionPolishChange}
+                radarPulse={radarPulse}
+                onRadarPulseChange={handleRadarPulseChange}
               />
               <ThemeToggle />
               <CarModeToggle />
@@ -915,6 +960,7 @@ export default function Home() {
               camera={activeWarning.camera}
               distance={activeWarning.distance}
               onDismiss={() => handleDismissCamera(activeWarning.camera.id)}
+              radarPulseEnabled={radarPulse}
             />
           )}
           
