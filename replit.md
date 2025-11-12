@@ -35,6 +35,7 @@ The design system features the Inter font family, a hierarchical sizing scale, a
 - **WebGL Error Handling:** Robust terrain initialization with graceful fallback for devices with limited WebGL support, ensuring 2D/3D toggle functionality.
 - **Immersive Experience Foundation:** A multi-sensory architecture built on typed event-driven patterns with a `UiMode` enum (CLASSIC, THREED, CINEMATIC, AR, VR, ECO) and an `EmotionEngine` for future AI integration.
 - **Immersive Voice & Haptics:** Production-ready emotional, sensory navigation with a central `AudioBus` service for spatial audio, `useHaptics` hook for tactile feedback, and emotion-adaptive voice using `EmotionEngine` to modify TTS parameters based on driver state.
+- **Mode Selector UI:** Interactive mode switching system with `ModeSwitcher` (desktop) and `ModeSwitcherCompact` (mobile) components supporting all 6 UI modes. Features keyboard shortcuts (1-6), tooltips, responsive design, EventBus integration, and persistent mode storage via `ModeService` with SSR/test-safe localStorage guards and dual-layer persistence (localStorage + PreferencesService).
 - **State Persistence:** User preferences are persisted via `PreferencesService` using `localStorage`.
 
 ## External Dependencies
