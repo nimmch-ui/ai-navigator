@@ -24,42 +24,12 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 /**
- * Create a cancellable async function with AbortController
- * Only the most recent call will complete; previous calls are aborted
- */
-export function createCancellableRequest<T extends (...args: any[]) => Promise<any>>() {
-  let abortController: AbortController | null = null;
-
-  return async function (...args: Parameters<T>): Promise<ReturnType<T> | null> {
-    // Cancel previous request
-    if (abortController) {
-      abortController.abort();
-    }
-
-    // Create new AbortController for this request
-    abortController = new AbortController();
-    const signal = abortController.signal;
-
-    try {
-      // Execute the request with the abort signal
-      const result = await (args[0] as any)(signal);
-      return result;
-    } catch (error) {
-      // Ignore abort errors
-      if (error instanceof Error && error.name === 'AbortError') {
-        return null;
-      }
-      throw error;
-    }
-  };
-}
-
-/**
  * Debounced fetch with automatic abort of previous requests
  */
 export class DebouncedFetcher {
   private timeout: NodeJS.Timeout | null = null;
   private abortController: AbortController | null = null;
+  private pendingResolve: ((value: any) => void) | null = null;
 
   constructor(private wait: number = 300) {}
 
@@ -69,9 +39,16 @@ export class DebouncedFetcher {
   async fetch<T>(
     fetcher: (signal: AbortSignal) => Promise<T>
   ): Promise<T | null> {
+    // Resolve previous pending promise with null (cancelled)
+    if (this.pendingResolve) {
+      this.pendingResolve(null);
+      this.pendingResolve = null;
+    }
+
     // Cancel previous timeout
     if (this.timeout) {
       clearTimeout(this.timeout);
+      this.timeout = null;
     }
 
     // Abort previous request
@@ -84,17 +61,31 @@ export class DebouncedFetcher {
     const signal = this.abortController.signal;
 
     return new Promise((resolve) => {
+      // Store resolve function so we can cancel this promise if needed
+      this.pendingResolve = resolve;
+
       this.timeout = setTimeout(async () => {
+        this.timeout = null;
+        const currentResolve = this.pendingResolve;
+        this.pendingResolve = null;
+
         try {
           const result = await fetcher(signal);
-          resolve(result);
+          this.abortController = null; // Reset after successful completion
+          if (currentResolve) {
+            currentResolve(result);
+          }
         } catch (error) {
           // Ignore abort errors
           if (error instanceof Error && error.name === 'AbortError') {
-            resolve(null);
+            if (currentResolve) {
+              currentResolve(null);
+            }
           } else {
             console.error('Fetch error:', error);
-            resolve(null);
+            if (currentResolve) {
+              currentResolve(null);
+            }
           }
         }
       }, this.wait);
@@ -105,6 +96,12 @@ export class DebouncedFetcher {
    * Cancel any pending requests
    */
   cancel(): void {
+    // Resolve pending promise with null
+    if (this.pendingResolve) {
+      this.pendingResolve(null);
+      this.pendingResolve = null;
+    }
+
     if (this.timeout) {
       clearTimeout(this.timeout);
       this.timeout = null;
