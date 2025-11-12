@@ -16,3 +16,19 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const laneSchema = z.object({
+  id: z.string(),
+  direction: z.enum(['left', 'through', 'right', 'u-turn']),
+  recommended: z.boolean().optional(),
+});
+
+export const laneSegmentSchema = z.object({
+  segmentId: z.string(),
+  stepIndex: z.number(),
+  lanes: z.array(laneSchema),
+  distanceToManeuver: z.number(),
+});
+
+export type Lane = z.infer<typeof laneSchema>;
+export type LaneSegment = z.infer<typeof laneSegmentSchema>;
