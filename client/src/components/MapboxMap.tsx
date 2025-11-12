@@ -52,6 +52,7 @@ interface MapboxMapProps {
   showSpeedCameras?: boolean;
   is3DMode?: boolean;
   cinematicMode?: boolean;
+  uiMode?: UiMode;
   mapTheme?: MapTheme;
   radarEnabled?: boolean;
   radarOpacity?: number;
@@ -81,6 +82,7 @@ export default function MapboxMap({
   showSpeedCameras = true,
   is3DMode = true,
   cinematicMode = false,
+  uiMode = UiMode.CLASSIC,
   mapTheme = 'auto',
   radarEnabled = false,
   radarOpacity = 0.6,
@@ -114,6 +116,11 @@ export default function MapboxMap({
   const cameraStateRef = useRef<CameraState | null>(null);
   const cameraAnimationFrameRef = useRef<number | null>(null);
   const lastCameraUpdateRef = useRef<number>(Date.now());
+  
+  // CINEMATIC mode refs
+  const cameraRigRef = useRef<CameraRig | null>(null);
+  const routeRendererRef = useRef<RouteRenderer | null>(null);
+  const isPageVisible = useRef<boolean>(true);
 
   // Toast notifications
   const { toast } = useToast();
@@ -240,6 +247,10 @@ export default function MapboxMap({
       // Add 3D buildings layer
       add3DBuildingsLayer(map.current);
 
+      // Initialize CINEMATIC mode services
+      cameraRigRef.current = new CameraRig(map.current);
+      routeRendererRef.current = new RouteRenderer(map.current);
+
       setMapLoaded(true);
     });
 
@@ -254,6 +265,12 @@ export default function MapboxMap({
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     return () => {
+      // Cleanup CINEMATIC services
+      cameraRigRef.current?.destroy();
+      routeRendererRef.current?.destroy();
+      cameraRigRef.current = null;
+      routeRendererRef.current = null;
+      
       map.current?.remove();
       map.current = null;
     };
@@ -347,6 +364,33 @@ export default function MapboxMap({
 
     toggle3DMode(map.current, is3DMode, 1.2, handle3DModeError);
   }, [is3DMode, mapLoaded]);
+
+  /**
+   * Page Visibility API - throttle animations when page is hidden
+   */
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      isPageVisible.current = document.visibilityState === 'visible';
+      
+      if (!isPageVisible.current) {
+        // Cancel camera RAF when hidden
+        if (cameraAnimationFrameRef.current !== null) {
+          cancelAnimationFrame(cameraAnimationFrameRef.current);
+          cameraAnimationFrameRef.current = null;
+        }
+        
+        // Stop route animations
+        routeRendererRef.current?.stopAnimation();
+        cameraRigRef.current?.stopAnimation();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   /**
    * Helper: Find closest point on route to current position
