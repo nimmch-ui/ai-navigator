@@ -4,6 +4,7 @@ export interface EventPayloadMap {
   'uiMode:changed': { mode: UiMode; previousMode: UiMode };
   'immersion:levelChanged': { level: number; settings: Record<string, boolean> };
   'emotion:stateChanged': { state: DriverState; timestamp: number };
+  'emotion:focusRegained': { timestamp: number };
 }
 
 type EventName = keyof EventPayloadMap;

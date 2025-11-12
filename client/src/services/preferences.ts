@@ -6,6 +6,7 @@ export type VehicleType = "car" | "ev" | "bike" | "walk";
 export type SpeedUnit = "kmh" | "mph";
 export type MapTheme = "auto" | "day" | "night";
 export type ARPermissionStatus = "granted" | "denied" | "prompt" | "unknown";
+export type VoiceStyle = "neutral" | "warm" | "energetic";
 
 export interface ARSensorCapabilities {
   hasWebXR: boolean;
@@ -33,7 +34,10 @@ export interface UserPreferences {
   routePreference: RoutePreference;
   voiceGuidance: boolean;
   voiceVolume: number;
+  voiceStyle: VoiceStyle;
+  emotionAdaptive: boolean;
   hapticsEnabled: boolean;
+  hapticsIntensity: number;
   hazardAlerts: boolean;
   ecoMode: boolean;
   vehicleType: VehicleType;
@@ -63,7 +67,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   routePreference: "fastest",
   voiceGuidance: true,
   voiceVolume: 1.0,
+  voiceStyle: "neutral",
+  emotionAdaptive: true,
   hapticsEnabled: true,
+  hapticsIntensity: 1.0,
   hazardAlerts: true,
   ecoMode: false,
   vehicleType: "car",

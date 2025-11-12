@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import type { TransportMode, RoutePreference, VehicleType, SpeedUnit } from '@/services/preferences';
+import type { TransportMode, RoutePreference, VehicleType, SpeedUnit, VoiceStyle } from '@/services/preferences';
 import { UiMode } from '@/types/ui';
 import { useToast } from '@/hooks/use-toast';
 
@@ -35,8 +35,14 @@ interface SettingsProps {
   onVoiceEnabledChange: (enabled: boolean) => void;
   voiceVolume: number;
   onVoiceVolumeChange: (volume: number) => void;
+  voiceStyle: VoiceStyle;
+  onVoiceStyleChange: (style: VoiceStyle) => void;
+  emotionAdaptive: boolean;
+  onEmotionAdaptiveChange: (enabled: boolean) => void;
   hapticsEnabled: boolean;
   onHapticsEnabledChange: (enabled: boolean) => void;
+  hapticsIntensity: number;
+  onHapticsIntensityChange: (intensity: number) => void;
   hazardAlertsEnabled: boolean;
   onHazardAlertsChange: (enabled: boolean) => void;
   voiceSupported: boolean;
@@ -75,8 +81,14 @@ export default function Settings({
   onVoiceEnabledChange,
   voiceVolume,
   onVoiceVolumeChange,
+  voiceStyle,
+  onVoiceStyleChange,
+  emotionAdaptive,
+  onEmotionAdaptiveChange,
   hapticsEnabled,
   onHapticsEnabledChange,
+  hapticsIntensity,
+  onHapticsIntensityChange,
   hazardAlertsEnabled,
   onHazardAlertsChange,
   voiceSupported,
@@ -394,7 +406,7 @@ export default function Settings({
           </div>
 
           {voiceEnabled && voiceSupported && (
-            <div className="space-y-2 pl-4 border-l-2 border-muted">
+            <div className="space-y-3 pl-4 border-l-2 border-muted">
               <div className="space-y-1">
                 <Label htmlFor="voice-volume" className="text-xs font-medium flex items-center gap-2">
                   <Volume2 className="h-3 w-3" />
@@ -411,6 +423,49 @@ export default function Settings({
                   data-testid="slider-voice-volume"
                 />
               </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Voice Style</Label>
+                <RadioGroup
+                  value={voiceStyle}
+                  onValueChange={(value) => onVoiceStyleChange(value as VoiceStyle)}
+                  data-testid="radio-voice-style"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="neutral" id="voice-neutral" data-testid="radio-voice-neutral" />
+                    <Label htmlFor="voice-neutral" className="text-xs font-normal cursor-pointer">
+                      Neutral
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="warm" id="voice-warm" data-testid="radio-voice-warm" />
+                    <Label htmlFor="voice-warm" className="text-xs font-normal cursor-pointer">
+                      Warm
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="energetic" id="voice-energetic" data-testid="radio-voice-energetic" />
+                    <Label htmlFor="voice-energetic" className="text-xs font-normal cursor-pointer">
+                      Energetic
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="emotion-adaptive" className="text-xs font-medium">
+                  Emotion-Adaptive Voice
+                </Label>
+                <Switch
+                  id="emotion-adaptive"
+                  checked={emotionAdaptive}
+                  onCheckedChange={onEmotionAdaptiveChange}
+                  data-testid="switch-emotion-adaptive"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                AI adjusts tone & pace based on driving state
+              </p>
             </div>
           )}
 
@@ -436,6 +491,24 @@ export default function Settings({
               data-testid="switch-haptics"
             />
           </div>
+
+          {hapticsEnabled && hapticsSupported && (
+            <div className="space-y-1 pl-4 border-l-2 border-muted">
+              <Label htmlFor="haptics-intensity" className="text-xs font-medium">
+                Haptic Intensity: {Math.round(hapticsIntensity * 100)}%
+              </Label>
+              <Slider
+                id="haptics-intensity"
+                min={50}
+                max={150}
+                step={10}
+                value={[hapticsIntensity * 100]}
+                onValueChange={(value) => onHapticsIntensityChange(value[0] / 100)}
+                className="py-2"
+                data-testid="slider-haptics-intensity"
+              />
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 flex items-center gap-2">

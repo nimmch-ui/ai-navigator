@@ -1,4 +1,16 @@
 // Voice guidance service using Web Speech API with SSML + haptics
+import { EmotionEngine } from './emotion/EmotionEngine';
+import { AudioBus } from './audio/AudioBus';
+import { HapticsUtil } from '@/hooks/useHaptics';
+import { PreferencesService, type VoiceStyle } from './preferences';
+
+// Voice style presets
+const VOICE_STYLE_PRESETS: Record<VoiceStyle, { rate: number; pitch: number; }> = {
+  neutral: { rate: 1.0, pitch: 1.0 },
+  warm: { rate: 0.95, pitch: 1.05 },    // Slightly slower, higher pitch
+  energetic: { rate: 1.1, pitch: 1.05 } // Faster, higher pitch
+};
+
 export interface VoiceAnnouncementOptions {
   priority?: 'low' | 'normal' | 'high';
   entityId?: string; // For hazard-based deduping (e.g., hazard ID)
@@ -129,14 +141,37 @@ class VoiceGuidanceService {
       text = this.processSSML(text);
     }
 
+    // Get user preferences
+    const preferences = PreferencesService.getPreferences();
+    const voiceStylePreset = VOICE_STYLE_PRESETS[preferences.voiceStyle];
+    
+    // Apply emotion-adaptive TTS parameters if enabled
+    let finalRate = voiceStylePreset.rate;
+    let finalPitch = voiceStylePreset.pitch;
+    let finalVolume = this.voiceVolume;
+    
+    if (preferences.emotionAdaptive) {
+      const emotionConfig = EmotionEngine.applyToTTS();
+      // Blend emotion config with voice style preset
+      finalRate = emotionConfig.rate ?? voiceStylePreset.rate;
+      finalPitch = emotionConfig.pitch ?? voiceStylePreset.pitch;
+      finalVolume = emotionConfig.volume ?? this.voiceVolume;
+    }
+    
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = this.voiceVolume;
+    utterance.rate = finalRate;
+    utterance.pitch = finalPitch;
+    utterance.volume = finalVolume;
     utterance.lang = 'en-US';
+    
+    // Duck ambient audio when speaking
+    AudioBus.duckChannels(['ambient'], 0.3, 0.2);
 
     utterance.onend = () => {
       this.isSpeaking = false;
+      
+      // Restore ducked audio
+      AudioBus.restoreChannels(['ambient'], 0.2);
 
       // Update entity throttle map
       if (announcement.options.entityId) {
@@ -179,13 +214,10 @@ class VoiceGuidanceService {
   }
 
   private triggerCriticalAlert(): void {
-    // Trigger haptic vibration if enabled and supported
-    if (this.hapticsEnabled && this.supportsVibrate) {
-      try {
-        navigator.vibrate([60, 40, 60]); // Short pulse pattern
-      } catch (error) {
-        // Vibrate failed, fail silently
-      }
+    // Trigger haptic vibration using HapticsUtil with user intensity
+    if (this.hapticsEnabled) {
+      const preferences = PreferencesService.getPreferences();
+      HapticsUtil.vibrate('warning', preferences.hapticsIntensity);
     }
 
     // Play audio ding
