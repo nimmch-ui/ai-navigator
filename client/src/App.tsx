@@ -11,6 +11,7 @@ import { CarModeProvider } from "@/contexts/CarModeContext";
 import { PWAUpdateNotification } from "@/components/PWAUpdateNotification";
 import { registerServiceWorker } from "@/lib/serviceWorker";
 import { initializeSubscriptions, cleanupSubscriptions } from "@/services/subscriptions";
+import { ModeManager } from "@/services/ui/ModeManager";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 
@@ -32,9 +33,13 @@ function App() {
     });
 
     initializeSubscriptions();
+    
+    // Initialize ModeManager after subscriptions are ready
+    ModeManager.initialize();
 
     return () => {
       cleanupSubscriptions();
+      ModeManager.destroy();
     };
   }, []);
 
