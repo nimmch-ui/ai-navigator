@@ -286,3 +286,53 @@
     inset: -1px;
   }
 }
+
+.car-mode {
+  --button-min-height: 3.5rem;
+  --icon-size: 1.75rem;
+  --font-size-base: 1.125rem;
+  --font-size-lg: 1.5rem;
+  --spacing: 1.5rem;
+  --primary: 217 91% 65%;
+  --primary-foreground: 0 0% 100%;
+  --background: 0 0% 8%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 12%;
+  --muted: 0 0% 20%;
+  --border: 0 0% 25%;
+  --muted-foreground: 0 0% 75%;
+}
+
+.car-mode button {
+  min-height: var(--button-min-height) !important;
+  font-size: var(--font-size-base) !important;
+  font-weight: 600 !important;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+.car-mode .car-mode-icon {
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+}
+
+.car-mode input,
+.car-mode select,
+.car-mode textarea {
+  min-height: var(--button-min-height) !important;
+  font-size: var(--font-size-base) !important;
+}
+
+.car-mode h1,
+.car-mode h2,
+.car-mode h3 {
+  font-weight: 700 !important;
+}
+
+.car-mode .text-lg {
+  font-size: var(--font-size-lg) !important;
+}
+
+.car-mode [data-car-mode-hide] {
+  display: none !important;
+}

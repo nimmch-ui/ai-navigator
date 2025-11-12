@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ARExperienceProvider } from "@/contexts/ARExperienceProvider";
 import { OfflineProvider } from "@/contexts/OfflineContext";
+import { CarModeProvider } from "@/contexts/CarModeContext";
+import { PWAUpdateNotification } from "@/components/PWAUpdateNotification";
 import { registerServiceWorker } from "@/lib/serviceWorker";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
@@ -31,12 +33,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <OfflineProvider>
-          <ARExperienceProvider>
-            <Toaster />
-            <Router />
-          </ARExperienceProvider>
-        </OfflineProvider>
+        <CarModeProvider>
+          <OfflineProvider>
+            <ARExperienceProvider>
+              <Toaster />
+              <PWAUpdateNotification />
+              <Router />
+            </ARExperienceProvider>
+          </OfflineProvider>
+        </CarModeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

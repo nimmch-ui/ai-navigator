@@ -133,6 +133,11 @@ self.addEventListener('message', async (event) => {
 
   const { type, payload } = event.data;
 
+  if (type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
   if (type === 'PREFETCH_TILES') {
     await prefetchTiles(payload.tiles, payload.clientId, payload.sessionId);
   }
