@@ -26,6 +26,7 @@ export const laneSchema = z.object({
 export const laneSegmentSchema = z.object({
   segmentId: z.string(),
   stepIndex: z.number(),
+  maneuverCoordinateIndex: z.number().optional(),
   lanes: z.array(laneSchema),
   distanceToManeuver: z.number(),
 });
