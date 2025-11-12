@@ -64,12 +64,23 @@ export default function ARView({
     hasCamera,
     hasDeviceOrientation,
     cameraPermission,
-    orientationPermission,
+    orientationPermission: initialOrientationPermission,
     requestCamera,
     requestOrientation,
     fallbackMode,
     errorMessage
   } = useARCapabilities();
+  
+  // Check for granted permission from Settings (iOS user gesture flow)
+  const [orientationPermission, setOrientationPermission] = useState(initialOrientationPermission);
+  
+  useEffect(() => {
+    // On mount, check if permission was granted via Settings
+    const stored = localStorage.getItem('ar_orientation_permission');
+    if (stored && (stored === 'granted' || stored === 'denied')) {
+      setOrientationPermission(stored as 'granted' | 'denied');
+    }
+  }, []);
 
   /**
    * Safety check: Warn if speed > 30 km/h and device is handheld

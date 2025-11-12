@@ -112,6 +112,8 @@ export default function Settings({
           const permission = await (DeviceOrientationEvent as any).requestPermission();
           
           if (permission !== 'granted') {
+            // Store denied status for ARView to read
+            localStorage.setItem('ar_orientation_permission', 'denied');
             toast({
               title: 'AR Mode Unavailable',
               description: 'Orientation sensors are required for AR mode. Please grant permission.',
@@ -120,6 +122,12 @@ export default function Settings({
             // Stay in current mode
             return;
           }
+          
+          // Store granted status so ARView can read it
+          localStorage.setItem('ar_orientation_permission', 'granted');
+        } else {
+          // Non-iOS browsers - permission not needed, mark as granted
+          localStorage.setItem('ar_orientation_permission', 'granted');
         }
         
         // Permission granted or not needed (non-iOS), proceed to AR mode
