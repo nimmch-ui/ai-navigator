@@ -72,6 +72,10 @@ Preferred communication style: Simple, everyday language.
 - Speed camera visibility controlled by showSpeedCameras setting.
 - Route visualization enhanced with glow effect and smooth camera transitions.
 - Mapbox token check with graceful error UI when VITE_MAPBOX_TOKEN is missing.
+- Premium 3D visuals use Mapbox terrain DEM (mapbox://mapbox.terrain-rgb) with 1.2x exaggeration.
+- Sky layer provides atmospheric rendering for realistic horizon when camera is pitched.
+- 2D/3D toggle button switches between flat (pitch 0) and cinematic 3D view (pitch 45).
+- Visual3D service in services/map/visual3d.ts manages terrain, sky, and camera transitions.
 
 ## External Dependencies
 

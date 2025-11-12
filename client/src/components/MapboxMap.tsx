@@ -10,6 +10,7 @@ import type { Hazard } from '@/data/hazards';
 import { getHazardMetadata } from '@/data/hazards';
 import type { SpeedCamera } from '@/data/speedCameras';
 import { formatSpeedLimit } from '@/services/radar';
+import { toggle3DMode } from '@/services/map/visual3d';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -22,6 +23,7 @@ interface MapboxMapProps {
   hazards?: Hazard[];
   speedCameras?: SpeedCamera[];
   showSpeedCameras?: boolean;
+  is3DMode?: boolean;
 }
 
 export default function MapboxMap({
@@ -32,7 +34,8 @@ export default function MapboxMap({
   route,
   hazards = [],
   speedCameras = [],
-  showSpeedCameras = true
+  showSpeedCameras = true,
+  is3DMode = true
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -91,7 +94,7 @@ export default function MapboxMap({
       style: mapStyle,
       center: [center[1], center[0]], // Convert [lat, lng] to [lng, lat] for Mapbox
       zoom: zoom,
-      pitch: 45, // Tilt for 3D effect
+      pitch: is3DMode ? 45 : 0,
       bearing: 0,
       antialias: true // Smooth rendering
     });
@@ -171,6 +174,15 @@ export default function MapboxMap({
       easing: (t) => t * (2 - t) // Ease out quad
     });
   }, [center, zoom, mapLoaded]);
+
+  /**
+   * Toggle 3D mode (terrain and sky) when is3DMode changes
+   */
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    toggle3DMode(map.current, is3DMode);
+  }, [is3DMode, mapLoaded]);
 
   /**
    * Update markers, hazards, cameras, and route
@@ -331,7 +343,7 @@ export default function MapboxMap({
       map.current.fitBounds(bounds, {
         padding: 80,
         duration: 1500,
-        pitch: 45,
+        pitch: is3DMode ? 45 : 0,
         bearing: 0
       });
     } else {

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Box, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import MapboxMap from '@/components/MapboxMap';
@@ -101,6 +101,7 @@ export default function Home() {
   const [isElectricVehicle, setIsElectricVehicle] = useState(false);
   const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [severeWeatherDismissed, setSevereWeatherDismissed] = useState(false);
+  const [is3DMode, setIs3DMode] = useState(true);
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -648,6 +649,7 @@ export default function Home() {
           hazards={hazardAlertsEnabled ? mockHazards : []}
           speedCameras={speedCameras}
           showSpeedCameras={showSpeedCameras}
+          is3DMode={is3DMode}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-30">
@@ -743,6 +745,16 @@ export default function Home() {
         </div>
 
         <div className="absolute bottom-6 right-6 z-30 flex flex-col gap-2">
+          <Button
+            size="icon"
+            variant="outline"
+            className="rounded-full shadow-lg"
+            onClick={() => setIs3DMode(!is3DMode)}
+            title={is3DMode ? "Switch to 2D" : "Switch to 3D"}
+            data-testid="button-toggle-3d"
+          >
+            {is3DMode ? <Box className="h-5 w-5" /> : <Map className="h-5 w-5" />}
+          </Button>
           <MapControls
             onZoomIn={() => setMapZoom((z) => Math.min(z + 1, 18))}
             onZoomOut={() => setMapZoom((z) => Math.max(z - 1, 3))}
