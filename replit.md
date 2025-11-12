@@ -2,16 +2,7 @@
 
 ## Overview
 
-AI Navigator is a map-first, AI-assisted navigation Progressive Web App (PWA) offering an interactive mapping experience with ChatGPT-style intelligence. It provides smart route planning, location discovery, and navigation guidance, aiming to redefine personal navigation by blending advanced AI with rich mapping features. Key capabilities include multimodal navigation, real-time rerouting, lane-level guidance, AR preview, speed camera alerts, voice navigation, premium 3D maps, offline downloads, and a dedicated Car Mode UI.
-
-**Recent Updates (Q2-A5 Telemetry, Deep Links & Analytics - Nov 12, 2025):**
-- Created production-ready analytics service with 8 event types: mode_selected, mode_fallback, ar_permission_denied, vr_unsupported, tts_style_changed, haptics_fired, hazard_announced, radar_announced
-- Implemented deep link support: URL query params (?mode=classic|3d|cinematic|ar|vr|eco) and hash routes (#nav:start=lat,lng&end=lat,lng&mode=...)
-- Added session summary tracking: time spent per mode, hazards announced count, radars announced count
-- Deep links auto-load on app startup, delegating to ModeManager for proper lifecycle, fallback, and analytics
-- Analytics integration: ModeManager (mode changes, fallbacks), AR capabilities (permission denied), mode capabilities (VR unsupported), radarPulse (explicit announcement types), useHaptics (tactile feedback), mode descriptors (voice style changes with redundancy guards)
-- Session lifecycle: handleModeChange() exclusively manages session start/end to prevent double-counting
-- Enhanced context: VR/AR unsupported events include full device capability flags for observability
+AI Navigator is a map-first, AI-assisted Progressive Web App (PWA) designed to redefine personal navigation. It offers an interactive mapping experience with ChatGPT-style intelligence, providing smart route planning, location discovery, and navigation guidance. Key capabilities include multimodal navigation (2D, 3D, Cinematic, AR, VR, Eco), real-time rerouting, lane-level guidance, AR preview, speed camera alerts, voice navigation, premium 3D maps, offline downloads, and a dedicated Car Mode UI. The project aims to blend advanced AI with rich mapping features to create an immersive and efficient navigation experience.
 
 ## User Preferences
 
@@ -20,79 +11,62 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend
-The frontend is built with React 18, TypeScript, Vite, and Wouter for routing. UI components use shadcn/ui, Radix UI primitives, and Tailwind CSS for styling. State management relies on TanStack Query for server state and React hooks for local state. Map integration is handled by Mapbox GL JS, providing interactive 3D maps with custom markers and GeoJSON overlays. The design emphasizes a full-viewport map with responsive overlaid UI panels.
+The frontend uses React 18, TypeScript, Vite, and Wouter for routing. UI components are built with shadcn/ui, Radix UI primitives, and styled with Tailwind CSS. State management employs TanStack Query for server state and React hooks for local state. Map integration is handled by Mapbox GL JS, providing interactive 3D maps with custom markers and GeoJSON overlays, featuring a full-viewport map with responsive overlaid UI panels.
 
 ### Backend
-The backend uses Express.js for HTTP services and API routing, integrated with Vite middleware for development. Data storage is currently an in-memory solution (MemStorage) with an abstracted interface, and Drizzle ORM is configured for PostgreSQL with Zod validation for future database integration.
+The backend utilizes Express.js for HTTP services and API routing, integrated with Vite middleware for development. Data storage is currently an in-memory solution (MemStorage) with an abstracted interface, and Drizzle ORM is configured for future PostgreSQL integration with Zod validation.
 
 ### Design System
-The design system features the Inter font family, a hierarchical sizing scale, an 8-pixel base grid, and HSL-based color tokens for light/dark mode. Accessibility is supported with consistent hover/active states and focus-visible rings. Icons are sourced from Lucide React.
+The design system incorporates the Inter font, a hierarchical sizing scale, an 8-pixel base grid, and HSL-based color tokens for light/dark mode. Accessibility features include consistent hover/active states and focus-visible rings. Icons are sourced from Lucide React.
 
 ### Core Features & Technical Implementations
-- **Navigation:** Multimodal support, smart search, real-time rerouting, and lane-level guidance.
-- **Mapping:** Mapbox GL JS provides premium 3D maps with terrain, sky, buildings, automatic day/night switching, and 2D/3D toggling.
-- **Augmented Reality (AR):** AR Preview mode uses `getUserMedia`, `WebXR`, and `DeviceOrientation` for overlaying navigation data onto a live camera feed. A full AR implementation provides live camera feed with canvas-based AR overlays for speed, maneuvers, and radar, featuring comprehensive safety systems and multi-tier fallback (full AR → pseudo-AR → 3D mode).
-- **Weather & Alerts:** Integrates OpenWeatherMap for forecasts and severe alerts, and RainViewer API for live radar. Includes a speed camera radar system with visual and voice alerts.
-- **Voice Guidance:** Utilizes Web Speech API (SpeechSynthesis) for turn-by-turn instructions and warnings, with hazard throttling.
-- **Performance:** Implements debouncing, AbortController for API requests, `React.memo`, lazy loading, and optimized map rendering.
-- **Offline Capabilities:** PWA functionality with `manifest.json` and a Service Worker for offline map region downloads and app updates.
-- **Car Mode UI:** A simplified, high-contrast interface with larger touch targets for in-vehicle use, activated via toggle or URL parameter.
-- **Community Reporting:** A Waze-style reporting system for cameras, accidents, and hazards with cooldowns, voting, and trust scores.
-- **3D Lane Rendering:** Displays elevated 3D lane ribbons using Mapbox GL fill-extrusion layers, color-coded for guidance.
-- **AI-Assisted Camera Control:** Intelligent camera state machine with 5 states (cruising, approaching_turn, in_turn, searching_target, overview) uses AI heuristics to adjust camera parameters based on turn density, speed, and weather.
-- **Realism Pack:** Optional visual/audio enhancements including dynamic weather lighting, motion polish (route glow, motion blur), and radar pulse animations.
-- **WebGL Error Handling:** Robust terrain initialization with graceful fallback for devices with limited WebGL support, ensuring 2D/3D toggle functionality.
-- **Immersive Experience Foundation:** A multi-sensory architecture built on typed event-driven patterns with a `UiMode` enum (CLASSIC, THREED, CINEMATIC, AR, VR, ECO) and an `EmotionEngine` for future AI integration.
-- **Immersive Voice & Haptics:** Production-ready emotional, sensory navigation with a central `AudioBus` service for spatial audio, `useHaptics` hook for tactile feedback, and emotion-adaptive voice using `EmotionEngine` to modify TTS parameters based on driver state.
-- **Mode Selector UI:** Interactive mode switching system with `ModeSwitcher` (desktop) and `ModeSwitcherCompact` (mobile) components supporting all 6 UI modes. Features keyboard shortcuts (1-6 numbers, C/A/E letters), tooltips, responsive design, EventBus integration, and persistent mode storage via `ModeService` with SSR/test-safe localStorage guards and dual-layer persistence (localStorage + PreferencesService).
-- **Gesture Navigation:** Long-press map gesture (600ms) toggles between Classic and 3D modes using `useMapLongPressToggle` hook with 10px movement threshold for gesture cancellation and haptic feedback integration.
-- **Mode Integration:** Dynamic camera adjustments (pitch, bearing, zoom) per UI mode via `modeCameraSettings` with smooth easeTo transitions. WebGL capability detection with continuous fallback enforcement (VR→AR→3D→Classic) and smart toast suppression. Default mode is CLASSIC with automatic downgrade for unsupported modes based on device capabilities.
-- **Mode Descriptors & Visual Logic (Q2-A4):** Production-ready mode lifecycle system with visual behaviors defined per mode in `descriptors.ts`. Each mode has `onEnter`/`onExit` hooks: CLASSIC (flat, pitch=0), THREED (terrain+buildings, pitch=60), CINEMATIC (smooth transitions+warm voice via PreferencesService, pitch=45, 1500ms easing), AR (camera overlay, fallback to THREED), VR (WebXR with fallback chain), ECO (eco routing+CO₂ panel conditional on uiMode). Voice tone system: CINEMATIC mode sets `voiceStyle='warm'` in PreferencesService and emits `preferences:voiceStyleChanged` event; voiceGuidance reads preferences on every announcement via `getPreferences().voiceStyle`, applying VOICE_STYLE_PRESETS (warm: rate=0.95, pitch=1.05). EventBus listener logs changes but style is applied automatically by reading current preference. Performance: 250ms debouncing on mode changes in ModeManager prevents rapid toggling, maintains 60fps target.
-- **ModeManager Architecture:** Production-ready mode lifecycle orchestration system with `ModeManager` service coordinating mode transitions via `enter()`, `exit()`, and lifecycle hooks. Always delegates to `ModeService.setMode()` for persistence and EventBus propagation. Features automatic WebGL fallback (getBestSupportedMode), view abstraction via `IRouteView` interface, and clean separation between mode coordination (ModeManager) and mode persistence (ModeService). Supports registering mode descriptors with custom view factories and onEnter/onExit hooks.
-- **SharedNavigationState Service:** Centralized reactive state management consolidating radar data (speed cameras, hazards), speed tracking (current speed, speed limit), weather conditions (forecasts, radar), voice guidance settings (enabled, volume), and eco estimates. Provides type-safe get/set accessors, partial updates via `updateState()`, subscription API for listeners, and emits EventBus `navigation:stateChanged` events. Ensures navigation data persists across all mode switches without disruption.
-- **Service Persistence:** All subscription services (speedSubscription, weatherSubscription, voiceSubscription, ecoSubscription, radarSubscription, hazardSubscription) are singletons initialized once in App.tsx. Services listen to mode changes and adapt behavior (e.g., voice adjusts TTS, weather adapts display) but maintain state across transitions. ModeManager orchestrates view replacement without disrupting background services, ensuring seamless multimodal navigation.
-- **State Persistence:** User preferences are persisted via `PreferencesService` using `localStorage`.
-- **Telemetry & Analytics (Q2-A5):** Production-ready analytics service tracking 8 event types with console-based logging (extensible to Google Analytics/Mixpanel). Events: mode_selected (mode changes), mode_fallback (capability fallback), ar_permission_denied (camera permission denied), vr_unsupported (WebXR unavailable), tts_style_changed (voice style changes), haptics_fired (tactile feedback), hazard_announced (hazard voice alerts), radar_announced (speed camera alerts). Session tracking maintains in-memory counters for time per mode, hazards announced, and radars announced. ModeManager.handleModeChange() exclusively manages session lifecycle to prevent double-counting. All analytics events include rich context (device capabilities, mode transitions, announcement types) for observability.
-- **Deep Links & Shareability (Q2-A5):** URL-based navigation supporting query params (?mode=classic|3d|cinematic|ar|vr|eco) and hash routes (#nav:start=lat,lng&end=lat,lng&mode=...) for shareable navigation links. Deep links auto-load on app startup via DeepLinksService.applyDeepLinks() initialized in App.tsx. Delegates to ModeManager.enter() for proper lifecycle, capability fallback (VR→AR→3D→Classic), and analytics tracking. generateShareableURL() creates shareable links with current mode and optional navigation coordinates. Hash routes take precedence over query params for mode selection.
+- **Multimodal Navigation:** Supports 6 distinct UI modes (CLASSIC, 3D, CINEMATIC, AR, VR, ECO) with intelligent fallback logic based on device capabilities (e.g., VR → AR → 3D → Classic). Each mode has specific visual settings, audio characteristics, and use cases, with seamless transitions managed by a `ModeManager` service.
+- **Mapping & Visualization:** Mapbox GL JS powers premium 3D maps with terrain, sky, buildings, automatic day/night switching, and 2D/3D toggling. Includes 3D lane rendering using fill-extrusion layers and AI-assisted camera control that dynamically adjusts camera parameters based on navigation context.
+- **Augmented Reality (AR):** AR Preview mode uses `getUserMedia` and `DeviceOrientation` for overlaying navigation data onto a live camera feed. A full AR implementation provides canvas-based overlays for speed, maneuvers, and radar, with safety systems and a multi-tier fallback.
+- **Voice Guidance & Haptics:** Utilizes Web Speech API for turn-by-turn instructions and warnings, with emotion-adaptive voice styles (e.g., "warm" voice in Cinematic mode) managed by `EmotionEngine`. Features a `useHaptics` hook for tactile feedback and an `AudioBus` service for spatial audio.
+- **Real-time Data & Alerts:** Integrates OpenWeatherMap for forecasts and severe alerts, RainViewer API for live radar, and a speed camera radar system with visual and voice alerts. Navigation data is centralized in a `SharedNavigationState` service.
+- **Performance & Offline:** Implements debouncing, AbortController, React.memo, lazy loading, and optimized map rendering. PWA functionality with `manifest.json` and a Service Worker enables offline map region downloads and app updates.
+- **User Interaction:** Features an interactive `ModeSwitcher` UI (desktop/mobile), keyboard shortcuts (1-6, C/A/E), and gesture navigation (long-press map to toggle 2D/3D). User preferences are persisted via `localStorage` using `PreferencesService`.
+- **Telemetry & Deep Links:** Includes a production-ready analytics service tracking 8 event types (e.g., `mode_selected`, `mode_fallback`) for observability. Supports URL-based deep links for shareable navigation with query parameters and hash routes, handled by a `DeepLinksService`.
 
 ## External Dependencies
 
 ### UI & Component Libraries
-- **@radix-ui/*:** Accessible primitives
-- **lucide-react:** Iconography
-- **class-variance-authority:** Component variants
-- **cmdk:** Command palette
+- @radix-ui/*
+- lucide-react
+- class-variance-authority
+- cmdk
 
 ### Mapping
-- **Mapbox GL JS:** 3D interactive maps
-- **Mapbox Streets styles:** Day/night map styles
-- **Mapbox Geocoding API:** Address-to-coordinate conversion
-- **Mapbox Directions API:** Routing services
+- Mapbox GL JS
+- Mapbox Streets styles
+- Mapbox Geocoding API
+- Mapbox Directions API
 
 ### Weather
-- **OpenWeatherMap API:** Weather forecasts and alerts
-- **RainViewer API:** Live weather radar overlay
+- OpenWeatherMap API
+- RainViewer API
 
 ### Browser APIs
-- **Web Speech API (SpeechSynthesis):** Voice guidance
-- **Service Worker API:** PWA offline caching, update notifications
-- **Web App Manifest:** PWA installation and configuration
-- **getUserMedia API:** Camera access for AR mode
-- **WebXR Device API:** Full AR capabilities
-- **DeviceOrientation API:** Gyroscope/accelerometer data for pseudo-AR mode
-- **Page Visibility API:** AR rendering pause
+- Web Speech API (SpeechSynthesis)
+- Service Worker API
+- Web App Manifest
+- getUserMedia API
+- WebXR Device API
+- DeviceOrientation API
+- Page Visibility API
 
 ### Form Management
-- **react-hook-form:** Form handling
-- **@hookform/resolvers:** Resolver for form validation
-- **Zod:** Schema validation
+- react-hook-form
+- @hookform/resolvers
+- Zod
 
 ### Database & ORM
-- **Drizzle ORM:** ORM for PostgreSQL
-- **@neondatabase/serverless:** Serverless database connector
-- **drizzle-zod:** Zod integration for Drizzle
+- Drizzle ORM
+- @neondatabase/serverless
+- drizzle-zod
 
 ### Utilities
-- **date-fns:** Date manipulation
-- **nanoid:** Unique ID generation
-- **clsx + tailwind-merge:** CSS class utilities
+- date-fns
+- nanoid
+- clsx + tailwind-merge
