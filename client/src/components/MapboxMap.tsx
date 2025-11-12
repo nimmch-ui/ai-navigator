@@ -34,6 +34,7 @@ import {
   handleCameraPan, 
   cleanupMotionPolish 
 } from '@/services/map/motionPolish';
+import { useToast } from '@/hooks/use-toast';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -111,6 +112,20 @@ export default function MapboxMap({
   const cameraAnimationFrameRef = useRef<number | null>(null);
   const lastCameraUpdateRef = useRef<number>(Date.now());
 
+  // Toast notifications
+  const { toast } = useToast();
+
+  /**
+   * Handle 3D mode errors
+   */
+  const handle3DModeError = (message: string) => {
+    toast({
+      title: "3D Mode Limited",
+      description: message,
+      variant: "default",
+    });
+  };
+
   /**
    * Check if WebGL is supported in the current browser
    */
@@ -128,45 +143,54 @@ export default function MapboxMap({
    * Add 3D buildings layer to the map
    */
   const add3DBuildingsLayer = (mapInstance: mapboxgl.Map) => {
-    const layers = mapInstance.getStyle().layers;
-    const labelLayerId = layers?.find(
-      (layer) => layer.type === 'symbol' && layer.layout && 'text-field' in layer.layout
-    )?.id;
+    try {
+      if (!mapInstance.isStyleLoaded()) {
+        console.warn('[3D Buildings] Style not loaded yet, deferring building layer setup');
+        return;
+      }
 
-    if (!mapInstance.getLayer('3d-buildings')) {
-      mapInstance.addLayer(
-        {
-          'id': '3d-buildings',
-          'source': 'composite',
-          'source-layer': 'building',
-          'filter': ['==', 'extrude', 'true'],
-          'type': 'fill-extrusion',
-          'minzoom': 14,
-          'paint': {
-            'fill-extrusion-color': '#aaa',
-            'fill-extrusion-height': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              15,
-              0,
-              15.05,
-              ['get', 'height']
-            ],
-            'fill-extrusion-base': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              15,
-              0,
-              15.05,
-              ['get', 'min_height']
-            ],
-            'fill-extrusion-opacity': 0.6
-          }
-        },
-        labelLayerId
-      );
+      const layers = mapInstance.getStyle().layers;
+      const labelLayerId = layers?.find(
+        (layer) => layer.type === 'symbol' && layer.layout && 'text-field' in layer.layout
+      )?.id;
+
+      if (!mapInstance.getLayer('3d-buildings')) {
+        mapInstance.addLayer(
+          {
+            'id': '3d-buildings',
+            'source': 'composite',
+            'source-layer': 'building',
+            'filter': ['==', 'extrude', 'true'],
+            'type': 'fill-extrusion',
+            'minzoom': 14,
+            'paint': {
+              'fill-extrusion-color': '#aaa',
+              'fill-extrusion-height': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'height']
+              ],
+              'fill-extrusion-base': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'min_height']
+              ],
+              'fill-extrusion-opacity': 0.6
+            }
+          },
+          labelLayerId
+        );
+      }
+    } catch (error) {
+      console.warn('[3D Buildings] Failed to add buildings layer:', error);
     }
   };
 
@@ -256,28 +280,33 @@ export default function MapboxMap({
       const onStyleLoad = () => {
         if (!map.current) return;
 
-        // Re-add 3D buildings layer
-        add3DBuildingsLayer(map.current);
+        // Wait for style to fully load before applying 3D features
+        map.current.once('style.load', () => {
+          if (!map.current) return;
 
-        // Re-apply 3D mode (terrain and sky)
-        toggle3DMode(map.current, is3DMode);
+          // Re-add 3D buildings layer
+          add3DBuildingsLayer(map.current);
 
-        // Re-apply weather lighting (resilience requirement)
-        if (weatherLightingEnabled) {
-          try {
-            applyWeatherLighting(map.current, weather, mapTheme, isDarkMode, true);
-          } catch (error) {
-            console.warn('[WeatherLighting] Failed to apply after style change:', error);
+          // Re-apply 3D mode (terrain and sky)
+          toggle3DMode(map.current, is3DMode, 1.2, handle3DModeError);
+
+          // Re-apply weather lighting (resilience requirement)
+          if (weatherLightingEnabled) {
+            try {
+              applyWeatherLighting(map.current, weather, mapTheme, isDarkMode, true);
+            } catch (error) {
+              console.warn('[WeatherLighting] Failed to apply after style change:', error);
+            }
           }
-        }
 
-        // Restore camera position
-        map.current.easeTo({
-          center: currentCenter,
-          zoom: currentZoom,
-          pitch: currentPitch,
-          bearing: currentBearing,
-          duration: 500
+          // Restore camera position
+          map.current.easeTo({
+            center: currentCenter,
+            zoom: currentZoom,
+            pitch: currentPitch,
+            bearing: currentBearing,
+            duration: 500
+          });
         });
 
         // Remove listener after execution
@@ -313,7 +342,7 @@ export default function MapboxMap({
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    toggle3DMode(map.current, is3DMode);
+    toggle3DMode(map.current, is3DMode, 1.2, handle3DModeError);
   }, [is3DMode, mapLoaded]);
 
   /**
