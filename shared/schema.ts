@@ -65,3 +65,39 @@ export const rerouteSettingsSchema = z.object({
 export type TrafficIncident = z.infer<typeof trafficIncidentSchema>;
 export type RerouteOption = z.infer<typeof rerouteOptionSchema>;
 export type RerouteSettings = z.infer<typeof rerouteSettingsSchema>;
+
+export const communityReportSchema = z.object({
+  id: z.string(),
+  type: z.enum(['fixed_camera', 'mobile_camera', 'accident', 'roadwork', 'hazard']),
+  location: z.tuple([z.number(), z.number()]),
+  description: z.string().optional(),
+  reporterId: z.string(),
+  reportedAt: z.number(),
+  confirmations: z.number().default(0),
+  rejections: z.number().default(0),
+  trustScore: z.number().default(0),
+  status: z.enum(['pending', 'approved', 'rejected', 'expired']).default('pending'),
+  expiresAt: z.number(),
+  voters: z.array(z.string()).default([]),
+});
+
+export const insertCommunityReportSchema = communityReportSchema.omit({
+  id: true,
+  confirmations: true,
+  rejections: true,
+  trustScore: true,
+  status: true,
+  voters: true,
+}).extend({
+  reporterId: z.string().default('anonymous'),
+});
+
+export const voteSchema = z.object({
+  reportId: z.string(),
+  voterId: z.string(),
+  voteType: z.enum(['confirm', 'reject']),
+});
+
+export type CommunityReport = z.infer<typeof communityReportSchema>;
+export type InsertCommunityReport = z.infer<typeof insertCommunityReportSchema>;
+export type Vote = z.infer<typeof voteSchema>;
