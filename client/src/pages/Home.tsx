@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { MessageSquare, Box, Map, Video, Sun, Moon, Cloud, CloudOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +45,8 @@ import { sendChatMessage, type ChatContext } from '@/services/chatApi';
 import { calculateRoute, formatDistance, formatDuration, getManeuverIcon, type RouteResult } from '@/services/routing';
 import { searchPlaces, type GeocodingResult } from '@/services/geocoding';
 import { getNextTheme, getThemeLabel, resolveTheme } from '@/services/map/theme';
+import { getLaneDataForRoute } from '@/services/lanes';
+import type { LaneSegment } from '@shared/schema';
 import { getSpeedCameras } from '@/services/radar';
 import type { SpeedCamera } from '@/data/speedCameras';
 import { detectCamerasOnRoute, getCurrentSpeedLimit, type CameraProximityWarning } from '@/services/cameraProximity';
@@ -151,11 +154,23 @@ export default function Home() {
   const [destinationCoords, setDestinationCoords] = useState<[number, number] | null>(null);
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+  const [laneSegments, setLaneSegments] = useState<Map<number, LaneSegment>>(new Map());
+  const [currentNavigationPosition, setCurrentNavigationPosition] = useState<[number, number] | undefined>();
+  const positionUpdateTimerRef = useRef<number | null>(null);
 
   const handleRouteUpdate = useCallback((newRoute: RouteResult) => {
     setRouteResult(newRoute);
     setRoute(newRoute.geometry);
     setDismissedCameraIds(new Set());
+    
+    // Extract lane data from route steps
+    const laneData = getLaneDataForRoute(newRoute.steps);
+    setLaneSegments(laneData);
+    
+    // Initialize navigation position to start of route
+    if (newRoute.geometry.length > 0) {
+      setCurrentNavigationPosition(newRoute.geometry[0]);
+    }
     
     const distanceKm = newRoute.distance / 1000;
     const durationMin = newRoute.duration / 60;
@@ -172,7 +187,7 @@ export default function Home() {
       const eco = calculateEcoEstimate(
         distanceKm,
         durationMin,
-        vehicleType === 'ev',
+        transportMode,
         routePreference
       );
       setEcoEstimate(eco);
@@ -804,6 +819,8 @@ export default function Home() {
           is3DMode={is3DMode}
           cinematicMode={cinematicMode}
           mapTheme={mapTheme}
+          laneData={laneSegments}
+          currentPosition={currentNavigationPosition}
           radarEnabled={radarEnabled}
           radarOpacity={radarOpacity}
           onRadarError={handleRadarError}

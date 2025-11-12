@@ -149,16 +149,20 @@ export function getMockLaneData(
  */
 export function getLaneDataForRoute(steps: Array<{
   instruction: string;
-  maneuver?: string;
-  distance: string;
+  maneuver?: string | { type: string; modifier?: string };
+  distance: string | number;
 }>): Map<number, LaneSegment> {
   const laneData = new Map<number, LaneSegment>();
   
   steps.forEach((step, index) => {
-    const maneuver = step.maneuver || '';
+    // Extract maneuver type from object or string
+    const maneuverType = typeof step.maneuver === 'object' 
+      ? step.maneuver.type 
+      : (step.maneuver || '');
+      
     const segmentId = `step-${index}`;
     
-    const laneSegment = getMockLaneData(index, maneuver, step.instruction, segmentId);
+    const laneSegment = getMockLaneData(index, maneuverType, step.instruction, segmentId);
     
     if (laneSegment) {
       laneData.set(index, laneSegment);
