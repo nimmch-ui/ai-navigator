@@ -19,6 +19,12 @@ export interface RerouteSettings {
   minTimeSavingsMinutes: number;
 }
 
+export interface RealismPackSettings {
+  weatherLighting: boolean;
+  motionPolish: boolean;
+  radarPulse: boolean;
+}
+
 export interface UserPreferences {
   transportMode: TransportMode;
   routePreference: RoutePreference;
@@ -39,6 +45,7 @@ export interface UserPreferences {
   arPermissionStatus: ARPermissionStatus;
   arSensorCapabilities: ARSensorCapabilities;
   rerouteSettings: RerouteSettings;
+  realismPack: RealismPackSettings;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -70,6 +77,11 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     offRouteDistanceMeters: 100,
     autoAccept: false,
     minTimeSavingsMinutes: 2,
+  },
+  realismPack: {
+    weatherLighting: true,
+    motionPolish: true,
+    radarPulse: true,
   },
 };
 

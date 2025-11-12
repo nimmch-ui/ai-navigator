@@ -24,6 +24,16 @@ import { buildLaneMesh, findNextLaneManeuver, LANE_CONFIG, type LaneMesh } from 
 import type { LaneSegment } from '@shared/schema';
 import type { RouteStep } from '@/services/routing';
 import type { WeatherData } from '@/services/weather';
+import { 
+  applyWeatherLighting, 
+  adjustRouteIntensity, 
+  resetWeatherLighting 
+} from '@/services/map/weatherLighting';
+import { 
+  startRouteBreathing, 
+  handleCameraPan, 
+  cleanupMotionPolish 
+} from '@/services/map/motionPolish';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -50,6 +60,10 @@ interface MapboxMapProps {
   weather?: WeatherData;
   distanceToNextStep?: number; // meters
   distanceToStepAfterNext?: number; // meters
+  // Realism Pack props
+  weatherLightingEnabled?: boolean;
+  motionPolishEnabled?: boolean;
+  isDarkMode?: boolean;
 }
 
 export default function MapboxMap({
@@ -73,7 +87,10 @@ export default function MapboxMap({
   speed = 0,
   weather,
   distanceToNextStep = Infinity,
-  distanceToStepAfterNext
+  distanceToStepAfterNext,
+  weatherLightingEnabled = true,
+  motionPolishEnabled = true,
+  isDarkMode = false
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -244,6 +261,15 @@ export default function MapboxMap({
 
         // Re-apply 3D mode (terrain and sky)
         toggle3DMode(map.current, is3DMode);
+
+        // Re-apply weather lighting (resilience requirement)
+        if (weatherLightingEnabled) {
+          try {
+            applyWeatherLighting(map.current, weather, mapTheme, isDarkMode, true);
+          } catch (error) {
+            console.warn('[WeatherLighting] Failed to apply after style change:', error);
+          }
+        }
 
         // Restore camera position
         map.current.easeTo({
@@ -456,6 +482,58 @@ export default function MapboxMap({
     distanceToStepAfterNext,
     currentPosition,
   ]);
+
+  /**
+   * Weather Lighting Effect
+   * Applies visual adjustments based on weather conditions
+   */
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !weatherLightingEnabled) {
+      if (map.current && mapLoaded && !weatherLightingEnabled) {
+        resetWeatherLighting(map.current);
+      }
+      return;
+    }
+
+    try {
+      applyWeatherLighting(map.current, weather, mapTheme, isDarkMode, true);
+      
+      // Apply route intensity adjustments
+      if (map.current.getLayer('route')) {
+        adjustRouteIntensity(map.current, 'route', weather, mapTheme, isDarkMode, true);
+      }
+    } catch (error) {
+      console.warn('[WeatherLighting] Failed to apply lighting effects:', error);
+    }
+  }, [weather, mapTheme, isDarkMode, weatherLightingEnabled, mapLoaded]);
+
+  /**
+   * Motion Polish Effect
+   * Route breathing glow and camera pan blur
+   */
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !motionPolishEnabled || !route || route.length === 0) {
+      cleanupMotionPolish();
+      return;
+    }
+
+    // Start route breathing effect
+    if (map.current.getLayer('route')) {
+      startRouteBreathing(map.current, 'route', speed, true);
+    }
+
+    // Handle camera pan for motion blur
+    if (cinematicMode) {
+      const currentBearing = map.current.getBearing();
+      if (map.current.getLayer('route-glow')) {
+        handleCameraPan(map.current, 'route-glow', currentBearing, true);
+      }
+    }
+
+    return () => {
+      cleanupMotionPolish();
+    };
+  }, [speed, cinematicMode, motionPolishEnabled, mapLoaded, route]);
 
   /**
    * Weather radar layer management with auto-refresh
