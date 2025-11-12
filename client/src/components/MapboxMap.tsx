@@ -11,11 +11,19 @@ import { getHazardMetadata } from '@/data/hazards';
 import type { SpeedCamera } from '@/data/speedCameras';
 import { formatSpeedLimit } from '@/services/radar';
 import { toggle3DMode } from '@/services/map/visual3d';
-import { startCinematicFollow, stopCinematicFollow } from '@/services/map/camera';
 import { resolveTheme, getStyleUrl, type MapTheme } from '@/services/map/theme';
+import {
+  updateCamera,
+  createInitialCameraState,
+  type CameraState,
+  type CameraContext,
+  type CameraIntent
+} from '@/services/map/cameraAI';
 import { fetchRadarData, getMostRecentRadarTileUrl } from '@/services/weatherRadar';
 import { buildLaneMesh, findNextLaneManeuver, LANE_CONFIG, type LaneMesh } from '@/services/map/lane3d';
 import type { LaneSegment } from '@shared/schema';
+import type { RouteStep } from '@/services/routing';
+import type { WeatherData } from '@/services/weather';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -36,6 +44,12 @@ interface MapboxMapProps {
   onRadarError?: (error: string) => void;
   laneData?: Map<number, LaneSegment>;
   currentPosition?: [number, number];
+  // AI Camera props
+  routeSteps?: RouteStep[];
+  speed?: number; // km/h
+  weather?: WeatherData;
+  distanceToNextStep?: number; // meters
+  distanceToStepAfterNext?: number; // meters
 }
 
 export default function MapboxMap({
@@ -54,7 +68,12 @@ export default function MapboxMap({
   radarOpacity = 0.6,
   onRadarError,
   laneData,
-  currentPosition
+  currentPosition,
+  routeSteps,
+  speed = 0,
+  weather,
+  distanceToNextStep = Infinity,
+  distanceToStepAfterNext
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -69,6 +88,11 @@ export default function MapboxMap({
   // Lane rendering state
   const activeLaneSegmentRef = useRef<string | null>(null);
   const laneMeshCacheRef = useRef<Map<string, LaneMesh>>(new Map());
+  
+  // AI Camera state
+  const cameraStateRef = useRef<CameraState | null>(null);
+  const cameraAnimationFrameRef = useRef<number | null>(null);
+  const lastCameraUpdateRef = useRef<number>(Date.now());
 
   /**
    * Check if WebGL is supported in the current browser
@@ -267,24 +291,127 @@ export default function MapboxMap({
   }, [is3DMode, mapLoaded]);
 
   /**
-   * Cinematic camera follow mode
+   * AI-Assisted Camera Control System
+   * Replaces legacy cinematic follow with intelligent state-based camera
    */
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    if (cinematicMode) {
-      // Function to get the current route for bearing calculation
-      const getRoute = () => route;
-
-      startCinematicFollow(map.current, getRoute);
-    } else {
-      stopCinematicFollow();
+    if (!cinematicMode) {
+      // Cancel animation loop and clear state
+      if (cameraAnimationFrameRef.current) {
+        cancelAnimationFrame(cameraAnimationFrameRef.current);
+        cameraAnimationFrameRef.current = null;
+      }
+      cameraStateRef.current = null;
+      return;
     }
 
-    return () => {
-      stopCinematicFollow();
+    // Initialize camera AI state
+    const currentBearing = map.current.getBearing();
+    const isHighway = speed > 80; // Simple heuristic: >80 km/h = highway
+    
+    // Determine turn density from route steps
+    let turnDensity: 'low' | 'medium' | 'high' = 'low';
+    if (distanceToNextStep < 200 && distanceToStepAfterNext && distanceToStepAfterNext < 150) {
+      turnDensity = 'high';
+    } else if (distanceToNextStep < 300) {
+      turnDensity = 'medium';
+    }
+
+    const initialContext: CameraContext = {
+      currentStep: routeSteps?.[0],
+      nextStep: routeSteps?.[1],
+      distanceToNextStep,
+      distanceToStepAfterNext,
+      routeGeometry: route,
+      speed,
+      currentBearing,
+      weather,
+      userOverride: false,
+      cinematicMode: true,
+      isHighway,
+      turnDensity,
     };
-  }, [cinematicMode, mapLoaded, route]);
+
+    // Initialize camera state if not already set
+    if (!cameraStateRef.current) {
+      cameraStateRef.current = createInitialCameraState(initialContext);
+      lastCameraUpdateRef.current = Date.now();
+    }
+
+    // Camera update loop
+    const updateCameraLoop = () => {
+      if (!map.current || !cinematicMode || !cameraStateRef.current) return;
+
+      const now = Date.now();
+      const deltaTime = now - lastCameraUpdateRef.current;
+      lastCameraUpdateRef.current = now;
+
+      // Build current context
+      const context: CameraContext = {
+        currentStep: routeSteps?.[0],
+        nextStep: routeSteps?.[1],
+        distanceToNextStep,
+        distanceToStepAfterNext,
+        routeGeometry: route,
+        speed,
+        currentBearing: map.current.getBearing(),
+        weather,
+        userOverride: false,
+        cinematicMode: true,
+        isHighway: speed > 80,
+        turnDensity,
+      };
+
+      // Update camera state with AI
+      const newCameraState = updateCamera(
+        cameraStateRef.current,
+        context,
+        deltaTime
+      );
+
+      cameraStateRef.current = newCameraState;
+
+      // Apply camera parameters to map
+      const { pitch, zoom, bearing, duration } = newCameraState.params;
+
+      // Smooth camera update using easeTo
+      map.current.easeTo({
+        pitch,
+        zoom,
+        bearing,
+        center: currentPosition 
+          ? [currentPosition[1], currentPosition[0]] // Convert [lat, lng] to [lng, lat]
+          : map.current.getCenter(),
+        duration: duration || 100,
+        easing: (t) => t, // Linear for frame-by-frame updates
+      });
+
+      // Continue loop
+      cameraAnimationFrameRef.current = requestAnimationFrame(updateCameraLoop);
+    };
+
+    // Start the loop
+    updateCameraLoop();
+
+    return () => {
+      if (cameraAnimationFrameRef.current) {
+        cancelAnimationFrame(cameraAnimationFrameRef.current);
+        cameraAnimationFrameRef.current = null;
+      }
+    };
+  }, [
+    cinematicMode,
+    mapLoaded,
+    route,
+    routeSteps,
+    speed,
+    weather,
+    distanceToNextStep,
+    distanceToStepAfterNext,
+    currentPosition,
+  ]);
 
   /**
    * Weather radar layer management with auto-refresh
@@ -449,9 +576,10 @@ export default function MapboxMap({
       let laneMesh = laneMeshCacheRef.current.get(segment.segmentId);
       
       if (!laneMesh) {
-        laneMesh = buildLaneMesh(segment, route, distance);
-        if (laneMesh) {
-          laneMeshCacheRef.current.set(segment.segmentId, laneMesh);
+        const builtMesh = buildLaneMesh(segment, route, distance);
+        if (builtMesh) {
+          laneMesh = builtMesh;
+          laneMeshCacheRef.current.set(segment.segmentId, builtMesh);
         }
       }
 

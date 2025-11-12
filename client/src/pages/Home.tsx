@@ -824,6 +824,11 @@ export default function Home() {
           radarEnabled={radarEnabled}
           radarOpacity={radarOpacity}
           onRadarError={handleRadarError}
+          routeSteps={routeResult?.steps}
+          speed={0}
+          weather={weatherData[0]}
+          distanceToNextStep={routeResult?.steps?.[0]?.distance || Infinity}
+          distanceToStepAfterNext={routeResult?.steps?.[1]?.distance}
         />
 
         <div className="absolute top-0 left-0 right-0 p-4 z-30">
