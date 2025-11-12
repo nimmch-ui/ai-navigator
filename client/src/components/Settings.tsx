@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge, Vibrate, Sparkles } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge, Vibrate, Sparkles, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -8,11 +8,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import type { TransportMode, RoutePreference, VehicleType, SpeedUnit, VoiceStyle } from '@/services/preferences';
 import { UiMode } from '@/types/ui';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface SettingsProps {
   // Immersive Experience
@@ -107,6 +115,7 @@ export default function Settings({
   onRadarPulseChange
 }: SettingsProps) {
   const { toast } = useToast();
+  const { locale, changeLocale, availableLocales, getLocaleName } = useTranslation();
 
   /**
    * Handle UI Mode change with AR permission request for iOS compatibility
@@ -176,6 +185,31 @@ export default function Settings({
           <div>
             <h3 className="font-semibold text-sm mb-1">Navigation Settings</h3>
             <p className="text-xs text-muted-foreground">Customize your navigation experience</p>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-1.5">
+              <Globe className="h-3.5 w-3.5" />
+              Language
+            </Label>
+            <Select
+              value={locale}
+              onValueChange={(value) => changeLocale(value as any)}
+              data-testid="select-language"
+            >
+              <SelectTrigger data-testid="button-language-trigger">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableLocales.map((loc) => (
+                  <SelectItem key={loc} value={loc} data-testid={`select-language-${loc}`}>
+                    {getLocaleName(loc)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Separator />
