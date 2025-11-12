@@ -986,6 +986,7 @@ export default function Home() {
                 }))
               } : null}
               isLoading={isCalculatingRoute}
+              isNavigating={rerouting.isNavigating}
               onClose={() => {
                 rerouting.stopNavigation();
                 setShowRoute(false);
@@ -1000,6 +1001,7 @@ export default function Home() {
                 setEcoEstimate(null);
               }}
               onStartNavigation={handleStartNavigation}
+              onStopNavigation={rerouting.stopNavigation}
             />
           </div>
         )}

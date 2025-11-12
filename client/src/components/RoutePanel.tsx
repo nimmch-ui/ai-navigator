@@ -1,5 +1,5 @@
 import { memo, useMemo, useState, useEffect } from 'react';
-import { Navigation, Clock, TrendingUp, MapPin, ArrowRight, X, Loader2 } from 'lucide-react';
+import { Navigation, Clock, TrendingUp, MapPin, ArrowRight, X, Loader2, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,8 @@ interface RoutePanelProps {
   error?: string;
   onClose?: () => void;
   onStartNavigation?: () => void;
+  onStopNavigation?: () => void;
+  isNavigating?: boolean;
 }
 
 const RoutePanel = memo(function RoutePanel({
@@ -37,7 +39,9 @@ const RoutePanel = memo(function RoutePanel({
   isLoading = false,
   error,
   onClose,
-  onStartNavigation
+  onStartNavigation,
+  onStopNavigation,
+  isNavigating = false
 }: RoutePanelProps) {
   // Simulated distance to next maneuver (in meters)
   // In production, this would be calculated from GPS position
@@ -191,7 +195,7 @@ const RoutePanel = memo(function RoutePanel({
               </div>
             </div>
 
-            {onStartNavigation && (
+            {onStartNavigation && !isNavigating && (
               <Button
                 className="w-full"
                 size="lg"
@@ -200,6 +204,19 @@ const RoutePanel = memo(function RoutePanel({
               >
                 <Navigation className="mr-2 h-5 w-5" />
                 Start Navigation
+              </Button>
+            )}
+
+            {onStopNavigation && isNavigating && (
+              <Button
+                className="w-full"
+                size="lg"
+                variant="destructive"
+                onClick={onStopNavigation}
+                data-testid="button-stop-navigation"
+              >
+                <Square className="mr-2 h-5 w-5" />
+                Stop Navigation
               </Button>
             )}
           </div>

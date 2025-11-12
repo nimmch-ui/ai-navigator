@@ -31,6 +31,12 @@ const MOCK_INCIDENTS: TrafficIncident[] = [
   },
 ];
 
+interface TrafficServiceConfig {
+  testMode?: boolean;
+  testIncidentSeverity?: TrafficIncident['severity'];
+  testIncidentDelayMinutes?: number;
+}
+
 function calculateDistance(
   point1: [number, number],
   point2: [number, number]
@@ -63,11 +69,62 @@ function isPointNearPath(
 
 export class TrafficService {
   private incidents: TrafficIncident[] = [...MOCK_INCIDENTS];
+  private config: TrafficServiceConfig;
+
+  constructor(config: TrafficServiceConfig = {}) {
+    this.config = config;
+  }
+
+  setConfig(config: TrafficServiceConfig) {
+    this.config = { ...this.config, ...config };
+  }
+
+  private generateSyntheticIncidents(
+    routeCoordinates: [number, number][]
+  ): TrafficIncident[] {
+    if (!this.config.testMode || routeCoordinates.length < 10) {
+      return [];
+    }
+
+    const midpointIndex = Math.floor(routeCoordinates.length / 2);
+    const midpoint = routeCoordinates[midpointIndex];
+
+    const incidents: TrafficIncident[] = [
+      {
+        id: `test-incident-1`,
+        type: 'congestion',
+        severity: this.config.testIncidentSeverity || 'moderate',
+        location: midpoint,
+        description: 'Heavy traffic ahead',
+        delayMinutes: this.config.testIncidentDelayMinutes || 8,
+        affectsRoute: true,
+      },
+    ];
+
+    const quarterIndex = Math.floor(routeCoordinates.length / 4);
+    if (quarterIndex > 0 && quarterIndex !== midpointIndex) {
+      incidents.push({
+        id: `test-incident-2`,
+        type: 'accident',
+        severity: this.config.testIncidentSeverity || 'severe',
+        location: routeCoordinates[quarterIndex],
+        description: 'Accident reported',
+        delayMinutes: (this.config.testIncidentDelayMinutes || 8) + 5,
+        affectsRoute: true,
+      });
+    }
+
+    return incidents;
+  }
 
   async getIncidentsAlongRoute(
     routeCoordinates: [number, number][]
   ): Promise<TrafficIncident[]> {
     await new Promise((resolve) => setTimeout(resolve, 300));
+
+    if (this.config.testMode) {
+      return this.generateSyntheticIncidents(routeCoordinates);
+    }
 
     return this.incidents.map((incident) => ({
       ...incident,
@@ -104,3 +161,22 @@ export class TrafficService {
 }
 
 export const trafficService = new TrafficService();
+
+if (typeof window !== 'undefined') {
+  (window as any).__enableTrafficTestMode = (
+    severity: TrafficIncident['severity'] = 'moderate',
+    delayMinutes: number = 8
+  ) => {
+    trafficService.setConfig({
+      testMode: true,
+      testIncidentSeverity: severity,
+      testIncidentDelayMinutes: delayMinutes,
+    });
+    console.log('[TrafficService] Test mode enabled with synthetic incidents');
+  };
+
+  (window as any).__disableTrafficTestMode = () => {
+    trafficService.setConfig({ testMode: false });
+    console.log('[TrafficService] Test mode disabled, using NYC mock data');
+  };
+}
