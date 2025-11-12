@@ -35,6 +35,9 @@ import {
   cleanupMotionPolish 
 } from '@/services/map/motionPolish';
 import { useToast } from '@/hooks/use-toast';
+import { UiMode } from '@/types/ui';
+import { CameraRig } from '@/services/map/CameraRig';
+import { RouteRenderer } from '@/services/map/RouteRenderer';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
