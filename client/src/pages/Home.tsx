@@ -861,14 +861,14 @@ export default function Home() {
           <ARView
             currentPosition={currentNavigationPosition}
             currentSpeed={0}
-            speedLimit={routeResult?.steps?.[0]?.speedLimit}
+            speedLimit={currentSpeedLimit}
             heading={0}
             routeSteps={routeResult?.steps}
             nextManeuver={routeResult?.steps?.[0] ? {
               direction: routeResult.steps[0].instruction,
               distance: routeResult.steps[0].distance,
-              lat: routeResult.steps[0].end_location[0],
-              lng: routeResult.steps[0].end_location[1]
+              lat: routeResult.steps[0].maneuver.location[0],
+              lng: routeResult.steps[0].maneuver.location[1]
             } : undefined}
             speedCameras={speedCameras}
             onClose={handleCloseAR}
@@ -981,15 +981,16 @@ export default function Home() {
         </div>
         )}
 
-        {/* Reroute Banner */}
+        {/* Reroute Banner and UI overlays (hidden in AR mode) */}
         {uiMode !== UiMode.AR && (
-          <RerouteBanner
-          rerouteOption={rerouting.rerouteOption}
-          onAccept={() => rerouting.acceptReroute(rerouting.rerouteOption!)}
-          onIgnore={rerouting.ignoreReroute}
-        />
+          <>
+            <RerouteBanner
+              rerouteOption={rerouting.rerouteOption}
+              onAccept={() => rerouting.acceptReroute(rerouting.rerouteOption!)}
+              onIgnore={rerouting.ignoreReroute}
+            />
 
-        <div className="absolute top-20 left-4 right-4 z-20 max-w-md mx-auto space-y-2">
+            <div className="absolute top-20 left-4 right-4 z-20 max-w-md mx-auto space-y-2">
           {!severeWeatherDismissed && weatherData.length > 0 && getSevereWeatherWarning(weatherData) && (
             <SevereWeatherAlert
               message={getSevereWeatherWarning(weatherData)!}
@@ -1115,129 +1116,131 @@ export default function Home() {
           />
         </div>
 
-        {hazardAlertsEnabled && (
-          <div className="absolute bottom-6 left-4 z-20">
-            <HazardLegend />
-          </div>
-        )}
-
-        {(tripEstimate || ecoEstimate || weatherData.length > 0) && (
-          <div className="absolute bottom-32 left-4 z-20 max-w-sm space-y-2">
-            {weatherData.length > 0 && <WeatherPanel weatherData={weatherData} />}
-            {ecoEstimate && <EcoSummary estimate={ecoEstimate} />}
-            {tripEstimate && (
-              <TripSummary
-                estimate={tripEstimate}
-                vehicleType={vehicleType}
-                ecoMode={ecoMode}
-              />
-            )}
-          </div>
-        )}
-
-        {showRoute && destinationCoords && (
-          <div className="absolute top-20 left-4 z-30 max-w-md">
-            <RoutePanel
-              origin={origin || "Current Location"}
-              destination={destination || "Destination"}
-              route={routeResult ? {
-                name: `${routePreference.charAt(0).toUpperCase() + routePreference.slice(1)} Route`,
-                distance: formatDistance(routeResult.distance),
-                duration: formatDuration(routeResult.duration),
-                steps: routeResult.steps.map(step => ({
-                  instruction: step.instruction,
-                  distance: formatDistance(step.distance),
-                  icon: getManeuverIcon(step.maneuver.type, step.maneuver.modifier)
-                }))
-              } : null}
-              isLoading={isCalculatingRoute}
-              isNavigating={rerouting.isNavigating}
-              onClose={() => {
-                rerouting.stopNavigation();
-                setShowRoute(false);
-                setDestination('');
-                setDestinationCoords(null);
-                setRouteResult(null);
-                setRoute(undefined);
-                setTripEstimate(null);
-                setWeatherData([]);
-                setSevereWeatherDismissed(false);
-                setCameraWarnings([]);
-                setEcoEstimate(null);
-              }}
-              onStartNavigation={handleStartNavigation}
-              onStopNavigation={rerouting.stopNavigation}
-            />
-          </div>
-        )}
-
-        {selectedReport && (
-          <div className="absolute bottom-24 right-6 z-20" data-testid="selected-report-popup">
-            <CommunityReportMarker report={selectedReport} />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedReport(null)}
-              className="mt-2 w-full"
-              data-testid="button-close-report"
-            >
-              Close
-            </Button>
-          </div>
-        )}
-
-        {communityReports.length > 0 && !selectedReport && (
-          <div className="absolute top-32 right-4 z-20 max-h-64 overflow-y-auto" data-car-mode-hide>
-            <div className="bg-card/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border w-64">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <h3 className="text-sm font-semibold">Reports ({communityReports.length})</h3>
-                <select
-                  value={minTrustScore}
-                  onChange={(e) => setMinTrustScore(Number(e.target.value))}
-                  className="text-xs border rounded px-2 py-1 bg-background"
-                  data-testid="select-trust-filter"
-                >
-                  <option value="0">All</option>
-                  <option value="40">40%+ Trust</option>
-                  <option value="70">70%+ Trust</option>
-                </select>
+            {hazardAlertsEnabled && (
+              <div className="absolute bottom-6 left-4 z-20">
+                <HazardLegend />
               </div>
-              {communityReports.slice(0, 5).map((report) => (
-                <button
-                  key={report.id}
-                  onClick={() => setSelectedReport(report)}
-                  className="w-full text-left p-2 rounded hover-elevate active-elevate-2 mb-1 last:mb-0 border"
-                  data-testid={`button-view-report-${report.id}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium truncate">
-                      {report.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </span>
-                    <Badge variant="secondary" className="text-xs">
-                      {report.trustScore}%
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                    <span>✓ {report.confirmations}</span>
-                    <span>✗ {report.rejections}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+            )}
 
-        {!showChat && (
-          <div className="absolute bottom-6 right-6 z-20 lg:hidden" data-car-mode-hide>
-            <Button
-              size="lg"
-              className="rounded-full shadow-lg h-14 w-14"
-              onClick={() => setShowChat(true)}
-              data-testid="button-open-chat"
-            >
-              <MessageSquare className="h-6 w-6" />
-            </Button>
-          </div>
+            {(tripEstimate || ecoEstimate || weatherData.length > 0) && (
+              <div className="absolute bottom-32 left-4 z-20 max-w-sm space-y-2">
+                {weatherData.length > 0 && <WeatherPanel weatherData={weatherData} />}
+                {ecoEstimate && <EcoSummary estimate={ecoEstimate} />}
+                {tripEstimate && (
+                  <TripSummary
+                    estimate={tripEstimate}
+                    vehicleType={vehicleType}
+                    ecoMode={ecoMode}
+                  />
+                )}
+              </div>
+            )}
+
+            {showRoute && destinationCoords && (
+              <div className="absolute top-20 left-4 z-30 max-w-md">
+                <RoutePanel
+                  origin={origin || "Current Location"}
+                  destination={destination || "Destination"}
+                  route={routeResult ? {
+                    name: `${routePreference.charAt(0).toUpperCase() + routePreference.slice(1)} Route`,
+                    distance: formatDistance(routeResult.distance),
+                    duration: formatDuration(routeResult.duration),
+                    steps: routeResult.steps.map(step => ({
+                      instruction: step.instruction,
+                      distance: formatDistance(step.distance),
+                      icon: getManeuverIcon(step.maneuver.type, step.maneuver.modifier)
+                    }))
+                  } : null}
+                  isLoading={isCalculatingRoute}
+                  isNavigating={rerouting.isNavigating}
+                  onClose={() => {
+                    rerouting.stopNavigation();
+                    setShowRoute(false);
+                    setDestination('');
+                    setDestinationCoords(null);
+                    setRouteResult(null);
+                    setRoute(undefined);
+                    setTripEstimate(null);
+                    setWeatherData([]);
+                    setSevereWeatherDismissed(false);
+                    setCameraWarnings([]);
+                    setEcoEstimate(null);
+                  }}
+                  onStartNavigation={handleStartNavigation}
+                  onStopNavigation={rerouting.stopNavigation}
+                />
+              </div>
+            )}
+
+            {selectedReport && (
+              <div className="absolute bottom-24 right-6 z-20" data-testid="selected-report-popup">
+                <CommunityReportMarker report={selectedReport} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedReport(null)}
+                  className="mt-2 w-full"
+                  data-testid="button-close-report"
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+
+            {communityReports.length > 0 && !selectedReport && (
+              <div className="absolute top-32 right-4 z-20 max-h-64 overflow-y-auto" data-car-mode-hide>
+                <div className="bg-card/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border w-64">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h3 className="text-sm font-semibold">Reports ({communityReports.length})</h3>
+                    <select
+                      value={minTrustScore}
+                      onChange={(e) => setMinTrustScore(Number(e.target.value))}
+                      className="text-xs border rounded px-2 py-1 bg-background"
+                      data-testid="select-trust-filter"
+                    >
+                      <option value="0">All</option>
+                      <option value="40">40%+ Trust</option>
+                      <option value="70">70%+ Trust</option>
+                    </select>
+                  </div>
+                  {communityReports.slice(0, 5).map((report) => (
+                    <button
+                      key={report.id}
+                      onClick={() => setSelectedReport(report)}
+                      className="w-full text-left p-2 rounded hover-elevate active-elevate-2 mb-1 last:mb-0 border"
+                      data-testid={`button-view-report-${report.id}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium truncate">
+                          {report.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          {report.trustScore}%
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                        <span>✓ {report.confirmations}</span>
+                        <span>✗ {report.rejections}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!showChat && (
+              <div className="absolute bottom-6 right-6 z-20 lg:hidden" data-car-mode-hide>
+                <Button
+                  size="lg"
+                  className="rounded-full shadow-lg h-14 w-14"
+                  onClick={() => setShowChat(true)}
+                  data-testid="button-open-chat"
+                >
+                  <MessageSquare className="h-6 w-6" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
