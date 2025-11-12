@@ -90,14 +90,33 @@ export default function Favorites({ onSelectFavorite }: FavoritesProps) {
     }
   };
 
-  const handleEditFavorite = () => {
+  const handleEditFavorite = async () => {
     if (!editingFavorite || !newName.trim() || !newAddress.trim()) {
       return;
     }
 
+    // If address changed, re-geocode it
+    let coordinates = editingFavorite.coordinates;
+    if (newAddress !== editingFavorite.address) {
+      setIsGeocoding(true);
+      const geocoded = await geocodeAddress(newAddress);
+      setIsGeocoding(false);
+
+      if (!geocoded) {
+        toast({
+          title: "Address not found",
+          description: "Could not find this address. Please try a different address.",
+          variant: "destructive"
+        });
+        return;
+      }
+      coordinates = geocoded.coordinates;
+    }
+
     const success = FavoritesService.updateFavorite(editingFavorite.id, {
       name: newName,
-      address: newAddress
+      address: newAddress,
+      coordinates
     });
 
     if (success) {
@@ -292,8 +311,12 @@ export default function Favorites({ onSelectFavorite }: FavoritesProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleEditFavorite} data-testid="button-update-favorite">
-              Update
+            <Button 
+              onClick={handleEditFavorite} 
+              disabled={isGeocoding}
+              data-testid="button-update-favorite"
+            >
+              {isGeocoding ? 'Finding address...' : 'Update'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -16,7 +16,16 @@ interface TripHistoryProps {
 }
 
 export default function TripHistory({ onReplayTrip }: TripHistoryProps) {
-  const [trips] = useState<TripRecord[]>(TripHistoryService.getTripHistory());
+  const [trips, setTrips] = useState<TripRecord[]>(TripHistoryService.getTripHistory());
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Refresh trip history when popover opens
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open) {
+      setTrips(TripHistoryService.getTripHistory());
+    }
+  };
 
   const formatDuration = (minutes: number): string => {
     if (minutes < 60) {
@@ -64,7 +73,7 @@ export default function TripHistory({ onReplayTrip }: TripHistoryProps) {
   };
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           size="icon"
