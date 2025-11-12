@@ -142,3 +142,69 @@ The app is now configured for global deployment with region-aware routing and in
 - Cache invalidation strategies for stale data prevention
 - Fallback to stale cache when network requests fail
 - Pending request deduplication to prevent redundant API calls
+
+## Localization Engine (i18n)
+
+### Q3-A2: Full Localization Support (Completed)
+The app now supports 14 languages with automatic locale detection, unit conversion, and RTL support:
+
+**Supported Languages:**
+- English (en) - Default
+- Albanian (sq-AL) - Including Kosovo users 🇦🇱
+- Serbian (sr) - Cyrillic script
+- Slovenian (sl-SI)
+- German (Switzerland) (de-CH)
+- French (Switzerland) (fr-CH)
+- Italian (Switzerland) (it-CH)
+- Turkish (tr)
+- Spanish (es) - LATAM default
+- Portuguese (Brazil) (pt-BR)
+- Hindi (hi)
+- Bengali (bn)
+- Arabic (ar) - RTL support
+- Chinese Simplified (zh-CN)
+
+**Locale Detection:**
+- Browser language auto-detection with normalization
+- Region-based fallback (MENA → Arabic, LATAM → Spanish, etc.)
+- LocalStorage persistence for user preference
+- Fallback chain: userLocale → region default → English
+
+**Translation System:**
+- Lightweight custom i18n implementation (no external dependencies)
+- JSON-based language packs in `client/src/services/i18n/locales/`
+- 33 translation keys covering all UI elements:
+  - App: title, subtitle
+  - Navigation: start, end, recenter, follow
+  - Speed: limit, current, average
+  - Alerts: camera_ahead, hazard, slowdown, speeding
+  - Weather: rain, snow, clear
+  - Eco: saving, route, score
+  - Modes: classic, 3d, cinematic, ar, vr, eco
+  - Settings: language, units, theme
+  - Voice: style, muted, enabled
+
+**Unit System:**
+- Automatic metric/imperial based on locale
+- Imperial: United States (English)
+- Metric: All other regions
+- Speed conversion: km/h ↔ mph
+- Distance conversion: meters/km ↔ feet/miles
+
+**RTL Support:**
+- Automatic direction detection for Arabic
+- Document dir attribute automatically set
+- Layout adapts for right-to-left languages
+
+**React Integration:**
+- `useTranslation()` hook for components
+- Real-time locale switching without page reload
+- Unit formatting functions: `formatSpeed()`, `formatDistance()`
+- Available locales list with native names
+
+**Technical Implementation:**
+- `i18n` service: Core translation engine
+- Dynamic import of language packs (code splitting)
+- Custom event system for locale changes
+- TypeScript-first with strongly typed keys
+- Zero external i18n library dependencies
