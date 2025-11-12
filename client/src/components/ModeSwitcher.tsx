@@ -202,7 +202,7 @@ export function ModeSwitcherCompact({ className, onModeChange }: ModeSwitcherPro
       </div>
       
       <div className="flex items-center gap-0.5">
-        {MODE_CONFIGS.map((config) => {
+        {MODE_CONFIGS.map((config, index) => {
           const isActive = currentMode === config.mode;
           
           return (
@@ -215,7 +215,7 @@ export function ModeSwitcherCompact({ className, onModeChange }: ModeSwitcherPro
                 "h-1.5 w-1.5 rounded-full transition-all",
                 isActive ? "bg-primary w-4" : "bg-muted hover:bg-muted-foreground/30"
               )}
-              data-testid={`dot-mode-${config.mode.toLowerCase()}`}
+              data-testid={`button-mode-dot-${config.mode.toLowerCase()}-${index}`}
             />
           );
         })}

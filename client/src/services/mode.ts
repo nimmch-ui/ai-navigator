@@ -20,10 +20,12 @@ class ModeServiceImpl {
    */
   getMode(): UiMode {
     try {
-      // Try localStorage first (for quick access)
-      const stored = localStorage.getItem(MODE_STORAGE_KEY);
-      if (stored && this.isValidMode(stored)) {
-        return stored as UiMode;
+      // Check if localStorage is available (guard for SSR/tests)
+      if (typeof window !== 'undefined' && 'localStorage' in window) {
+        const stored = localStorage.getItem(MODE_STORAGE_KEY);
+        if (stored && this.isValidMode(stored)) {
+          return stored as UiMode;
+        }
       }
       
       // Fall back to preferences
@@ -46,8 +48,12 @@ class ModeServiceImpl {
     }
 
     try {
-      // Save to both localStorage and preferences
-      localStorage.setItem(MODE_STORAGE_KEY, mode);
+      // Save to localStorage (only if available)
+      if (typeof window !== 'undefined' && 'localStorage' in window) {
+        localStorage.setItem(MODE_STORAGE_KEY, mode);
+      }
+      
+      // Always save to preferences
       PreferencesService.updatePreference('uiMode', mode);
 
       // Emit eventbus event for system-wide listeners

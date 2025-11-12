@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import { UiMode } from "@/types/ui";
 import { PreferencesService } from "@/services/preferences";
 import { EventBus } from "@/services/eventBus";
+import { ModeService } from "@/services/mode";
 
 interface UiModeContextValue {
   uiMode: UiMode;
@@ -18,8 +19,8 @@ const UiModeContext = createContext<UiModeContextValue | undefined>(undefined);
 
 export function UiModeProvider({ children }: { children: React.ReactNode }) {
   const [uiMode, setUiModeState] = useState<UiMode>(() => {
-    const prefs = PreferencesService.getPreferences();
-    return prefs.uiMode;
+    // Delegate to ModeService for initial state
+    return ModeService.getMode();
   });
 
   const [spatialAudio, setSpatialAudioState] = useState<boolean>(() => {
@@ -58,13 +59,11 @@ export function UiModeProvider({ children }: { children: React.ReactNode }) {
     const previousMode = uiMode;
     if (mode === previousMode) return;
 
+    // Delegate to ModeService which handles persistence and EventBus
+    ModeService.setMode(mode);
+    
+    // Update local state (will also be updated by onChange subscriber)
     setUiModeState(mode);
-    debouncedSave({ uiMode: mode });
-
-    EventBus.emit('uiMode:changed', {
-      mode,
-      previousMode
-    });
 
     EventBus.emit('immersion:levelChanged', {
       level: calculateImmersionLevel(mode, spatialAudio, ambientMusic, hapticsEnabled),
@@ -74,7 +73,7 @@ export function UiModeProvider({ children }: { children: React.ReactNode }) {
         hapticsEnabled
       }
     });
-  }, [uiMode, spatialAudio, ambientMusic, hapticsEnabled, debouncedSave]);
+  }, [uiMode, spatialAudio, ambientMusic, hapticsEnabled]);
 
   const setSpatialAudio = useCallback((enabled: boolean) => {
     if (enabled === spatialAudio) return;
@@ -121,13 +120,28 @@ export function UiModeProvider({ children }: { children: React.ReactNode }) {
     });
   }, [hapticsEnabled, uiMode, spatialAudio, ambientMusic, debouncedSave]);
 
+  // Subscribe to ModeService changes (from keyboard shortcuts, etc.)
   useEffect(() => {
+    const unsubscribe = ModeService.onChange((mode) => {
+      setUiModeState(mode);
+      
+      EventBus.emit('immersion:levelChanged', {
+        level: calculateImmersionLevel(mode, spatialAudio, ambientMusic, hapticsEnabled),
+        settings: {
+          spatialAudio,
+          ambientMusic,
+          hapticsEnabled
+        }
+      });
+    });
+
     return () => {
+      unsubscribe();
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, []);
+  }, [spatialAudio, ambientMusic, hapticsEnabled]);
 
   const value: UiModeContextValue = {
     uiMode,

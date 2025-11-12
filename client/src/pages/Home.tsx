@@ -21,6 +21,7 @@ import RoutePanel from '@/components/RoutePanel';
 import ThemeToggle from '@/components/ThemeToggle';
 import { CarModeToggle } from '@/components/CarModeToggle';
 import Settings from '@/components/Settings';
+import { ModeSwitcher, ModeSwitcherCompact } from '@/components/ModeSwitcher';
 import Favorites from '@/components/Favorites';
 import TripHistory from '@/components/TripHistory';
 import ReportButton from '@/components/ReportButton';
@@ -41,7 +42,7 @@ import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled, getVoiceVolume, setVoiceVolume, getHapticsEnabled, setHapticsEnabled, isHapticsSupported } from '@/services/voiceGuidance';
 import { calculateTripEstimate, type VehicleType } from '@/services/tripEstimates';
 import type { TripEstimate } from '@/services/tripEstimates';
-import { PreferencesService, type TransportMode, type RoutePreference, type SpeedUnit, type MapTheme } from '@/services/preferences';
+import { PreferencesService, type TransportMode, type RoutePreference, type SpeedUnit, type MapTheme, type VoiceStyle } from '@/services/preferences';
 import { TripHistoryService, type TripRecord } from '@/services/tripHistory';
 import { FavoritesService, type Favorite } from '@/services/favorites';
 import { sendChatMessage, type ChatContext } from '@/services/chatApi';
@@ -140,12 +141,24 @@ export default function Home() {
   const [cameraWarnings, setCameraWarnings] = useState<CameraProximityWarning[]>([]);
   const [dismissedCameraIds, setDismissedCameraIds] = useState<Set<string>>(new Set());
   const [currentSpeedLimit, setCurrentSpeedLimit] = useState<number | null>(null);
+  
+  // Voice & Emotion settings state
+  const [voiceStyle, setVoiceStyleState] = useState<VoiceStyle>(() => {
+    return PreferencesService.getPreferences().voiceStyle;
+  });
+  const [emotionAdaptive, setEmotionAdaptiveState] = useState(() => {
+    return PreferencesService.getPreferences().emotionAdaptive;
+  });
+  const [hapticsIntensity, setHapticsIntensityState] = useState(() => {
+    return PreferencesService.getPreferences().hapticsIntensity;
+  });
   const [ecoEstimate, setEcoEstimate] = useState<EcoEstimate | null>(null);
   const [isElectricVehicle, setIsElectricVehicle] = useState(false);
   const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [severeWeatherDismissed, setSevereWeatherDismissed] = useState(false);
-  const [is3DMode, setIs3DMode] = useState(true);
-  const [cinematicMode, setCinematicMode] = useState(false);
+  // Derive mode flags from uiMode (no separate state needed)
+  const is3DMode = uiMode === UiMode.THREED || uiMode === UiMode.CINEMATIC;
+  const cinematicMode = uiMode === UiMode.CINEMATIC;
   const [mapTheme, setMapTheme] = useState<MapTheme>('auto');
   const [radarEnabled, setRadarEnabled] = useState(false);
   const [radarOpacity, setRadarOpacity] = useState(0.6);
@@ -194,7 +207,7 @@ export default function Home() {
         distanceKm,
         durationMin,
         transportMode,
-        routePreference
+        isElectricVehicle
       );
       setEcoEstimate(eco);
     } else {
@@ -247,7 +260,7 @@ export default function Home() {
     setShowSpeedCameras(prefs.showSpeedCameras);
     setSpeedWarnings(prefs.speedWarnings);
     setSpeedUnit(prefs.speedUnit);
-    setCinematicMode(prefs.cinematicMode);
+    // cinematicMode is now derived from uiMode (ModeService handles this)
     setMapTheme(prefs.mapTheme);
     setRadarEnabled(prefs.radarEnabled);
     setRadarOpacity(prefs.radarOpacity);
@@ -353,15 +366,21 @@ export default function Home() {
     });
   };
 
-  const handleCinematicModeChange = (enabled: boolean) => {
-    setCinematicMode(enabled);
-    PreferencesService.updatePreference('cinematicMode', enabled);
-    toast({
-      title: enabled ? "Cinematic Mode ON" : "Cinematic Mode OFF",
-      description: enabled 
-        ? "Smooth camera follow with auto-bearing alignment" 
-        : "Camera follow disabled"
-    });
+  // Cinematic mode is now derived from uiMode (UiMode.CINEMATIC)
+
+  const handleVoiceStyleChange = (style: VoiceStyle) => {
+    setVoiceStyleState(style);
+    PreferencesService.updatePreference('voiceStyle', style);
+  };
+
+  const handleEmotionAdaptiveChange = (enabled: boolean) => {
+    setEmotionAdaptiveState(enabled);
+    PreferencesService.updatePreference('emotionAdaptive', enabled);
+  };
+
+  const handleHapticsIntensityChange = (intensity: number) => {
+    setHapticsIntensityState(intensity);
+    PreferencesService.updatePreference('hapticsIntensity', intensity);
   };
 
   const handleMapThemeChange = () => {
@@ -861,7 +880,7 @@ export default function Home() {
           <ARView
             currentPosition={currentNavigationPosition}
             currentSpeed={0}
-            speedLimit={currentSpeedLimit}
+            speedLimit={currentSpeedLimit ?? undefined}
             heading={0}
             routeSteps={routeResult?.steps}
             nextManeuver={routeResult?.steps?.[0] ? {
@@ -945,8 +964,14 @@ export default function Home() {
                 onVoiceEnabledChange={handleVoiceEnabledChange}
                 voiceVolume={voiceVolume}
                 onVoiceVolumeChange={handleVoiceVolumeChange}
+                voiceStyle={voiceStyle}
+                onVoiceStyleChange={handleVoiceStyleChange}
+                emotionAdaptive={emotionAdaptive}
+                onEmotionAdaptiveChange={handleEmotionAdaptiveChange}
                 hapticsEnabled={hapticsEnabled}
                 onHapticsEnabledChange={handleHapticsEnabledChange}
+                hapticsIntensity={hapticsIntensity}
+                onHapticsIntensityChange={handleHapticsIntensityChange}
                 hazardAlertsEnabled={hazardAlertsEnabled}
                 onHazardAlertsChange={handleHazardAlertsChange}
                 showSpeedCameras={showSpeedCameras}
@@ -1049,6 +1074,17 @@ export default function Home() {
           )}
         </div>
 
+        {/* Desktop: Mode Switcher at top-right */}
+        <div className="absolute top-4 right-4 z-30 hidden md:block">
+          <ModeSwitcher />
+        </div>
+
+        {/* Mobile: Compact Mode Switcher at bottom-center */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 md:hidden">
+          <ModeSwitcherCompact />
+        </div>
+
+        {/* Control cluster: bottom-right */}
         <div className="absolute bottom-6 right-6 z-30 flex flex-col gap-2">
           <Button
             size="icon"
@@ -1080,31 +1116,6 @@ export default function Home() {
               )
             )}
           </Button>
-          <Button
-            size="icon"
-            variant={cinematicMode ? "default" : "outline"}
-            className="rounded-full shadow-lg"
-            onClick={() => handleCinematicModeChange(!cinematicMode)}
-            title={cinematicMode ? "Cinematic Mode ON" : "Cinematic Mode OFF"}
-            data-testid="button-toggle-cinematic"
-          >
-            <Video className="h-5 w-5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            className="rounded-full shadow-lg"
-            onClick={() => setIs3DMode(!is3DMode)}
-            title={is3DMode ? "Switch to 2D" : "Switch to 3D"}
-            data-testid="button-toggle-3d"
-          >
-            {is3DMode ? <Box className="h-5 w-5" /> : <MapIcon className="h-5 w-5" />}
-          </Button>
-          <ARToggleButton
-            isActive={isARActive}
-            onToggle={toggleAR}
-            disabled={isInitializing}
-          />
           <MapControls
             onZoomIn={() => setMapZoom((z) => Math.min(z + 1, 18))}
             onZoomOut={() => setMapZoom((z) => Math.max(z - 1, 3))}
