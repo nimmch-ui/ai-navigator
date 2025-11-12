@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { useUiMode } from '@/contexts/UiModeContext';
+import { UiMode } from '@/types/ui';
 import MapboxMap from '@/components/MapboxMap';
 import SearchBar from '@/components/SearchBar';
 import MapControls from '@/components/MapControls';
 import { useARExperience } from '@/contexts/ARExperienceProvider';
 import ARToggleButton from '@/components/ar/ARToggleButton';
 import ARPreviewOverlay from '@/components/ar/ARPreviewOverlay';
+import ARView from '@/components/ARView';
 
 const ChatPanel = lazy(() => import('@/components/ChatPanel'));
 import RoutePanel from '@/components/RoutePanel';
@@ -840,38 +842,71 @@ export default function Home() {
     }
   };
 
+  const handleARFallbackTo3D = () => {
+    setUiMode(UiMode.THREED);
+    toast({
+      title: "Switched to 3D Mode",
+      description: "AR mode is unavailable, using 3D map instead",
+    });
+  };
+
+  const handleCloseAR = () => {
+    setUiMode(UiMode.THREED);
+  };
+
   return (
     <div className="h-screen w-screen overflow-hidden flex">
       <div className="flex-1 relative">
-        <MapboxMap
-          center={mapCenter}
-          zoom={mapZoom}
-          markers={markers}
-          route={route}
-          hazards={hazardAlertsEnabled ? mockHazards : []}
-          speedCameras={speedCameras}
-          showSpeedCameras={showSpeedCameras}
-          is3DMode={is3DMode}
-          cinematicMode={cinematicMode}
-          mapTheme={mapTheme}
-          laneData={laneSegments}
-          currentPosition={currentNavigationPosition}
-          radarEnabled={radarEnabled}
-          radarOpacity={radarOpacity}
-          onRadarError={handleRadarError}
-          routeSteps={routeResult?.steps}
-          speed={0}
-          weather={weatherData[0]}
-          distanceToNextStep={routeResult?.steps?.[0]?.distance || Infinity}
-          distanceToStepAfterNext={routeResult?.steps?.[1]?.distance}
-          weatherLightingEnabled={weatherLighting}
-          motionPolishEnabled={motionPolish}
-          isDarkMode={isDarkMode}
-        />
+        {uiMode === UiMode.AR ? (
+          <ARView
+            currentPosition={currentNavigationPosition}
+            currentSpeed={0}
+            speedLimit={routeResult?.steps?.[0]?.speedLimit}
+            heading={0}
+            routeSteps={routeResult?.steps}
+            nextManeuver={routeResult?.steps?.[0] ? {
+              direction: routeResult.steps[0].instruction,
+              distance: routeResult.steps[0].distance,
+              lat: routeResult.steps[0].end_location[0],
+              lng: routeResult.steps[0].end_location[1]
+            } : undefined}
+            speedCameras={speedCameras}
+            onClose={handleCloseAR}
+            onFallbackTo3D={handleARFallbackTo3D}
+          />
+        ) : (
+          <MapboxMap
+            center={mapCenter}
+            zoom={mapZoom}
+            markers={markers}
+            route={route}
+            hazards={hazardAlertsEnabled ? mockHazards : []}
+            speedCameras={speedCameras}
+            showSpeedCameras={showSpeedCameras}
+            is3DMode={is3DMode}
+            cinematicMode={cinematicMode}
+            uiMode={uiMode}
+            mapTheme={mapTheme}
+            laneData={laneSegments}
+            currentPosition={currentNavigationPosition}
+            radarEnabled={radarEnabled}
+            radarOpacity={radarOpacity}
+            onRadarError={handleRadarError}
+            routeSteps={routeResult?.steps}
+            speed={0}
+            weather={weatherData[0]}
+            distanceToNextStep={routeResult?.steps?.[0]?.distance || Infinity}
+            distanceToStepAfterNext={routeResult?.steps?.[1]?.distance}
+            weatherLightingEnabled={weatherLighting}
+            motionPolishEnabled={motionPolish}
+            isDarkMode={isDarkMode}
+          />
+        )}
 
-        <div className="absolute top-0 left-0 right-0 p-4 z-30">
-          <div className="max-w-2xl mx-auto space-y-3">
-            <div className="flex items-center gap-2">
+        {uiMode !== UiMode.AR && (
+          <div className="absolute top-0 left-0 right-0 p-4 z-30">
+            <div className="max-w-2xl mx-auto space-y-3">
+              <div className="flex items-center gap-2">
               <div className="flex-1">
                 <SearchBar
                   onSearch={handleSearch}
@@ -944,9 +979,11 @@ export default function Home() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Reroute Banner */}
-        <RerouteBanner
+        {uiMode !== UiMode.AR && (
+          <RerouteBanner
           rerouteOption={rerouting.rerouteOption}
           onAccept={() => rerouting.acceptReroute(rerouting.rerouteOption!)}
           onIgnore={rerouting.ignoreReroute}
