@@ -2,7 +2,7 @@
 
 ## Overview
 
-AI Navigator is a map-first navigation application offering an AI-assisted, interactive mapping experience similar to Google Maps or Apple Maps. It integrates ChatGPT-style AI for intelligent route planning, location discovery, and navigation guidance, providing a clean interface for users. The application supports multimodal navigation, smart search, real-time rerouting, lane-level guidance, AR preview mode, speed camera alerts, real-time speed limits, weather awareness, voice navigation, and premium 3D maps with day/night modes. Its core ambition is to blend advanced AI with a rich mapping experience to redefine personal navigation.
+AI Navigator is a map-first navigation application offering an AI-assisted, interactive mapping experience similar to Google Maps or Apple Maps. It integrates ChatGPT-style AI for intelligent route planning, location discovery, and navigation guidance, providing a clean interface for users. The application is a Progressive Web App (PWA) that can be installed on mobile devices, tablets, and desktops. It supports multimodal navigation, smart search, real-time rerouting, lane-level guidance, AR preview mode, speed camera alerts, real-time speed limits, weather awareness, voice navigation, premium 3D maps with day/night modes, offline map downloads, and a dedicated Car Mode UI for simplified in-vehicle navigation. Its core ambition is to blend advanced AI with a rich mapping experience to redefine personal navigation.
 
 ## User Preferences
 
@@ -31,6 +31,8 @@ The design system employs the Inter font family, a hierarchical sizing scale, an
 - **Voice Guidance:** Web Speech API (SpeechSynthesis) provides turn-by-turn instructions and camera warnings. Hazard throttling prevents repetitive announcements.
 - **Performance:** Employs debouncing for API requests (geocoding, routing) with AbortController, `React.memo` for component optimization, and lazy loading for faster initial renders. Map performance is optimized with pre-warmed styles and throttled camera updates.
 - **Offline Prefetch:** Allows downloading map regions for offline navigation using a Service Worker for caching Mapbox styles, sprites, fonts, and vector tiles. Includes interactive area selection and quota enforcement.
+- **Progressive Web App (PWA):** Full PWA functionality with `manifest.json`, app icons (192x192, 512x512), service worker registration, and update notifications. Users can install the app on their home screen for a native-like experience. Service worker provides offline support and handles app updates with user-controlled update flow (SKIP_WAITING message).
+- **Car Mode UI:** Dedicated simplified interface for in-vehicle use with larger touch targets (minimum 48px), higher contrast colors, and essential-only navigation elements. Hides non-essential UI (AI chat panel, favorites, trip history) to reduce driver distraction. Activated via toggle button in header or URL parameter (?mode=car). State persisted in localStorage.
 - **State Persistence:** User preferences are persisted via `PreferencesService` using `localStorage`.
 
 ## External Dependencies
@@ -57,6 +59,8 @@ The design system employs the Inter font family, a hierarchical sizing scale, an
 ### Browser APIs
 
 - **Web Speech API (SpeechSynthesis):** Voice guidance
+- **Service Worker API:** PWA offline caching, update notifications
+- **Web App Manifest:** PWA installation and configuration
 
 ### Form Management
 
