@@ -2,34 +2,14 @@
 
 ## Overview
 
-AI Navigator is a map-first navigation application that combines intelligent AI assistance with interactive mapping capabilities. The application provides users with a Google Maps/Apple Maps-like experience enhanced by ChatGPT-style AI interactions for route planning, location discovery, and navigation guidance.
+AI Navigator is a map-first navigation application that integrates AI assistance with interactive mapping, offering a Google Maps/Apple Maps-like experience. It features ChatGPT-style AI for route planning, location discovery, and navigation guidance. The application aims to provide a clean interface for searching locations, getting AI recommendations, viewing routes, and interacting with an intelligent chat assistant.
 
-The application is built as a full-stack TypeScript application with a React frontend and Express backend, designed to deliver a clean, uncluttered interface where users can search locations, get AI-powered recommendations, view routes, and interact with an intelligent chat assistant.
-
-**Implementation Progress (8-Part Specification):**
-- ✅ **Part 1B: Multimodal Core (COMPLETE)** - Production-ready Mapbox Directions API integration with car/bike/walk/transit modes, AbortController pattern for race condition prevention
-- ✅ **Part 2A: Search & Route Preferences (COMPLETE)** - Smart autocomplete search, route preference selector (Fastest/Shortest/Eco), intelligent route selection from Mapbox alternatives, enhanced error handling
-- ✅ **Part 2B: Radar Basics (Speed Cameras) (COMPLETE)** - Extensible speed camera system with map markers, tooltips, and service layer architecture ready for real API integration
-- ✅ **Part 3A: Speed Limit HUD & Eco Mode (COMPLETE)** - Real-time speed limit display, camera proximity warnings within 250m, eco consumption estimates (L/100km or kWh/km), proximity-biased geocoding
-
-**Recently Added Features (Part 3A - November 11, 2025):**
-- **Speed Limit HUD**: Real-time display of current speed limit based on map center position with transport mode icon (car/bike/walk/bus)
-- **Camera Proximity Alerts**: Warning banners when route passes within 250m of speed cameras, showing distance and speed limit, only displays nearest non-dismissed camera
-- **Eco Mode Integration**: Consumption estimates calculated only when eco mode enabled, showing fuel (8L/100km) for gas vehicles or energy (0.2kWh/km) for EVs
-- **EcoSummary Component**: Visual card displaying trip distance, duration, fuel/energy consumption, CO2 estimates, and eco driving tips
-- **Proximity-Biased Geocoding**: Search results prioritized based on map center location to prevent returning distant matches (fixed Australia vs San Francisco bug)
-- **Auto-Following Speed Limits**: Speed limit updates automatically as map center changes, using nearest camera within 500m radius
-
-**Previously Added Features (Parts 1B-2B - November 11, 2025):**
-- **Speed Camera Radar System**: Visual markers on map showing speed camera locations with speed limits
-- **Interactive Camera Markers**: Red circular markers with camera icons, tooltips on hover, detailed popups on click
-- **Extensible Radar Architecture**: Service layer design (`services/radar.ts`) allows easy replacement of mock data with real APIs
-- **Speed Camera Data Model**: 6 demo cameras around San Francisco with speed limits (40-60 km/h) and optional directional info
-- **Route Preference Selection**: Three route options (Fastest, Shortest, Eco) with intelligent selection from Mapbox alternatives
-- **Eco Route Algorithm**: Selects lowest-duration route within 10% of shortest distance for optimal efficiency
-- **Smart Search Autocomplete**: Mapbox Geocoding API integration with up to 5 location suggestions
-- **Enhanced Error Handling**: Differentiates between API errors, network failures, and "no results found"
-- **Accessibility Improvements**: Full ARIA support (aria-pressed, aria-label, sr-only) for route preference buttons
+Key capabilities include:
+- Multimodal navigation (car, bike, walk, transit)
+- Smart search with route preferences (Fastest, Shortest, Eco)
+- Speed camera radar system with visual alerts
+- Real-time speed limit display and eco-consumption estimates
+- Weather awareness with origin/destination forecasts and severe weather alerts
 
 ## User Preferences
 
@@ -39,203 +19,82 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend Architecture
 
-**Framework & Build System:**
-- React 18 with TypeScript for type-safe component development
-- Vite as the build tool and development server for fast hot module replacement
-- Wouter for lightweight client-side routing (single-page application pattern)
-
-**UI Component System:**
-- shadcn/ui component library (New York style variant) for consistent, accessible UI components
-- Radix UI primitives for headless accessible components
-- Tailwind CSS for utility-first styling with custom design tokens
-- CSS variables for theming support (light/dark mode capability)
-
-**State Management:**
-- TanStack Query (React Query) for server state management and data fetching
-- React hooks for local component state
-- Custom hooks for reusable logic (mobile detection, toast notifications)
-
-**Key Layout Patterns:**
-- Full-viewport map with overlaid UI panels
-- Responsive design with desktop (320px collapsible sidebar) and mobile (bottom sheet) layouts
-- Fixed header bar (h-16) for search and controls
-- Floating right-side controls for map interactions
-
-**Map Integration:**
-- Leaflet.js for interactive map rendering
-- OpenStreetMap tile layers for map data
-- Custom marker and route overlay support
+**Framework & Build System:** React 18 with TypeScript, Vite for development, Wouter for routing.
+**UI Component System:** shadcn/ui (New York style), Radix UI primitives, Tailwind CSS for styling, CSS variables for theming.
+**State Management:** TanStack Query for server state, React hooks for local state, custom hooks for reusable logic.
+**Key Layout Patterns:** Full-viewport map with overlaid UI panels, responsive design (desktop sidebar, mobile bottom sheet), fixed header, floating right-side controls.
+**Map Integration:** Leaflet.js for interactive maps, OpenStreetMap tile layers, custom markers and route overlays.
 
 ### Backend Architecture
 
-**Server Framework:**
-- Express.js for HTTP server and API routing
-- HTTP server creation with support for future WebSocket upgrades
-- Custom request logging middleware for API monitoring
-
-**Development Environment:**
-- Vite middleware integration in development for seamless full-stack development
-- Server-side rendering preparation (template loading system)
-- Hot reload support through Vite's HMR
-
-**Data Storage:**
-- In-memory storage implementation (MemStorage class) for development/prototyping
-- Abstracted storage interface (IStorage) allowing easy migration to persistent databases
-- User management capabilities (CRUD operations)
-
-**Database Schema (Prepared but not actively used):**
-- Drizzle ORM configured for PostgreSQL
-- User table with UUID primary keys, username/password fields
-- Zod schema validation for type-safe data insertion
-- Migration system ready via drizzle-kit
+**Server Framework:** Express.js for HTTP server and API routing.
+**Development Environment:** Vite middleware integration, server-side rendering preparation, hot reload support.
+**Data Storage:** In-memory storage (MemStorage) for prototyping with an abstracted interface (IStorage) for future database migration.
+**Database Schema:** Drizzle ORM configured for PostgreSQL with user table schema and Zod validation (not actively connected).
 
 ### Design System
 
-**Typography:**
-- Inter font family (Google Fonts) for clean, modern appearance
-- Hierarchical sizing: Headers (24-32px, 600-700 weight), Body (14-16px, 400-500 weight)
-- Optimized line-height (1.6) for chat readability
-
-**Spacing & Layout:**
-- Tailwind spacing units (2, 4, 6, 8) for consistent component padding and gaps
-- 8-pixel base grid system for visual rhythm
-
-**Color System:**
-- HSL-based color tokens for easy theme manipulation
-- Semantic color naming (primary, secondary, muted, accent, destructive)
-- Separate light/dark mode definitions
-- Border and outline colors with alpha transparency for layered depth
-
-**Interactive Elements:**
-- Hover and active state elevation effects (shadow-based feedback)
-- Focus-visible ring system for keyboard navigation accessibility
-- Consistent border radius (lg: 9px, md: 6px, sm: 3px)
-
-### External Dependencies
-
-**UI & Component Libraries:**
-- @radix-ui/* packages for accessible primitives (dialogs, dropdowns, tooltips, etc.)
-- lucide-react for consistent iconography (used for hazard icons: Camera, School, AlertTriangle, Construction)
-- class-variance-authority for type-safe component variants
-- cmdk for command palette functionality
-
-**Mapping:**
-- Leaflet.js (@types/leaflet for TypeScript support)
-- Leaflet divIcon for custom hazard markers with embedded SVG icons
-- OpenStreetMap tile server for map tiles
-
-**Browser APIs:**
-- Web Speech API (SpeechSynthesis) for voice guidance announcements
-
-**Form Management:**
-- react-hook-form for form state management
-- @hookform/resolvers for validation integration
-- Zod for schema validation
-
-**Database & ORM (configured but not actively connected):**
-- Drizzle ORM for type-safe database queries
-- @neondatabase/serverless for PostgreSQL connection
-- drizzle-zod for runtime validation
-
-**Utilities:**
-- date-fns for date manipulation
-- nanoid for unique ID generation
-- clsx + tailwind-merge for className composition
-
-**Development Tools:**
-- @replit/vite-plugin-* for Replit-specific development features
-- tsx for TypeScript execution
-- esbuild for production builds
-
-### API Structure
-
-The application currently has a minimal API setup with:
-- Route registration system in `server/routes.ts`
-- Storage abstraction for future backend expansion
-- Request/response logging for debugging
-- CORS and JSON body parsing middleware
-
-The frontend is prepared to communicate with backend APIs through:
-- TanStack Query for data fetching
-- Centralized API request helper with credential support
-- Error handling with status code checking
-
-### Authentication & Authorization
-
-Basic user schema prepared with:
-- Username/password storage structure
-- UUID-based user identification
-- Schema validation through Zod
-- No active authentication flow implemented (infrastructure only)
-
-## Recent Implementation Details (November 11, 2025)
-
-### Eco Mode & Trip Estimates
-**File**: `client/src/services/tripEstimates.ts`
-- Calculates fuel consumption for gas vehicles (L/100km coefficients)
-- Calculates energy consumption for EVs (kWh/100km coefficients)
-- Estimates CO2 emissions for environmental awareness
-- Provides eco-friendly driving tips based on vehicle type
-- All coefficients are configurable for future tuning
-- Includes disclaimers about estimate accuracy
-
-### Hazard Warning System
-**Files**: `client/src/data/hazards.ts`, `client/src/components/HazardAlert.tsx`
-- Four hazard types: speed cameras, school zones, dangerous curves, accident zones
-- Each hazard has severity level (low/medium/high), alert radius (~300m), speed limit data
-- Proximity detection using Haversine formula for distance calculation
-- Visual alerts appear when user is within hazard alert radius
-- Hazard markers rendered on map with color-coded icons (red, yellow, orange, blue)
-- Dismissible alert banners with distance information
-
-### Voice Guidance Service
-**File**: `client/src/services/voiceGuidance.ts`
-- Browser-based text-to-speech using Web Speech API
-- Message queue system with priority support (high/normal)
-- Entity-based throttling prevents repeated announcements for same hazard
-- Graceful fallback when speech synthesis unavailable
-- LocalStorage persistence for user voice preference
-
-### UI Components
-- **Settings** (`client/src/components/Settings.tsx`): Popover with eco mode toggle, vehicle type selector, voice guidance switch, hazard alerts toggle
-- **SpeedLimitHUD** (`client/src/components/SpeedLimitHUD.tsx`): Fixed position HUD showing current speed limit and transport mode icon, updates based on map center
-- **CameraProximityAlert** (`client/src/components/CameraProximityAlert.tsx`): Dismissible warning banner for approaching speed cameras with distance and limit info
-- **EcoSummary** (`client/src/components/EcoSummary.tsx`): Card displaying fuel/energy consumption, CO2 estimates, and eco tips when eco mode enabled
-- **TripSummary** (`client/src/components/TripSummary.tsx`): Card showing trip metrics with conditional rendering based on vehicle type
-- **HazardAlert** (`client/src/components/HazardAlert.tsx`): Alert banner with hazard icon, distance, speed limit info
-- **HazardLegend** (`client/src/components/HazardLegend.tsx`): Legend explaining hazard marker colors and types
-- **MapView** (updated): Now accepts `hazards` prop and renders custom markers with Leaflet divIcons
-
-### Services Layer
-
-**Camera Proximity Detection** (`client/src/services/cameraProximity.ts`)
-- `detectCamerasOnRoute()`: Finds cameras within 250m of route geometry using point-to-line distance
-- `getCurrentSpeedLimit()`: Returns speed limit at current map center (nearest camera within 500m)
-- Uses Haversine distance formula for accurate geographic calculations
-- Sorted by distance to prioritize nearest cameras
-
-**Eco Estimates** (`client/src/services/ecoEstimates.ts`)
-- `calculateEcoEstimate()`: Computes fuel/energy consumption based on vehicle type
-- Simple per-km constants: 8L/100km for gas vehicles, 0.2kWh/km for electric vehicles
-- Returns distance, duration, consumption, CO2 emissions, and eco driving tips
-- Designed for easy replacement with real vehicle data APIs
-
-**Geocoding Enhancement** (`client/src/pages/Home.tsx`)
-- Added `proximity` parameter to Mapbox Geocoding API calls
-- Biases search results toward current map center (lng,lat format)
-- Prevents returning distant locations with similar names (e.g., Golden Gate Bridge in Australia)
-- Automatically adapts to user's current map view
+**Typography:** Inter font family, hierarchical sizing, optimized line-height.
+**Spacing & Layout:** Tailwind spacing units, 8-pixel base grid system.
+**Color System:** HSL-based color tokens, semantic naming, light/dark mode definitions, transparent border/outline colors.
+**Interactive Elements:** Hover/active state elevation, focus-visible ring for accessibility, consistent border radius.
 
 ### Design Decisions
-- Used Lucide React icons instead of emojis per architecture guidelines
-- Hazard ID-based throttling (not text-based) for voice announcements
-- Configurable coefficients in trip estimates for future real-world calibration
-- Mock hazard data positioned around San Francisco for demonstration
-- Distance calculations use Haversine formula for geographic accuracy
-- Voice queue prevents multiple simultaneous announcements
-- Speed limit HUD positioned top-left for visibility without obscuring map
-- Camera proximity shows only nearest non-dismissed alert to avoid alert fatigue
-- Eco estimates calculated only when eco mode enabled to save computation
-- isElectricVehicle derived from vehicleType === 'ev' for consistency
-- Camera detection happens after route calculation to ensure route geometry available
-- Dismissed camera IDs reset when new route calculated
+
+- UI uses Lucide React icons.
+- Hazard ID-based throttling for voice announcements.
+- Configurable coefficients in trip estimates for future calibration.
+- Mock hazard data for demonstration purposes.
+- Haversine formula for accurate geographic distance calculations.
+- Voice queue prevents simultaneous announcements.
+- Speed limit HUD positioned for visibility.
+- Camera proximity alerts show only the nearest non-dismissed alert.
+- Eco estimates calculated only when eco mode is enabled.
+- Camera detection occurs after route calculation.
+- Dismissed camera IDs reset with new route calculations.
+- Weather service uses VITE_WEATHER_API_KEY environment variable with graceful fallback to mock data.
+- Mock weather generates random conditions (clear/clouds/rain) for testing without API key.
+- Severe weather detection based on OpenWeatherMap weather ID codes (thunderstorm/snow/rain/fog).
+- Weather dismissal state resets on route closure and when fresh severe weather data arrives.
+- Parallel Promise.all for efficient origin/destination weather fetching.
+- Weather data cleared when route panel closes to prevent stale UI.
+
+## External Dependencies
+
+**UI & Component Libraries:**
+- @radix-ui/* for accessible primitives
+- lucide-react for iconography
+- class-variance-authority for component variants
+- cmdk for command palette
+
+**Mapping:**
+- Leaflet.js and @types/leaflet
+- OpenStreetMap tile server
+- Mapbox Geocoding API (VITE_MAPBOX_TOKEN)
+- Mapbox Directions API (VITE_MAPBOX_TOKEN)
+
+**Weather:**
+- OpenWeatherMap API (VITE_WEATHER_API_KEY, optional)
+
+**Browser APIs:**
+- Web Speech API (SpeechSynthesis) for voice guidance
+
+**Form Management:**
+- react-hook-form
+- @hookform/resolvers
+- Zod for schema validation
+
+**Database & ORM (configured, not actively connected):**
+- Drizzle ORM
+- @neondatabase/serverless
+- drizzle-zod
+
+**Utilities:**
+- date-fns
+- nanoid
+- clsx + tailwind-merge
+
+**Development Tools:**
+- @replit/vite-plugin-*
+- tsx
+- esbuild
