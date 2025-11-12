@@ -39,6 +39,20 @@ export default function MapboxMap({
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tokenError, setTokenError] = useState(false);
+  const [webglError, setWebglError] = useState(false);
+
+  /**
+   * Check if WebGL is supported in the current browser
+   */
+  const isWebGLSupported = (): boolean => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      return !!gl;
+    } catch (e) {
+      return false;
+    }
+  };
 
   /**
    * Determine if it's nighttime for day/night style switching
@@ -58,6 +72,13 @@ export default function MapboxMap({
     if (!MAPBOX_TOKEN) {
       console.error('Mapbox token not found. Please set VITE_MAPBOX_TOKEN in your environment.');
       setTokenError(true);
+      return;
+    }
+
+    // Check for WebGL support
+    if (!isWebGLSupported()) {
+      console.warn('WebGL is not supported in this browser. Mapbox GL JS requires WebGL.');
+      setWebglError(true);
       return;
     }
 
@@ -335,6 +356,22 @@ export default function MapboxMap({
           <h3 className="text-lg font-semibold mb-2">Map Unavailable</h3>
           <p className="text-sm text-muted-foreground">
             Mapbox access token is required. Please contact support or check your configuration.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (webglError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-muted" data-testid="map-webgl-error">
+        <div className="text-center p-6 max-w-md">
+          <h3 className="text-lg font-semibold mb-2">3D Map Unavailable</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            WebGL is required for the interactive 3D map but is not available in your browser or environment.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            This might occur in headless browsers or older devices. Features like Favorites, History, and Settings are still accessible.
           </p>
         </div>
       </div>

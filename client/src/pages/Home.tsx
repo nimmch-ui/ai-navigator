@@ -650,7 +650,7 @@ export default function Home() {
           showSpeedCameras={showSpeedCameras}
         />
 
-        <div className="absolute top-0 left-0 right-0 p-4 z-[1000]">
+        <div className="absolute top-0 left-0 right-0 p-4 z-30">
           <div className="max-w-2xl mx-auto space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex-1">
@@ -701,7 +701,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="absolute top-20 left-4 right-4 z-[999] max-w-md mx-auto space-y-2">
+        <div className="absolute top-20 left-4 right-4 z-20 max-w-md mx-auto space-y-2">
           {!severeWeatherDismissed && weatherData.length > 0 && getSevereWeatherWarning(weatherData) && (
             <SevereWeatherAlert
               message={getSevereWeatherWarning(weatherData)!}
@@ -735,14 +735,14 @@ export default function Home() {
           })}
         </div>
 
-        <div className="absolute top-24 left-4 z-[999]">
+        <div className="absolute top-24 left-4 z-20">
           <SpeedLimitHUD
             speedLimit={currentSpeedLimit}
             transportMode={transportMode}
           />
         </div>
 
-        <div className="absolute bottom-6 right-6 z-[1000] flex flex-col gap-2">
+        <div className="absolute bottom-6 right-6 z-30 flex flex-col gap-2">
           <MapControls
             onZoomIn={() => setMapZoom((z) => Math.min(z + 1, 18))}
             onZoomOut={() => setMapZoom((z) => Math.max(z - 1, 3))}
@@ -755,13 +755,13 @@ export default function Home() {
         </div>
 
         {hazardAlertsEnabled && (
-          <div className="absolute bottom-6 left-4 z-[999]">
+          <div className="absolute bottom-6 left-4 z-20">
             <HazardLegend />
           </div>
         )}
 
         {(tripEstimate || ecoEstimate || weatherData.length > 0) && (
-          <div className="absolute bottom-32 left-4 z-[999] max-w-sm space-y-2">
+          <div className="absolute bottom-32 left-4 z-20 max-w-sm space-y-2">
             {weatherData.length > 0 && <WeatherPanel weatherData={weatherData} />}
             {ecoEstimate && <EcoSummary estimate={ecoEstimate} />}
             {tripEstimate && (
@@ -775,7 +775,7 @@ export default function Home() {
         )}
 
         {showRoute && destinationCoords && (
-          <div className="absolute top-20 left-4 z-[1000] max-w-md">
+          <div className="absolute top-20 left-4 z-30 max-w-md">
             <RoutePanel
               origin={origin || "Current Location"}
               destination={destination || "Destination"}
@@ -806,7 +806,7 @@ export default function Home() {
         )}
 
         {!showChat && (
-          <div className="absolute bottom-6 right-6 z-[999] lg:hidden">
+          <div className="absolute bottom-6 right-6 z-20 lg:hidden">
             <Button
               size="lg"
               className="rounded-full shadow-lg h-14 w-14"
@@ -819,7 +819,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className={`${showChat ? 'fixed inset-0 z-[1001] lg:relative lg:inset-auto' : 'hidden'} lg:flex lg:w-96`}>
+      <div className={`${showChat ? 'fixed inset-0 z-[100] lg:relative lg:inset-auto' : 'hidden'} lg:flex lg:w-96`}>
         <ChatPanel
           onClose={() => setShowChat(false)}
           onSendMessage={handleSendMessage}
