@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import fs from "fs";
+import path from "path";
 
 const app = express();
 
@@ -55,6 +57,20 @@ app.use((req, res, next) => {
 
     res.status(status).json({ message });
     throw err;
+  });
+
+  // Serve service worker with correct MIME type (before Vite middleware)
+  // This prevents the catch-all route from serving HTML for /sw.js
+  app.get('/sw.js', (_req, res) => {
+    const swPath = path.resolve(import.meta.dirname, "..", "public", "sw.js");
+    
+    if (fs.existsSync(swPath)) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Service-Worker-Allowed', '/');
+      res.sendFile(swPath);
+    } else {
+      res.status(404).send('Service worker not found');
+    }
   });
 
   // importantly only setup vite in development and after
