@@ -1,7 +1,8 @@
-import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge, Vibrate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import {
   Popover,
   PopoverContent,
@@ -22,9 +23,14 @@ interface SettingsProps {
   onVehicleTypeChange: (type: VehicleType) => void;
   voiceEnabled: boolean;
   onVoiceEnabledChange: (enabled: boolean) => void;
+  voiceVolume: number;
+  onVoiceVolumeChange: (volume: number) => void;
+  hapticsEnabled: boolean;
+  onHapticsEnabledChange: (enabled: boolean) => void;
   hazardAlertsEnabled: boolean;
   onHazardAlertsChange: (enabled: boolean) => void;
   voiceSupported: boolean;
+  hapticsSupported: boolean;
   showSpeedCameras: boolean;
   onShowSpeedCamerasChange: (enabled: boolean) => void;
   speedWarnings: boolean;
@@ -44,9 +50,14 @@ export default function Settings({
   onVehicleTypeChange,
   voiceEnabled,
   onVoiceEnabledChange,
+  voiceVolume,
+  onVoiceVolumeChange,
+  hapticsEnabled,
+  onHapticsEnabledChange,
   hazardAlertsEnabled,
   onHazardAlertsChange,
   voiceSupported,
+  hapticsSupported,
   showSpeedCameras,
   onShowSpeedCamerasChange,
   speedWarnings,
@@ -204,6 +215,50 @@ export default function Settings({
               onCheckedChange={onVoiceEnabledChange}
               disabled={!voiceSupported}
               data-testid="switch-voice-guidance"
+            />
+          </div>
+
+          {voiceEnabled && voiceSupported && (
+            <div className="space-y-2 pl-4 border-l-2 border-muted">
+              <div className="space-y-1">
+                <Label htmlFor="voice-volume" className="text-xs font-medium flex items-center gap-2">
+                  <Volume2 className="h-3 w-3" />
+                  Voice Volume: {Math.round(voiceVolume * 100)}%
+                </Label>
+                <Slider
+                  id="voice-volume"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={[voiceVolume * 100]}
+                  onValueChange={(value) => onVoiceVolumeChange(value[0] / 100)}
+                  className="py-2"
+                  data-testid="slider-voice-volume"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5 flex items-center gap-2">
+              <Vibrate className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label htmlFor="haptics" className="text-sm font-medium">
+                  Haptic Feedback
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {hapticsSupported
+                    ? "Vibration for critical alerts"
+                    : "Not supported on this device"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="haptics"
+              checked={hapticsEnabled}
+              onCheckedChange={onHapticsEnabledChange}
+              disabled={!hapticsSupported}
+              data-testid="switch-haptics"
             />
           </div>
 

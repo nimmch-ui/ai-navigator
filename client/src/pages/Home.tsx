@@ -34,7 +34,7 @@ import WeatherPanel from '@/components/WeatherPanel';
 import SevereWeatherAlert from '@/components/SevereWeatherAlert';
 import { mockHazards, getHazardWarningMessage } from '@/data/hazards';
 import type { Hazard } from '@/data/hazards';
-import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled } from '@/services/voiceGuidance';
+import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled, getVoiceVolume, setVoiceVolume, getHapticsEnabled, setHapticsEnabled, isHapticsSupported } from '@/services/voiceGuidance';
 import { calculateTripEstimate, type VehicleType } from '@/services/tripEstimates';
 import type { TripEstimate } from '@/services/tripEstimates';
 import { PreferencesService, type TransportMode, type RoutePreference, type SpeedUnit, type MapTheme } from '@/services/preferences';
@@ -122,6 +122,8 @@ export default function Home() {
   const [ecoMode, setEcoMode] = useState(false);
   const [vehicleType, setVehicleType] = useState<VehicleType>("car");
   const [voiceEnabled, setVoiceEnabledState] = useState(getVoiceEnabled());
+  const [voiceVolume, setVoiceVolumeState] = useState(getVoiceVolume());
+  const [hapticsEnabled, setHapticsEnabledState] = useState(getHapticsEnabled());
   const [hazardAlertsEnabled, setHazardAlertsEnabled] = useState(true);
   const [showSpeedCameras, setShowSpeedCameras] = useState(true);
   const [speedWarnings, setSpeedWarnings] = useState(true);
@@ -217,6 +219,10 @@ export default function Home() {
     setVehicleType(prefs.vehicleType);
     setVoiceEnabledState(prefs.voiceGuidance);
     setVoiceEnabled(prefs.voiceGuidance);
+    setVoiceVolumeState(prefs.voiceVolume);
+    setVoiceVolume(prefs.voiceVolume);
+    setHapticsEnabledState(prefs.hapticsEnabled);
+    setHapticsEnabled(prefs.hapticsEnabled);
     setHazardAlertsEnabled(prefs.hazardAlerts);
     setShowSpeedCameras(prefs.showSpeedCameras);
     setSpeedWarnings(prefs.speedWarnings);
@@ -264,6 +270,18 @@ export default function Home() {
     setVoiceEnabledState(enabled);
     setVoiceEnabled(enabled);
     PreferencesService.updatePreference('voiceGuidance', enabled);
+  };
+
+  const handleVoiceVolumeChange = (volume: number) => {
+    setVoiceVolumeState(volume);
+    setVoiceVolume(volume);
+    PreferencesService.updatePreference('voiceVolume', volume);
+  };
+
+  const handleHapticsEnabledChange = (enabled: boolean) => {
+    setHapticsEnabledState(enabled);
+    setHapticsEnabled(enabled);
+    PreferencesService.updatePreference('hapticsEnabled', enabled);
   };
 
   const handleHazardAlertsChange = (enabled: boolean) => {
@@ -601,11 +619,17 @@ export default function Home() {
 
   useEffect(() => {
     if (activeWarning && voiceEnabled) {
-      const cameraMessage = `Speed camera ahead in ${Math.round(activeWarning.distance)} meters. Limit ${activeWarning.camera.speedLimitKmh} kilometers per hour.`;
+      const isCritical = activeWarning.distance < 300;
+      const cameraMessage = isCritical 
+        ? `<break time="200ms"/>Speed camera ahead<break time="400ms"/>${Math.round(activeWarning.distance)} meters<break time="300ms"/>Limit ${activeWarning.camera.speedLimitKmh} kilometers per hour`
+        : `Speed camera ahead in ${Math.round(activeWarning.distance)} meters. Limit ${activeWarning.camera.speedLimitKmh} kilometers per hour.`;
+      
       announce(cameraMessage, { 
         priority: 'high',
         entityId: `camera-${activeWarning.camera.id}`,
-        throttleMs: 60000
+        throttleMs: 60000,
+        isCritical: isCritical,
+        ssml: isCritical
       });
     }
   }, [activeWarning?.camera.id, voiceEnabled]);
@@ -818,6 +842,10 @@ export default function Home() {
                 onVehicleTypeChange={handleVehicleTypeChange}
                 voiceEnabled={voiceEnabled}
                 onVoiceEnabledChange={handleVoiceEnabledChange}
+                voiceVolume={voiceVolume}
+                onVoiceVolumeChange={handleVoiceVolumeChange}
+                hapticsEnabled={hapticsEnabled}
+                onHapticsEnabledChange={handleHapticsEnabledChange}
                 hazardAlertsEnabled={hazardAlertsEnabled}
                 onHazardAlertsChange={handleHazardAlertsChange}
                 showSpeedCameras={showSpeedCameras}
@@ -827,6 +855,7 @@ export default function Home() {
                 speedUnit={speedUnit}
                 onSpeedUnitChange={handleSpeedUnitChange}
                 voiceSupported={isVoiceSupported()}
+                hapticsSupported={isHapticsSupported()}
               />
               <ThemeToggle />
               <CarModeToggle />
