@@ -14,6 +14,8 @@ import { toggle3DMode } from '@/services/map/visual3d';
 import { startCinematicFollow, stopCinematicFollow } from '@/services/map/camera';
 import { resolveTheme, getStyleUrl, type MapTheme } from '@/services/map/theme';
 import { fetchRadarData, getMostRecentRadarTileUrl } from '@/services/weatherRadar';
+import { buildLaneMesh, findNextLaneManeuver, LANE_CONFIG } from '@/services/map/lane3d';
+import type { LaneSegment } from '@shared/schema';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -32,6 +34,8 @@ interface MapboxMapProps {
   radarEnabled?: boolean;
   radarOpacity?: number;
   onRadarError?: (error: string) => void;
+  laneData?: Map<number, LaneSegment>;
+  currentPosition?: [number, number];
 }
 
 export default function MapboxMap({
@@ -48,7 +52,9 @@ export default function MapboxMap({
   mapTheme = 'auto',
   radarEnabled = false,
   radarOpacity = 0.6,
-  onRadarError
+  onRadarError,
+  laneData,
+  currentPosition
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -59,6 +65,10 @@ export default function MapboxMap({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [tokenError, setTokenError] = useState(false);
   const [webglError, setWebglError] = useState(false);
+  
+  // Lane rendering state
+  const activeLaneSegmentRef = useRef<string | null>(null);
+  const laneMeshCacheRef = useRef<Map<string, any>>(new Map());
 
   /**
    * Check if WebGL is supported in the current browser
@@ -391,6 +401,125 @@ export default function MapboxMap({
       }
     };
   }, [radarEnabled, radarOpacity, mapLoaded, onRadarError]);
+
+  /**
+   * 3D Lane Rendering - Dedicated source/layer with paint-based fade
+   */
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !route || route.length < 2) return;
+    if (!laneData || laneData.size === 0) {
+      // No lane data - remove layer if it exists
+      if (map.current.getLayer('lane-extrusion')) {
+        map.current.removeLayer('lane-extrusion');
+      }
+      if (map.current.getSource('lanes')) {
+        map.current.removeSource('lanes');
+      }
+      activeLaneSegmentRef.current = null;
+      return;
+    }
+
+    const LANE_SOURCE_ID = 'lanes';
+    const LANE_LAYER_ID = 'lane-extrusion';
+
+    // Find next lane maneuver
+    const nextManeuver = currentPosition 
+      ? findNextLaneManeuver(currentPosition, route, laneData)
+      : null;
+
+    if (!nextManeuver) {
+      // No upcoming maneuver in range - remove layer
+      if (map.current.getLayer(LANE_LAYER_ID)) {
+        map.current.removeLayer(LANE_LAYER_ID);
+      }
+      if (map.current.getSource(LANE_SOURCE_ID)) {
+        map.current.removeSource(LANE_SOURCE_ID);
+      }
+      activeLaneSegmentRef.current = null;
+      return;
+    }
+
+    const { segment, distance } = nextManeuver;
+    
+    // Check if this is a new maneuver (only rebuild if segment changed)
+    const segmentChanged = activeLaneSegmentRef.current !== segment.segmentId;
+    
+    if (segmentChanged) {
+      // Build new lane mesh (or get from cache)
+      let laneMesh = laneMeshCacheRef.current.get(segment.segmentId);
+      
+      if (!laneMesh) {
+        laneMesh = buildLaneMesh(segment, route, distance);
+        if (laneMesh) {
+          laneMeshCacheRef.current.set(segment.segmentId, laneMesh);
+        }
+      }
+
+      if (!laneMesh) return;
+
+      // Add or update source
+      const source = map.current.getSource(LANE_SOURCE_ID);
+      if (source) {
+        (source as mapboxgl.GeoJSONSource).setData(laneMesh.geojson);
+      } else {
+        map.current.addSource(LANE_SOURCE_ID, {
+          type: 'geojson',
+          data: laneMesh.geojson
+        });
+      }
+
+      // Add layer if it doesn't exist
+      if (!map.current.getLayer(LANE_LAYER_ID)) {
+        // Find insertion point (before labels)
+        const layers = map.current.getStyle().layers;
+        const labelLayerId = layers?.find(
+          (layer) => layer.type === 'symbol' && layer.layout && 'text-field' in layer.layout
+        )?.id;
+
+        map.current.addLayer(
+          {
+            id: LANE_LAYER_ID,
+            type: 'fill-extrusion',
+            source: LANE_SOURCE_ID,
+            paint: {
+              // Data-driven color from feature properties
+              'fill-extrusion-color': ['get', 'color'],
+              // Data-driven opacity with fade factor
+              'fill-extrusion-opacity': ['get', 'opacity'],
+              // Data-driven height for elevation
+              'fill-extrusion-height': ['get', 'height'],
+              'fill-extrusion-base': 0
+            }
+          },
+          labelLayerId
+        );
+      }
+
+      activeLaneSegmentRef.current = segment.segmentId;
+    } else if (distance < -LANE_CONFIG.FADE_OUT_DISTANCE) {
+      // Passed the maneuver, clear the layer
+      if (map.current.getLayer(LANE_LAYER_ID)) {
+        map.current.removeLayer(LANE_LAYER_ID);
+      }
+      if (map.current.getSource(LANE_SOURCE_ID)) {
+        map.current.removeSource(LANE_SOURCE_ID);
+      }
+      activeLaneSegmentRef.current = null;
+      laneMeshCacheRef.current.delete(segment.segmentId);
+    }
+
+    return () => {
+      // Cleanup on unmount
+      if (map.current) {
+        if (map.current.getLayer(LANE_LAYER_ID)) {
+          map.current.removeLayer(LANE_LAYER_ID);
+        }
+        if (map.current.getSource(LANE_SOURCE_ID)) {
+          map.current.removeSource(LANE_SOURCE_ID);
+        }
+      }
+    };
+  }, [laneData, route, currentPosition, mapLoaded]);
 
   /**
    * Update markers, hazards, cameras, and route
