@@ -38,6 +38,7 @@ import EcoSummary from '@/components/EcoSummary';
 import WeatherPanel from '@/components/WeatherPanel';
 import SevereWeatherAlert from '@/components/SevereWeatherAlert';
 import PredictiveSafetyBadge from '@/components/PredictiveSafetyBadge';
+import HUDFlashAlert from '@/components/HUDFlashAlert';
 import { mockHazards, getHazardWarningMessage } from '@/data/hazards';
 import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled, getVoiceVolume, setVoiceVolume, getHapticsEnabled, setHapticsEnabled, isHapticsSupported } from '@/services/voiceGuidance';
@@ -945,6 +946,7 @@ export default function Home() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex">
+      <HUDFlashAlert />
       <div className="flex-1 relative">
         {uiMode === UiMode.AR ? (
           <ARView

@@ -81,6 +81,7 @@ class SafetyControllerImpl {
   private initialized = false;
   private lastAlertTimes: Map<string, number> = new Map(); // Per-level cooldown tracking
   private eventUnsubscribers: Array<() => void> = []; // Track EventBus subscriptions for cleanup
+  private retryTimeouts: NodeJS.Timeout[] = []; // Track retry timeouts for cleanup
   private weatherAdaptation: WeatherAdaptation = {
     speedReduction: 0,
     brakingMultiplier: 1.0,
@@ -127,13 +128,16 @@ class SafetyControllerImpl {
 
     // Fetch initial driver state from EmotionEngine with retry logic
     const tryFetchDriverState = (attempts = 0) => {
+      if (!this.initialized) return; // Guard against shutdown during retry
+      
       const initialDriverState = EmotionEngine.getDriverState();
       if (initialDriverState) {
         this.handleDriverStateChange(initialDriverState);
         console.log('[SafetyController] Initial driver state loaded');
       } else if (attempts < 5) {
         // Retry up to 5 times with exponential backoff
-        setTimeout(() => tryFetchDriverState(attempts + 1), 100 * Math.pow(2, attempts));
+        const timeoutId = setTimeout(() => tryFetchDriverState(attempts + 1), 100 * Math.pow(2, attempts));
+        this.retryTimeouts.push(timeoutId);
       } else {
         console.warn('[SafetyController] Failed to fetch initial driver state after retries');
       }
@@ -149,11 +153,17 @@ class SafetyControllerImpl {
 
     console.log('[SafetyController] Shutting down safety system');
     
+    // Mark as shutdown first to prevent retry callbacks from re-subscribing
+    this.initialized = false;
+    
+    // Clear all retry timeouts to prevent stale callbacks
+    this.retryTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.retryTimeouts = [];
+    
     // Unsubscribe from all EventBus listeners to prevent leaks
     this.eventUnsubscribers.forEach(unsubscribe => unsubscribe());
     this.eventUnsubscribers = [];
     
-    this.initialized = false;
     this.lastAlertTimes.clear();
   }
 
