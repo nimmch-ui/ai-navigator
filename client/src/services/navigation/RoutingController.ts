@@ -44,6 +44,9 @@ export interface RoutingControllerState {
   rerouteMode: RerouteMode;
   lastRerouteCheck: number;
   lastProposal: RerouteProposal | null;
+  lastRerouteSuggestion: number;
+  consecutiveRejections: number;
+  rerouteCooldownUntil: number;
 }
 
 const DEFAULT_THRESHOLDS: RerouteThresholds = {
@@ -52,6 +55,13 @@ const DEFAULT_THRESHOLDS: RerouteThresholds = {
   minCongestionLevel: 60, // 60%+
   incidentSeverityThreshold: 'medium',
 };
+
+// Safety constraints
+const MIN_TIME_BETWEEN_REROUTES_MS = 180000; // 3 minutes
+const MAX_CONSECUTIVE_REJECTIONS = 2; // Pause after 2 rejections
+const REJECTION_COOLDOWN_MS = 600000; // 10 minutes cooldown
+const JUNCTION_PROXIMITY_METERS = 100; // Don't reroute within 100m of junctions
+const JUNCTION_MIN_TIME_SAVED = 300; // Require 5 min saved near junctions
 
 export class RoutingController {
   private state: RoutingControllerState;
@@ -76,6 +86,9 @@ export class RoutingController {
       rerouteMode,
       lastRerouteCheck: 0,
       lastProposal: null,
+      lastRerouteSuggestion: 0,
+      consecutiveRejections: 0,
+      rerouteCooldownUntil: 0,
     };
     
     this.thresholds = { ...DEFAULT_THRESHOLDS };
@@ -151,6 +164,18 @@ export class RoutingController {
     this.state.currentRoute = proposal.alternativeRoute;
     this.state.lastProposal = null;
     
+    // Reset rejection tracking on acceptance
+    this.state.consecutiveRejections = 0;
+    this.state.rerouteCooldownUntil = 0;
+    
+    // Emit telemetry event
+    EventBus.emit('reroute_accepted' as any, {
+      timeSaved: proposal.timeSaved,
+      reason: proposal.reason,
+      severity: proposal.severity,
+      timestamp: Date.now(),
+    });
+    
     // Emit reroute accepted event FIRST (before clearing isEvaluating)
     EventBus.emit('route:reroute_accepted' as any, {
       newRoute: proposal.alternativeRoute,
@@ -177,12 +202,31 @@ export class RoutingController {
     this.state.lastProposal = null;
     this.isEvaluating = false;
     
+    // Track consecutive rejections
+    this.state.consecutiveRejections++;
+    
+    // Emit telemetry event
+    EventBus.emit('reroute_rejected' as any, {
+      consecutiveRejections: this.state.consecutiveRejections,
+      timestamp: Date.now(),
+    });
+    
+    // If driver rejects 2 in a row, enter cooldown period
+    if (this.state.consecutiveRejections >= MAX_CONSECUTIVE_REJECTIONS) {
+      this.state.rerouteCooldownUntil = Date.now() + REJECTION_COOLDOWN_MS;
+      console.log('[RoutingController] 2 consecutive rejections - entering 10min cooldown');
+      
+      voiceGuidanceService.announce('Reroute suggestions paused', {
+        priority: 'low',
+      });
+    }
+    
     // Emit rejection event to clear UI
     EventBus.emit('route:reroute_rejected' as any, {
       timestamp: Date.now(),
     });
     
-    console.log('[RoutingController] Reroute rejected');
+    console.log('[RoutingController] Reroute rejected (consecutive:', this.state.consecutiveRejections, ')');
   }
 
   /**
@@ -208,6 +252,19 @@ export class RoutingController {
 
     if (this.isEvaluating) {
       return; // Prevent overlapping evaluations
+    }
+
+    // SAFETY CONSTRAINT: Check minimum time between reroutes (3 min)
+    const now = Date.now();
+    if (now - this.state.lastRerouteSuggestion < MIN_TIME_BETWEEN_REROUTES_MS) {
+      return;
+    }
+
+    // SAFETY CONSTRAINT: Check rejection cooldown period (10 min after 2 rejections)
+    if (now < this.state.rerouteCooldownUntil) {
+      const remainingMin = Math.ceil((this.state.rerouteCooldownUntil - now) / 60000);
+      console.log(`[RoutingController] In cooldown period (${remainingMin}min remaining)`);
+      return;
     }
 
     this.isEvaluating = true;
@@ -252,7 +309,24 @@ export class RoutingController {
       );
 
       if (proposal && this.meetsRerouteThresholds(proposal)) {
+        // SAFETY CONSTRAINT: Check junction proximity
+        const nearJunction = this.isNearJunction();
+        if (nearJunction && proposal.timeSaved < JUNCTION_MIN_TIME_SAVED) {
+          console.log('[RoutingController] Near junction - requires >5min savings (got', Math.round(proposal.timeSaved / 60), 'min)');
+          this.isEvaluating = false;
+          return;
+        }
+
         this.state.lastProposal = proposal;
+        this.state.lastRerouteSuggestion = Date.now();
+
+        // Emit telemetry event
+        EventBus.emit('reroute_suggested' as any, {
+          timeSaved: proposal.timeSaved,
+          reason: proposal.reason,
+          severity: proposal.severity,
+          nearJunction,
+        });
 
         // Voice prompt with time saved
         const minutesSaved = Math.round(proposal.timeSaved / 60);
@@ -507,6 +581,97 @@ export class RoutingController {
     });
 
     return enrichedUpcoming;
+  }
+
+  /**
+   * Check if current position is near a junction
+   * Detects sharp turns in upcoming route geometry
+   */
+  private isNearJunction(): boolean {
+    if (!this.state.currentRoute || !this.state.currentPosition) {
+      return false;
+    }
+
+    const route = this.state.currentRoute;
+    const currentPos = this.state.currentPosition;
+    
+    // Find closest point on route
+    let closestIndex = 0;
+    let minDistance = Infinity;
+    
+    for (let i = 0; i < route.geometry.length; i++) {
+      const [lat, lng] = route.geometry[i];
+      const distance = this.calculateDistance(currentPos, [lat, lng]);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = i;
+      }
+    }
+
+    // Check for sharp turns in next 100m of route
+    let accumulatedDist = 0;
+    for (let i = closestIndex; i < route.geometry.length - 2 && accumulatedDist < JUNCTION_PROXIMITY_METERS; i++) {
+      const p1 = route.geometry[i] as [number, number];
+      const p2 = route.geometry[i + 1] as [number, number];
+      const p3 = route.geometry[i + 2] as [number, number];
+      
+      accumulatedDist += this.calculateDistance(p1, p2);
+      
+      // Calculate turn angle
+      const angle = this.calculateTurnAngle(p1, p2, p3);
+      
+      // Sharp turn detected (>45 degrees = potential junction)
+      if (Math.abs(angle) > 45) {
+        console.log('[RoutingController] Junction detected ahead (turn angle:', Math.round(angle), 'deg)');
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Calculate turn angle between three points
+   */
+  private calculateTurnAngle(
+    p1: [number, number],
+    p2: [number, number],
+    p3: [number, number]
+  ): number {
+    // Calculate bearing from p1 to p2
+    const bearing1 = this.calculateBearing(p1, p2);
+    // Calculate bearing from p2 to p3
+    const bearing2 = this.calculateBearing(p2, p3);
+    
+    // Calculate turn angle
+    let angle = bearing2 - bearing1;
+    
+    // Normalize to -180 to 180
+    while (angle > 180) angle -= 360;
+    while (angle < -180) angle += 360;
+    
+    return angle;
+  }
+
+  /**
+   * Calculate bearing between two points
+   */
+  private calculateBearing(
+    point1: [number, number],
+    point2: [number, number]
+  ): number {
+    const [lat1, lon1] = point1;
+    const [lat2, lon2] = point2;
+    
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+    
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+    
+    const θ = Math.atan2(y, x);
+    return (θ * 180 / Math.PI + 360) % 360;
   }
 
   /**

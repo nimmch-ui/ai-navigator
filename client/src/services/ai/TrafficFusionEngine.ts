@@ -3,6 +3,7 @@ import type { ITrafficSource } from '../data/traffic';
 import { EventBus } from '../eventBus';
 import { ProviderRegistry } from '../data/ProviderRegistry';
 import { RegionDetector } from '../data/regionDetector';
+import { OfflineModeService } from '../system/OfflineModeService';
 
 /**
  * Traffic segment with enriched intelligence data
@@ -71,11 +72,19 @@ interface HistoricalPattern {
 export class TrafficFusionEngine {
   private segments: Map<string, TrafficSegment> = new Map();
   private updateInterval: ReturnType<typeof setInterval> | null = null;
-  private readonly UPDATE_INTERVAL_MS = 60000; // 1 minute
+  private readonly UPDATE_INTERVAL_MS = 60000; // 1 minute (good network)
+  private readonly WEAK_NETWORK_INTERVAL_MS = 180000; // 3 minutes (weak network)
   private readonly PREDICTION_WINDOW_MS = 1800000; // 30 minutes
   private trafficSource: ITrafficSource | null = null;
   private currentBBox: BBox | null = null;
   private isUpdating: boolean = false; // Prevent overlapping updates
+  private lastKnownSnapshot: Map<string, TrafficSegment> = new Map(); // Offline fallback
+  private offlineModeService: OfflineModeService;
+  private wasOffline: boolean = false; // Track offline state transitions
+
+  constructor() {
+    this.offlineModeService = OfflineModeService.getInstance();
+  }
 
   /**
    * Initialize the fusion engine
@@ -109,14 +118,33 @@ export class TrafficFusionEngine {
     // Initial update
     await this.updateTrafficData();
     
-    // Set up periodic updates (environment-safe)
+    // Set up periodic updates with adaptive interval (environment-safe)
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
     }
     
+    // Use adaptive interval based on network quality
+    const updateInterval = () => {
+      const networkStatus = this.offlineModeService.getStatus();
+      return networkStatus.quality === 'weak' 
+        ? this.WEAK_NETWORK_INTERVAL_MS 
+        : this.UPDATE_INTERVAL_MS;
+    };
+    
     this.updateInterval = setInterval(() => {
       this.updateTrafficData();
-    }, this.UPDATE_INTERVAL_MS);
+    }, updateInterval());
+    
+    // Listen for network status changes to adjust interval
+    this.offlineModeService.subscribe((status) => {
+      if (this.updateInterval) {
+        clearInterval(this.updateInterval);
+        this.updateInterval = setInterval(() => {
+          this.updateTrafficData();
+        }, updateInterval());
+        console.log('[TrafficFusionEngine] Adjusted update interval for network quality:', status.quality);
+      }
+    });
     
     console.log('[TrafficFusionEngine] Started monitoring bbox:', bbox);
   }
@@ -186,10 +214,51 @@ export class TrafficFusionEngine {
       return;
     }
 
+    // OFFLINE/WEAK NETWORK BEHAVIOR
+    const networkStatus = this.offlineModeService.getStatus();
+    
+    if (networkStatus.isOffline) {
+      console.log('[TrafficFusionEngine] Offline mode - using last known traffic snapshot');
+      
+      // Restore segments from last known snapshot
+      if (this.lastKnownSnapshot.size > 0) {
+        this.segments = new Map(this.lastKnownSnapshot);
+        console.log('[TrafficFusionEngine] Restored', this.segments.size, 'segments from snapshot');
+      } else {
+        console.warn('[TrafficFusionEngine] No snapshot available for offline fallback');
+      }
+      
+      // Emit offline event only on state transition (avoid spam)
+      if (!this.wasOffline) {
+        EventBus.emit('offline:mode_entered', {
+          timestamp: Date.now(),
+          quality: 'offline',
+        });
+        this.wasOffline = true;
+      }
+      
+      return;
+    }
+    
+    // Emit recovery event if coming back online
+    if (this.wasOffline) {
+      console.log('[TrafficFusionEngine] Network recovered - resuming live updates');
+      EventBus.emit('offline:mode_recovered' as any, {
+        timestamp: Date.now(),
+      });
+      this.wasOffline = false;
+    }
+
     this.isUpdating = true;
 
     try {
-      console.log('[TrafficFusionEngine] Updating traffic data...');
+      console.log('[TrafficFusionEngine] Updating traffic data... (network:', networkStatus.quality, ')');
+      
+      // Emit telemetry event
+      EventBus.emit('traffic_update_received' as any, {
+        timestamp: Date.now(),
+        networkQuality: networkStatus.quality,
+      });
       
       // Fetch live traffic and incidents in parallel
       const [flowData, incidentData] = await Promise.all([
@@ -205,9 +274,18 @@ export class TrafficFusionEngine {
       // Process and fuse data
       await this.fuseTrafficData(flowData, incidentData, weather);
       
+      // Save snapshot for offline fallback
+      this.lastKnownSnapshot = new Map(this.segments);
+      
       console.log('[TrafficFusionEngine] Update complete. Segments:', this.segments.size);
     } catch (error) {
       console.error('[TrafficFusionEngine] Update failed:', error);
+      
+      // Fallback to last known snapshot on error
+      if (this.lastKnownSnapshot.size > 0) {
+        console.log('[TrafficFusionEngine] Using last known snapshot after error');
+        this.segments = new Map(this.lastKnownSnapshot);
+      }
     } finally {
       this.isUpdating = false;
     }
