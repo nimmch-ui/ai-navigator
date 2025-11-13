@@ -50,6 +50,11 @@ const COOLDOWN = {
 
 // Weather-based safety multipliers
 const WEATHER_MULTIPLIERS = {
+  storm: {
+    speedReduction: 40,       // 40% speed reduction
+    brakingMultiplier: 2.8,   // 2.8x braking distance
+    warningIntensity: 2.0,    // 100% more intense warnings
+  },
   rain: {
     speedReduction: 15,       // 15% speed reduction
     brakingMultiplier: 1.5,   // 1.5x braking distance
@@ -75,6 +80,7 @@ const WEATHER_MULTIPLIERS = {
 class SafetyControllerImpl {
   private initialized = false;
   private lastAlertTimes: Map<string, number> = new Map(); // Per-level cooldown tracking
+  private eventUnsubscribers: Array<() => void> = []; // Track EventBus subscriptions for cleanup
   private weatherAdaptation: WeatherAdaptation = {
     speedReduction: 0,
     brakingMultiplier: 1.0,
@@ -98,26 +104,41 @@ class SafetyControllerImpl {
 
     console.log('[SafetyController] Initializing Intelligent Safety System...');
 
-    // Subscribe to risk updates from PredictiveEngine
-    EventBus.subscribe('ai:riskUpdate', ({ scores, factors }) => {
-      this.handleRiskUpdate(scores, factors);
-    });
+    // Subscribe to risk updates from PredictiveEngine and store unsubscriber
+    this.eventUnsubscribers.push(
+      EventBus.subscribe('ai:riskUpdate', ({ scores, factors }) => {
+        this.handleRiskUpdate(scores, factors);
+      })
+    );
 
     // Subscribe to weather updates
-    EventBus.subscribe('weather:updated', ({ weather }) => {
-      this.handleWeatherUpdate(weather);
-    });
+    this.eventUnsubscribers.push(
+      EventBus.subscribe('weather:updated', ({ weather }) => {
+        this.handleWeatherUpdate(weather);
+      })
+    );
 
     // Subscribe to driver state changes
-    EventBus.subscribe('emotion:stateChanged', ({ state }) => {
-      this.handleDriverStateChange(state);
-    });
+    this.eventUnsubscribers.push(
+      EventBus.subscribe('emotion:stateChanged', ({ state }) => {
+        this.handleDriverStateChange(state);
+      })
+    );
 
-    // Fetch initial driver state from EmotionEngine
-    const initialDriverState = EmotionEngine.getDriverState();
-    if (initialDriverState) {
-      this.handleDriverStateChange(initialDriverState);
-    }
+    // Fetch initial driver state from EmotionEngine with retry logic
+    const tryFetchDriverState = (attempts = 0) => {
+      const initialDriverState = EmotionEngine.getDriverState();
+      if (initialDriverState) {
+        this.handleDriverStateChange(initialDriverState);
+        console.log('[SafetyController] Initial driver state loaded');
+      } else if (attempts < 5) {
+        // Retry up to 5 times with exponential backoff
+        setTimeout(() => tryFetchDriverState(attempts + 1), 100 * Math.pow(2, attempts));
+      } else {
+        console.warn('[SafetyController] Failed to fetch initial driver state after retries');
+      }
+    };
+    tryFetchDriverState();
 
     this.initialized = true;
     console.log('[SafetyController] Safety system ready');
@@ -127,6 +148,11 @@ class SafetyControllerImpl {
     if (!this.initialized) return;
 
     console.log('[SafetyController] Shutting down safety system');
+    
+    // Unsubscribe from all EventBus listeners to prevent leaks
+    this.eventUnsubscribers.forEach(unsubscribe => unsubscribe());
+    this.eventUnsubscribers = [];
+    
     this.initialized = false;
     this.lastAlertTimes.clear();
   }
@@ -326,8 +352,6 @@ class SafetyControllerImpl {
   }
 
   private handleWeatherUpdate(weather: WeatherNow | null): void {
-    const previousAdaptation = { ...this.weatherAdaptation };
-
     if (!weather) {
       this.weatherAdaptation = {
         speedReduction: 0,
@@ -336,17 +360,23 @@ class SafetyControllerImpl {
         weatherCondition: 'clear',
       };
     } else {
-      // Map weather condition to safety multipliers
+      // Map weather condition to safety multipliers with severity awareness
       const weatherCondition = weather.condition;
+      const precipitation = weather.precipitation ?? 0;
       let condition: keyof typeof WEATHER_MULTIPLIERS = 'clear';
 
-      if (weatherCondition === 'rain' || weatherCondition === 'storm') {
-        condition = 'rain';
+      // Differentiate storm intensity from light rain
+      if (weatherCondition === 'storm') {
+        condition = 'storm';
+      } else if (weatherCondition === 'rain') {
+        // Heavy precipitation (>10mm/h) gets storm-level treatment
+        condition = precipitation > 10 ? 'storm' : 'rain';
       } else if (weatherCondition === 'snow') {
         condition = 'snow';
       } else if (weatherCondition === 'fog') {
         condition = 'fog';
-      } else if (weatherCondition === 'clouds' || weatherCondition === 'clear') {
+      } else {
+        // 'clouds' and 'clear' both default to clear multipliers
         condition = 'clear';
       }
 
