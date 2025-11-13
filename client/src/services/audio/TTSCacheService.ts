@@ -1,4 +1,5 @@
 import { get, set, keys, del } from 'idb-keyval';
+import { EventBus } from '@/services/eventBus';
 
 export interface TTSCacheEntry {
   audioBlob: Blob;
@@ -86,6 +87,7 @@ export class TTSCacheService {
         const age = Date.now() - cached.createdAt;
         if (age < MAX_CACHE_AGE_MS) {
           console.log('[TTSCache] Cache hit for:', text.substring(0, 30));
+          EventBus.emit('offline:tts_cache_hit', { text, language });
           const audio = new Audio(URL.createObjectURL(cached.audioBlob));
           return audio;
         } else {
@@ -97,6 +99,7 @@ export class TTSCacheService {
     }
 
     console.log('[TTSCache] Cache miss, generating:', text.substring(0, 30));
+    EventBus.emit('offline:tts_cache_miss', { text, language });
     return await this.generateAndCache(text, language, voiceStyle);
   }
 

@@ -1,6 +1,7 @@
 import type { TransportMode, RoutePreference } from './preferences';
 import { routeCache } from './navigation/RouteCache';
 import { offlineModeService } from './system/OfflineModeService';
+import { EventBus } from './eventBus';
 
 export interface RouteStep {
   instruction: string;
@@ -113,6 +114,11 @@ export async function calculateRoute(
     );
     if (cachedRoute) {
       console.log('[Routing] Using cached route (offline mode)');
+      
+      EventBus.emit('offline:route_loaded_from_cache', {
+        routeId: cachedRoute.id,
+        distance: cachedRoute.metadata.distance,
+      });
       
       const steps: RouteStep[] = cachedRoute.maneuvers.map(m => ({
         instruction: m.instruction,

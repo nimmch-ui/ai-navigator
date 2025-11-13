@@ -138,6 +138,19 @@ export class OfflineModeService {
 
     this.status = newStatus;
 
+    if (!previous.isOffline && newStatus.isOffline) {
+      EventBus.emit('offline:mode_entered', {
+        timestamp: Date.now(),
+        quality: newStatus.quality,
+      });
+    } else if (previous.isOffline && !newStatus.isOffline) {
+      const duration = newStatus.timestamp - previous.timestamp;
+      EventBus.emit('offline:mode_exit', {
+        timestamp: Date.now(),
+        duration,
+      });
+    }
+
     const event: NetworkStatusChangedEvent = {
       previous,
       current: newStatus,
