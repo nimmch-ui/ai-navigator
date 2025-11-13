@@ -4,8 +4,9 @@ import { authProvider } from '../auth/AuthProvider';
 
 class SyncTriggers {
   private isInitialized = false;
-  private syncDebounceTimer: NodeJS.Timeout | null = null;
+  private syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly DEBOUNCE_MS = 2000;
+  private unsubscribers: Array<() => void> = [];
 
   initialize(): void {
     if (this.isInitialized) {
@@ -19,20 +20,18 @@ class SyncTriggers {
   }
 
   private setupTriggers(): void {
-    EventBus.subscribe('favorites:itemAdded', this.onFavoriteAdded.bind(this));
-    EventBus.subscribe('favorites:itemUpdated', this.onFavoriteUpdated.bind(this));
-    EventBus.subscribe('favorites:itemRemoved', this.onFavoriteRemoved.bind(this));
-    
-    EventBus.subscribe('route:completed', this.onRouteCompleted.bind(this));
-    EventBus.subscribe('trips:recorded', this.onTripRecorded.bind(this));
-    
-    EventBus.subscribe('mode:changed', this.onModeChanged.bind(this));
-    EventBus.subscribe('uiMode:changed', this.onUIModeChanged.bind(this));
-    
-    EventBus.subscribe('settings:changed', this.onSettingsChanged.bind(this));
-    EventBus.subscribe('preferences:updated', this.onPreferencesUpdated.bind(this));
-    
-    EventBus.subscribe('user:profileUpdated', this.onProfileUpdated.bind(this));
+    this.unsubscribers.push(
+      EventBus.subscribe('favorites:itemAdded', this.onFavoriteAdded.bind(this)),
+      EventBus.subscribe('favorites:itemUpdated', this.onFavoriteUpdated.bind(this)),
+      EventBus.subscribe('favorites:itemRemoved', this.onFavoriteRemoved.bind(this)),
+      EventBus.subscribe('route:completed', this.onRouteCompleted.bind(this)),
+      EventBus.subscribe('trips:recorded', this.onTripRecorded.bind(this)),
+      EventBus.subscribe('mode:changed', this.onModeChanged.bind(this)),
+      EventBus.subscribe('uiMode:changed', this.onUIModeChanged.bind(this)),
+      EventBus.subscribe('settings:changed', this.onSettingsChanged.bind(this)),
+      EventBus.subscribe('preferences:updated', this.onPreferencesUpdated.bind(this)),
+      EventBus.subscribe('user:profileUpdated', this.onProfileUpdated.bind(this))
+    );
     
     console.log('[SyncTriggers] Event listeners registered');
   }
@@ -136,6 +135,9 @@ class SyncTriggers {
       clearTimeout(this.syncDebounceTimer);
       this.syncDebounceTimer = null;
     }
+    
+    this.unsubscribers.forEach(unsub => unsub());
+    this.unsubscribers = [];
     
     this.isInitialized = false;
     console.log('[SyncTriggers] Destroyed');

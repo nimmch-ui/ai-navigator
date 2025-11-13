@@ -94,6 +94,12 @@ function App() {
     // AuthProvider is automatically initialized on import
     console.log('[App] AuthProvider initialized');
     
+    // Expose for testing (dev/test only)
+    if (typeof window !== 'undefined' && import.meta.env.DEV) {
+      (window as any).__authProvider = authProvider;
+      (window as any).__syncTriggers = syncTriggers;
+    }
+    
     console.log('[App] Analytics session started:', Analytics.getSessionSummary().sessionId);
 
     return () => {
@@ -103,6 +109,11 @@ function App() {
       SafetyController.shutdown();
       PredictiveNavigation.shutdown();
       syncTriggers.destroy();
+      
+      if (typeof window !== 'undefined' && import.meta.env.DEV) {
+        delete (window as any).__authProvider;
+        delete (window as any).__syncTriggers;
+      }
     };
   }, []);
 

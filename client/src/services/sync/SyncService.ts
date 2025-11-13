@@ -45,7 +45,7 @@ class SyncService {
     localStorage.setItem(this.CANONICAL_USER_KEY, userId);
   }
 
-  private restoreCloudSession(): void {
+  restoreCloudSession(): void {
     try {
       const stored = localStorage.getItem(this.SESSION_KEY);
       if (stored) {
@@ -94,8 +94,11 @@ class SyncService {
 
   logoutCloud(): void {
     localStorage.removeItem(this.SESSION_KEY);
+    localStorage.removeItem(this.CANONICAL_USER_KEY);
     this.cloudBackend = null;
     this.backend = new FakeSyncBackend();
+    this.setSyncEnabled(false);
+    this.clearQueue();
     console.log('[SyncService] Cloud logout successful');
   }
 

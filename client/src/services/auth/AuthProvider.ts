@@ -12,6 +12,10 @@ export interface AuthSession {
   expiresAt: number;
 }
 
+interface StoredSession extends AuthLoginResponse {
+  method: AuthMethod;
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   session: AuthSession | null;
@@ -31,6 +35,7 @@ class AuthProvider {
 
   constructor() {
     this.initialize();
+    this.setupStorageListener();
   }
 
   private async initialize(): Promise<void> {
@@ -48,6 +53,25 @@ class AuthProvider {
     } finally {
       this.setState({ isLoading: false });
     }
+  }
+
+  private setupStorageListener(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'cloudSync_session' && !event.newValue && this.state.isAuthenticated) {
+        console.log('[AuthProvider] Session removed in another tab - logging out');
+        this.logout();
+      }
+      
+      if (event.key === 'cloudSync_session' && event.newValue && !this.state.isAuthenticated) {
+        console.log('[AuthProvider] Session added in another tab - restoring cloud session');
+        syncService.restoreCloudSession();
+        this.refresh();
+      }
+    });
   }
 
   async login(email: string, password: string): Promise<AuthLoginResponse> {
@@ -70,6 +94,9 @@ class AuthProvider {
         isLoading: false,
         error: null,
       });
+
+      const storedSession: StoredSession = { ...response, method: 'email' };
+      localStorage.setItem('cloudSync_session', JSON.stringify(storedSession));
 
       EventBus.emit('auth:login', { userId: response.userId, method: 'email' });
       
@@ -114,6 +141,9 @@ class AuthProvider {
         error: null,
       });
 
+      const storedSession: StoredSession = { ...response, method: 'google' };
+      localStorage.setItem('cloudSync_session', JSON.stringify(storedSession));
+
       EventBus.emit('auth:login', { userId: response.userId, method: 'google' });
       
       this.triggerDevicePairing();
@@ -157,6 +187,9 @@ class AuthProvider {
         error: null,
       });
 
+      const storedSession: StoredSession = { ...response, method: 'apple' };
+      localStorage.setItem('cloudSync_session', JSON.stringify(storedSession));
+
       EventBus.emit('auth:login', { userId: response.userId, method: 'apple' });
       
       this.triggerDevicePairing();
@@ -182,7 +215,7 @@ class AuthProvider {
     }
 
     try {
-      const savedSession = JSON.parse(stored) as AuthLoginResponse;
+      const savedSession = JSON.parse(stored) as StoredSession;
       
       if (savedSession.expiresAt < Date.now()) {
         localStorage.removeItem('cloudSync_session');
@@ -192,13 +225,14 @@ class AuthProvider {
       const isValid = await syncService.isCloudEnabled();
       
       if (!isValid) {
+        localStorage.removeItem('cloudSync_session');
         return false;
       }
 
       const session: AuthSession = {
         userId: savedSession.userId,
         username: savedSession.username,
-        method: 'email',
+        method: savedSession.method || 'email',
         sessionToken: savedSession.sessionToken,
         expiresAt: savedSession.expiresAt,
       };
@@ -211,6 +245,7 @@ class AuthProvider {
       return true;
     } catch (error) {
       console.error('[AuthProvider] Session refresh failed:', error);
+      localStorage.removeItem('cloudSync_session');
       return false;
     }
   }
@@ -219,6 +254,8 @@ class AuthProvider {
     syncService.logoutCloud();
     
     const userId = this.state.session?.userId;
+    
+    localStorage.removeItem('cloudSync_session');
     
     this.setState({
       isAuthenticated: false,

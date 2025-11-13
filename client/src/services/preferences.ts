@@ -150,7 +150,6 @@ export class PreferencesService {
     value: UserPreferences[K]
   ): void {
     this.savePreferences({ [key]: value });
-    EventBus.emit('settings:changed', { key: key as string, value });
   }
 
   static resetPreferences(): void {
