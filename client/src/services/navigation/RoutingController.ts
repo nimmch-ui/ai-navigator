@@ -25,14 +25,14 @@ export interface RerouteProposal {
   distanceImpact: number; // meters (positive = longer, negative = shorter)
   ecoImpact: number; // percentage change in efficiency
   reason: string;
-  severity: 'low' | 'medium' | 'high';
+  severity: 'low' | 'moderate' | 'severe';
 }
 
 export interface RerouteThresholds {
   minTimeSaved: number; // seconds
   maxDistanceIncrease: number; // meters
   minCongestionLevel: number; // 0-100
-  incidentSeverityThreshold: 'low' | 'medium' | 'high';
+  incidentSeverityThreshold: 'low' | 'moderate' | 'severe';
 }
 
 export interface RoutingControllerState {
@@ -53,7 +53,7 @@ const DEFAULT_THRESHOLDS: RerouteThresholds = {
   minTimeSaved: 180, // 3 minutes
   maxDistanceIncrease: 5000, // 5km
   minCongestionLevel: 60, // 60%+
-  incidentSeverityThreshold: 'medium',
+  incidentSeverityThreshold: 'moderate',
 };
 
 // Safety constraints
@@ -333,7 +333,7 @@ export class RoutingController {
         const voiceText = `New route available, ${minutesSaved} ${minutesSaved === 1 ? 'minute' : 'minutes'} faster.`;
         
         voiceGuidance.announce(voiceText, {
-          priority: proposal.severity === 'high' ? 'high' : 'normal',
+          priority: proposal.severity === 'severe' ? 'high' : 'normal',
         });
 
         if (this.state.rerouteMode === 'auto') {
@@ -448,23 +448,23 @@ export class RoutingController {
 
     // Determine reason and severity
     let reason = 'Traffic conditions ahead';
-    let severity: 'low' | 'medium' | 'high' = 'low';
+    let severity: 'low' | 'moderate' | 'severe' = 'low';
 
     if (incidents.length > 0) {
       const severeCount = incidents.filter(i => i.severity === 'severe').length;
       if (severeCount > 0) {
         reason = `${severeCount} severe ${severeCount === 1 ? 'incident' : 'incidents'} ahead`;
-        severity = 'high';
+        severity = 'severe';
       } else {
         reason = `${incidents.length} ${incidents.length === 1 ? 'incident' : 'incidents'} ahead`;
-        severity = 'medium';
+        severity = 'moderate';
       }
     } else if (congestion >= 80) {
       reason = 'Severe traffic congestion ahead';
-      severity = 'high';
+      severity = 'severe';
     } else if (congestion >= 60) {
       reason = 'Heavy traffic ahead';
-      severity = 'medium';
+      severity = 'moderate';
     }
 
     return {
