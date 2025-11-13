@@ -78,6 +78,11 @@ interface SettingsProps {
   onMotionPolishChange: (enabled: boolean) => void;
   radarPulse: boolean;
   onRadarPulseChange: (enabled: boolean) => void;
+  // Night Vision (Pro Tier)
+  nightVisionIntensity: number;
+  onNightVisionIntensityChange: (intensity: number) => void;
+  nightVisionThermalMode: boolean;
+  onNightVisionThermalModeChange: (enabled: boolean) => void;
   // Regional Data Providers
   region: Region;
   onRegionChange: (region: Region) => void;
@@ -126,6 +131,10 @@ export default function Settings({
   onMotionPolishChange,
   radarPulse,
   onRadarPulseChange,
+  nightVisionIntensity,
+  onNightVisionIntensityChange,
+  nightVisionThermalMode,
+  onNightVisionThermalModeChange,
   region,
   onRegionChange
 }: SettingsProps) {
@@ -959,6 +968,73 @@ export default function Settings({
               data-testid="switch-radar-pulse"
             />
           </div>
+
+          <Separator className="my-4" />
+
+          <div>
+            <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
+              {t('settings.night_vision')}
+              <Crown className="h-4 w-4 text-primary" />
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              {t('settings.night_vision_desc')}
+            </p>
+          </div>
+
+          {uiMode === UiMode.NIGHT_VISION && hasFeature('pro') && (
+            <>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="night-vision-intensity" className="text-sm font-medium">
+                    {t('settings.night_vision_intensity')}
+                  </Label>
+                  <span className="text-xs text-muted-foreground">{nightVisionIntensity}%</span>
+                </div>
+                <Slider
+                  id="night-vision-intensity"
+                  min={10}
+                  max={100}
+                  step={5}
+                  value={[nightVisionIntensity]}
+                  onValueChange={(values) => onNightVisionIntensityChange(values[0])}
+                  data-testid="slider-night-vision-intensity"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.night_vision_intensity_desc')}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="thermal-mode" className="text-sm font-medium">
+                    {t('settings.thermal_mode')}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t('settings.thermal_mode_desc')}
+                  </p>
+                </div>
+                <Switch
+                  id="thermal-mode"
+                  checked={nightVisionThermalMode}
+                  onCheckedChange={onNightVisionThermalModeChange}
+                  data-testid="switch-thermal-mode"
+                />
+              </div>
+            </>
+          )}
+
+          {uiMode !== UiMode.NIGHT_VISION && (
+            <p className="text-xs text-muted-foreground italic">
+              {t('settings.night_vision_inactive')}
+            </p>
+          )}
+
+          {!hasFeature('pro') && (
+            <p className="text-xs text-primary italic flex items-center gap-1">
+              <Crown className="h-3 w-3" />
+              {t('settings.night_vision_pro_required')}
+            </p>
+          )}
 
           <Separator />
 

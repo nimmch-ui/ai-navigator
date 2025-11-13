@@ -8,6 +8,9 @@
  * - AI-powered object detection (animals, pedestrians, road lines)
  */
 
+import { PreferencesService } from '../preferences';
+import { EventBus } from '../eventBus';
+
 export type ColorMode = 'normal' | 'infrared' | 'thermal';
 
 export interface DetectionResult {
@@ -35,6 +38,8 @@ class NightVisionService {
   private ctx: CanvasRenderingContext2D | null = null;
   private colorMode: ColorMode = 'normal';
   private initialized = false;
+  private intensity: number = 50; // 10-100%, default 50%
+  private gammaFactor: number = 1.5; // Computed from intensity
 
   /**
    * Initialize the service with a canvas element
@@ -51,8 +56,39 @@ class NightVisionService {
       throw new Error('[NightVision] Failed to get 2D context');
     }
 
+    // Load settings from preferences
+    this.loadSettingsFromPreferences();
+
+    // Subscribe to preference changes
+    EventBus.subscribe('preferences:updated', () => {
+      this.loadSettingsFromPreferences();
+    });
+
     this.initialized = true;
     console.log('[NightVision] Service initialized:', width, 'x', height);
+  }
+
+  /**
+   * Load Night Vision settings from PreferencesService
+   */
+  private loadSettingsFromPreferences(): void {
+    const prefs = PreferencesService.getPreferences();
+    this.intensity = prefs.nightVision.intensity;
+    
+    // Map intensity (10-100) to gamma factor (0.8-2.5)
+    // Lower intensity = lower gamma (darker), higher intensity = higher gamma (brighter)
+    this.gammaFactor = 0.8 + ((this.intensity - 10) / 90) * 1.7;
+    
+    // Set color mode based on thermal mode setting
+    // thermal=false → 'normal' (standard night vision enhancement)
+    // thermal=true → 'thermal' (heat-signature color mapping)
+    this.colorMode = prefs.nightVision.thermalMode ? 'thermal' : 'normal';
+    
+    console.log('[NightVision] Settings loaded:', {
+      intensity: this.intensity,
+      gammaFactor: this.gammaFactor.toFixed(2),
+      colorMode: this.colorMode
+    });
   }
 
   /**
@@ -73,7 +109,9 @@ class NightVisionService {
   /**
    * Enhance low-light image using histogram equalization and gamma correction
    */
-  enhanceLowLight(imageData: ImageData, gamma: number = 1.5): ImageData {
+  enhanceLowLight(imageData: ImageData, gamma?: number): ImageData {
+    // Use provided gamma or fall back to preference-based gamma
+    const effectiveGamma = gamma !== undefined ? gamma : this.gammaFactor;
     if (!this.ctx) {
       throw new Error('[NightVision] Service not initialized');
     }
@@ -85,7 +123,7 @@ class NightVisionService {
     );
 
     // Step 1: Apply gamma correction to brighten dark areas
-    this.applyGammaCorrection(enhanced.data, gamma);
+    this.applyGammaCorrection(enhanced.data, effectiveGamma);
 
     // Step 2: Apply histogram equalization for better contrast
     this.applyHistogramEqualization(enhanced.data);

@@ -175,6 +175,8 @@ export default function Home() {
   const [weatherLighting, setWeatherLighting] = useState(true);
   const [motionPolish, setMotionPolish] = useState(true);
   const [radarPulse, setRadarPulse] = useState(true);
+  const [nightVisionIntensity, setNightVisionIntensity] = useState(50);
+  const [nightVisionThermalMode, setNightVisionThermalMode] = useState(false);
   const [region, setRegion] = useState<Region>(PreferencesService.getPreferences().region);
 
   const [origin, setOrigin] = useState<string>("");
@@ -289,6 +291,8 @@ export default function Home() {
     setWeatherLighting(prefs.realismPack.weatherLighting);
     setMotionPolish(prefs.realismPack.motionPolish);
     setRadarPulse(prefs.realismPack.radarPulse);
+    setNightVisionIntensity(prefs.nightVision.intensity);
+    setNightVisionThermalMode(prefs.nightVision.thermalMode);
 
     getSpeedCameras().then(cameras => {
       if (mounted) {
@@ -390,6 +394,24 @@ export default function Home() {
     PreferencesService.updatePreference('realismPack', {
       ...prefs.realismPack,
       radarPulse: enabled
+    });
+  };
+
+  const handleNightVisionIntensityChange = (intensity: number) => {
+    setNightVisionIntensity(intensity);
+    const prefs = PreferencesService.getPreferences();
+    PreferencesService.updatePreference('nightVision', {
+      ...prefs.nightVision,
+      intensity
+    });
+  };
+
+  const handleNightVisionThermalModeChange = (enabled: boolean) => {
+    setNightVisionThermalMode(enabled);
+    const prefs = PreferencesService.getPreferences();
+    PreferencesService.updatePreference('nightVision', {
+      ...prefs.nightVision,
+      thermalMode: enabled
     });
   };
 
@@ -1063,6 +1085,10 @@ export default function Home() {
                 onMotionPolishChange={handleMotionPolishChange}
                 radarPulse={radarPulse}
                 onRadarPulseChange={handleRadarPulseChange}
+                nightVisionIntensity={nightVisionIntensity}
+                onNightVisionIntensityChange={handleNightVisionIntensityChange}
+                nightVisionThermalMode={nightVisionThermalMode}
+                onNightVisionThermalModeChange={handleNightVisionThermalModeChange}
                 region={region}
                 onRegionChange={handleRegionChange}
               />
