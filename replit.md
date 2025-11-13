@@ -30,6 +30,10 @@ The frontend is built with React 18, TypeScript, and Vite, utilizing Wouter for 
 - **Monetization & Payments:** A subscription billing framework with Stripe integration, premium feature enforcement (Free, Premium, Pro tiers), multi-currency support, and comprehensive localization across 10 languages for global rollout.
 - **Real-time Traffic AI Core:** AI-powered traffic intelligence layer providing real-time congestion monitoring, incident detection, and predictive analytics, fusing traffic flow, incidents, weather, and historical patterns.
 - **Dynamic Rerouting & ETA Optimization:** Smart ETA calculation and automatic rerouting system responsive to traffic conditions, including alternative route comparisons and user-configurable reroute thresholds.
+  - **Safety Constraints:** Minimum 3-minute intervals between reroutes (5 minutes near junctions), rejection tracking with cooldown (2 rejections = 10-minute pause), junction detection (>30° bearing change within 500m).
+  - **Offline Fallback:** TrafficFusionEngine freezes live updates when offline, restores cached snapshot, throttles polling (1 min good network, 3 min weak), emits offline:mode_entered/offline:mode_recovered events.
+  - **Telemetry System:** Comprehensive event tracking (traffic_update_received, reroute_suggested, reroute_accepted, reroute_rejected) for complete lifecycle monitoring.
+  - **AR/3D Traffic Visualization:** Real-time congestion heatmap with red gradient (0-100%), incident markers with severity-based colors, integrated into MapboxMap component. Note: Known edge case where layers may not persist through theme switches (requires TrafficLayerController enhancement).
 
 ## External Dependencies
 
