@@ -2,6 +2,7 @@ import { UiMode, DriverState } from "@/types/ui";
 import type { Locale } from "@/services/i18n";
 import type { NetworkStatus } from "@/services/system/OfflineModeService";
 import type { UserProfile, FavoritePlace, TripRecord } from "@/services/data/userDataModels";
+import type { RiskScores, RiskFactor } from "@/services/ai/PredictiveEngine";
 
 export interface EventPayloadMap {
   'uiMode:changed': { mode: UiMode; previousMode: UiMode };
@@ -39,6 +40,8 @@ export interface EventPayloadMap {
   'sync:pull_completed': { recordsPulled: number };
   'sync:cloud_cleared': undefined;
   'sync:identityChanged': { previousUserId: string; canonicalUserId: string };
+  'ai:predictionTick': { timestamp: number };
+  'ai:riskUpdate': { scores: RiskScores; timestamp: number; factors: RiskFactor[] };
 }
 
 type EventName = keyof EventPayloadMap;

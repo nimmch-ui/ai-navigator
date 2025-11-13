@@ -315,6 +315,145 @@ class VoiceGuidanceService {
   clearEntityThrottle(entityId: string): void {
     this.entityThrottleMap.delete(entityId);
   }
+
+  /**
+   * Announce predictive risk warnings with adaptive voice styles
+   */
+  announcePredictiveRisk(
+    riskType: 'overspeed' | 'sharp_turn' | 'collision' | 'late_braking' | 'lane_deviation',
+    severity: 'low' | 'moderate' | 'high' | 'critical',
+    distance?: number
+  ): boolean {
+    const preferences = PreferencesService.getPreferences();
+    const voiceStyle = preferences.voiceStyle;
+    
+    const message = this.getPredictiveWarningMessage(riskType, severity, voiceStyle, distance);
+    
+    // Only critical is truly critical (requires haptics + ding)
+    const isCritical = severity === 'critical';
+    
+    // Priority levels: critical=high, high=normal, moderate=normal, low=low
+    const priority = severity === 'critical' ? 'high' : severity === 'high' || severity === 'moderate' ? 'normal' : 'low';
+    
+    // Throttling: critical=5s, high=10s, moderate=15s, low=20s
+    let throttleMs = 20000;
+    if (severity === 'critical') throttleMs = 5000;
+    else if (severity === 'high') throttleMs = 10000;
+    else if (severity === 'moderate') throttleMs = 15000;
+    
+    return this.announce(message, {
+      priority,
+      isCritical,
+      entityId: `predictive_${riskType}`,
+      throttleMs,
+    });
+  }
+
+  /**
+   * Generate warning message based on risk type, severity, and voice style
+   */
+  private getPredictiveWarningMessage(
+    riskType: string,
+    severity: string,
+    voiceStyle: VoiceStyle,
+    distance?: number
+  ): string {
+    const distanceText = distance ? ` in ${Math.round(distance)} meters` : '';
+    
+    // Message variations for different voice styles
+    const messages: Record<string, Record<VoiceStyle, string[]>> = {
+      overspeed: {
+        neutral: [
+          'Reduce speed. Current speed exceeds limit.',
+          'Speed warning. Please slow down.',
+          'Overspeed detected. Adjust your speed.',
+        ],
+        warm: [
+          'Hey, let\'s ease off the gas a bit.',
+          'A bit too fast there. Let\'s slow down.',
+          'You\'re going a little fast. Let\'s take it easy.',
+        ],
+        energetic: [
+          'Slow down! Speed limit ahead!',
+          'Too fast! Reduce speed now!',
+          'Speed check! Let\'s dial it back!',
+        ],
+      },
+      sharp_turn: {
+        neutral: [
+          `Sharp curve ahead${distanceText}. Reduce speed.`,
+          `Approaching tight turn${distanceText}. Slow down.`,
+          `Sharp turn ahead${distanceText}. Prepare to slow down.`,
+        ],
+        warm: [
+          `There\'s a sharp curve coming up${distanceText}. Let\'s slow down for it.`,
+          `We\'ve got a tight turn ahead${distanceText}. Better ease off the gas.`,
+          `Sharp turn approaching${distanceText}. Let\'s take it smooth and easy.`,
+        ],
+        energetic: [
+          `Sharp turn ahead${distanceText}! Reduce speed now!`,
+          `Big curve coming${distanceText}! Slow down!`,
+          `Tight turn alert${distanceText}! Brake now!`,
+        ],
+      },
+      collision: {
+        neutral: [
+          `Potential hazard ahead${distanceText}. Maintain safe distance.`,
+          `Obstacle detected${distanceText}. Exercise caution.`,
+          `Hazard approaching${distanceText}. Stay alert.`,
+        ],
+        warm: [
+          `Heads up, there\'s something ahead${distanceText}. Keep your distance.`,
+          `Watch out, hazard coming${distanceText}. Let\'s be careful.`,
+          `Pay attention, obstacle ahead${distanceText}. Stay safe.`,
+        ],
+        energetic: [
+          `Hazard alert${distanceText}! Watch out!`,
+          `Danger ahead${distanceText}! Stay back!`,
+          `Obstacle detected${distanceText}! Be ready!`,
+        ],
+      },
+      late_braking: {
+        neutral: [
+          'Potential braking hazard approaching. Prepare to slow down.',
+          'Insufficient braking distance. Reduce speed now.',
+          'Braking alert. Slow down immediately.',
+        ],
+        warm: [
+          'We might need to brake soon. Let\'s slow down just in case.',
+          'Not much room to stop ahead. Better slow down now.',
+          'Let\'s reduce speed. We\'ll need some braking distance.',
+        ],
+        energetic: [
+          'Brake now! Obstacle too close!',
+          'Slow down immediately! Not enough stopping distance!',
+          'Brake alert! Reduce speed now!',
+        ],
+      },
+      lane_deviation: {
+        neutral: [
+          'Stay focused. Maintain lane position.',
+          'Lane guidance. Keep centered.',
+          'Attention required. Stay in your lane.',
+        ],
+        warm: [
+          'Stay with me here. Let\'s keep it steady.',
+          'Focus up. We\'re drifting a bit.',
+          'Hey, let\'s stay centered in the lane.',
+        ],
+        energetic: [
+          'Focus! Stay in your lane!',
+          'Attention! Lane keeping required!',
+          'Wake up! Stay centered!',
+        ],
+      },
+    };
+
+    const variations = messages[riskType]?.[voiceStyle] || messages[riskType]?.['neutral'] || [];
+    const randomIndex = Math.floor(Math.random() * variations.length);
+    
+    return variations[randomIndex] || 'Navigation alert.';
+  }
 }
 
 // Export singleton instance
@@ -362,4 +501,12 @@ export const isHapticsSupported = (): boolean => {
 
 export const cancelAllAnnouncements = (): void => {
   voiceGuidance.cancelAll();
+};
+
+export const announcePredictiveRisk = (
+  riskType: 'overspeed' | 'sharp_turn' | 'collision' | 'late_braking' | 'lane_deviation',
+  severity: 'low' | 'moderate' | 'high' | 'critical',
+  distance?: number
+): boolean => {
+  return voiceGuidance.announcePredictiveRisk(riskType, severity, distance);
 };

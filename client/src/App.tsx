@@ -21,6 +21,8 @@ import { regionRouter } from "@/services/regionRouter";
 import { i18n } from "@/services/i18n";
 import { geolocationService } from "@/services/geolocation";
 import { userDataStore } from "@/services/data/UserDataStore";
+import { PredictiveNavigation } from "@/services/ai/PredictiveNavigation";
+import { EmotionEngine } from "@/services/emotion/EmotionEngine";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 
@@ -76,12 +78,18 @@ function App() {
     // Apply deep links (auto-load mode from URL params)
     DeepLinks.applyDeepLinks();
     
+    // Initialize AI services
+    EmotionEngine.init();
+    PredictiveNavigation.init();
+    console.log('[App] AI services initialized: EmotionEngine, PredictiveNavigation');
+    
     console.log('[App] Analytics session started:', Analytics.getSessionSummary().sessionId);
 
     return () => {
       cleanupSubscriptions();
       ModeManager.destroy();
       Analytics.endSession();
+      PredictiveNavigation.shutdown();
     };
   }, []);
 
