@@ -9,12 +9,17 @@ export async function getSpeedCameras(): Promise<SpeedCamera[]> {
     const region = await RegionDetector.detectRegion();
     const providerSet = ProviderRegistry.for(region);
     
+    // Global bounding box for all cameras
+    const globalBBox = {
+      minLat: -90,
+      maxLat: 90,
+      minLng: -180,
+      maxLng: 180
+    };
+    
     const result = await ProviderRegistry.withFailover(
       providerSet.radar,
-      (provider) => provider.getSpeedCameras(
-        { lat: -90, lon: -180 },
-        { lat: 90, lon: 180 }
-      ),
+      (provider) => provider.getCameras(globalBBox),
       'Speed Cameras',
       'global_cameras',
       'radar'
