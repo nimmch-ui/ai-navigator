@@ -8,6 +8,7 @@ import { currencyService } from '@/services/currency/CurrencyService';
 import { i18n } from '@/services/i18n';
 import { featureFlagsService } from '@/services/featureFlags/FeatureFlagsService';
 import { monetizationService } from '@/services/monetization/MonetizationService';
+import { servicesReady } from '@/services/appInitialization';
 
 export default function GlobalRolloutStatus() {
   const [, setLocation] = useLocation();
@@ -20,13 +21,11 @@ export default function GlobalRolloutStatus() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Wait for services to be ready using the global servicesReady promise
+    // Wait for services to be ready using the module-level servicesReady promise
     const loadData = async () => {
       try {
-        // Wait for services to initialize
-        if (typeof window !== 'undefined' && (window as any).__servicesReady) {
-          await (window as any).__servicesReady;
-        }
+        // Wait for services to initialize (deterministic readiness signal)
+        await servicesReady;
 
         // Get available currencies
         setCurrencies(currencyService.getAvailableCurrencies());

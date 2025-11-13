@@ -28,6 +28,7 @@ import { SafetyController } from "@/services/ai/SafetyController";
 import { EmotionEngine } from "@/services/emotion/EmotionEngine";
 import { syncTriggers } from "@/services/sync/SyncTriggers";
 import { authProvider } from "@/services/auth/AuthProvider";
+import { notifyServicesReady, notifyServicesError } from "@/services/appInitialization";
 import Home from "@/pages/Home";
 import NightVisionDemo from "@/pages/night-vision-demo";
 import GlobalRolloutStatus from "@/pages/global-rollout-status";
@@ -103,8 +104,10 @@ function App() {
         console.log('[App] Sync triggers initialized');
         
         console.log('[App] All services ready');
+        notifyServicesReady();
       } catch (err) {
         console.error('[App] Initialization failed:', err);
+        notifyServicesError(err as Error);
         throw err;
       }
     })();
