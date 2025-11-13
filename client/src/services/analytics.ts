@@ -62,6 +62,7 @@ class AnalyticsService {
     [UiMode.AR]: 0,
     [UiMode.VR]: 0,
     [UiMode.ECO]: 0,
+    [UiMode.NIGHT_VISION]: 0,
   };
   private hazardsAnnouncedCount: number = 0;
   private radarsAnnouncedCount: number = 0;

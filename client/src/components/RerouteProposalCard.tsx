@@ -25,8 +25,8 @@ export function RerouteProposalCard({
 
   const severityColors = {
     low: 'bg-blue-500',
-    medium: 'bg-orange-500',
-    high: 'bg-red-500',
+    moderate: 'bg-orange-500',
+    severe: 'bg-red-500',
   };
 
   return (

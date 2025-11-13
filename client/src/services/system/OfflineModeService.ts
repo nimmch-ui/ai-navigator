@@ -173,6 +173,17 @@ export class OfflineModeService {
     return { ...this.status };
   }
 
+  /**
+   * Subscribe to network status changes
+   * Returns unsubscribe function
+   */
+  subscribe(callback: (status: NetworkStatus) => void): () => void {
+    this.statusChangeCallbacks.add(callback);
+    return () => {
+      this.statusChangeCallbacks.delete(callback);
+    };
+  }
+
   isNavigationRestricted(): boolean {
     return this.status.isOffline;
   }

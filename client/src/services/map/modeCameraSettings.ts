@@ -47,6 +47,12 @@ export const MODE_CAMERA_SETTINGS: Record<UiMode, CameraSettings> = {
     bearing: 0,
     duration: 1000,
     essential: true
+  },
+  [UiMode.NIGHT_VISION]: {
+    pitch: 45,
+    bearing: 0,
+    duration: 1000,
+    essential: true
   }
 };
 

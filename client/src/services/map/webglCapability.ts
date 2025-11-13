@@ -5,6 +5,7 @@
 
 export interface DeviceCapabilities {
   hasWebGL: boolean;
+  webglSupported: boolean; // Alias for hasWebGL for backwards compatibility
   hasWebXR: boolean;
   hasCamera: boolean;
 }
@@ -46,8 +47,11 @@ export function getDeviceCapabilities(): DeviceCapabilities {
     return cachedCapabilities;
   }
 
+  const hasWebGL = detectWebGL();
+  
   cachedCapabilities = {
-    hasWebGL: detectWebGL(),
+    hasWebGL,
+    webglSupported: hasWebGL, // Alias for backwards compatibility
     hasWebXR: detectWebXR(),
     hasCamera: detectCamera()
   };

@@ -1312,7 +1312,12 @@ export default function Settings({
     </Popover>
 
     {showPaywall && (
-      <Paywall onClose={() => setShowPaywall(false)} />
+      <Paywall 
+        open={showPaywall} 
+        onOpenChange={setShowPaywall} 
+        requiredTier="pro"
+        feature="Night Vision Driving Assist"
+      />
     )}
   </>
   );

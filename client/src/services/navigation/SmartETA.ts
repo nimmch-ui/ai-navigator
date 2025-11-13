@@ -44,7 +44,7 @@ export function computeETA(
 ): ETAResult {
   const {
     currentSpeed = 0,
-    mode = 'CLASSIC',
+    mode = UiMode.CLASSIC,
     considerWeather = true,
   } = options;
 
@@ -264,15 +264,15 @@ function calculateStopAndGoDelay(segments: EnrichedRouteSegment[]): number {
  */
 function getModeMultiplier(mode: UiMode): number {
   switch (mode) {
-    case 'ECO':
+    case UiMode.ECO:
       return 1.1; // Eco mode drives slower, +10% time
-    case 'CINEMATIC':
-    case 'VR':
+    case UiMode.CINEMATIC:
+    case UiMode.VR:
       return 1.0; // Normal speed
-    case 'CLASSIC':
-    case '3D':
-    case 'AR':
-    case 'NIGHT_VISION':
+    case UiMode.CLASSIC:
+    case UiMode.THREED:
+    case UiMode.AR:
+    case UiMode.NIGHT_VISION:
     default:
       return 1.0;
   }

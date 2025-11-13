@@ -53,12 +53,9 @@ export default function CommunityReportMarker({ report }: CommunityReportMarkerP
     }
 
     try {
-      await apiRequest(`/api/reports/${report.id}/vote`, {
-        method: 'POST',
-        body: JSON.stringify({
-          voterId: getVoterId(),
-          voteType,
-        }),
+      await apiRequest('POST', `/api/reports/${report.id}/vote`, {
+        voterId: getVoterId(),
+        voteType,
       });
 
       await queryClient.invalidateQueries({ queryKey: ['/api/reports'] });

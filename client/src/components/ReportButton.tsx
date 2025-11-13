@@ -90,10 +90,7 @@ export default function ReportButton({ currentLocation }: ReportButtonProps) {
         expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       };
 
-      await apiRequest('/api/reports', {
-        method: 'POST',
-        body: JSON.stringify(reportData),
-      });
+      await apiRequest('POST', '/api/reports', reportData);
 
       await queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
 

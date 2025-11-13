@@ -1,6 +1,7 @@
 import { GlobalConfig, type Region } from "@shared/global.config";
 import { PreferencesService } from "@/services/preferences";
 import { EventBus } from "@/services/eventBus";
+import baseTranslations from "./locales/en.json";
 
 export type Locale = 
   | "en"
@@ -21,55 +22,12 @@ export type Locale =
 
 export type UnitSystem = "metric" | "imperial";
 
-export type TranslationKey = 
-  | "app.title"
-  | "app.subtitle"
-  | "nav.start"
-  | "nav.end"
-  | "nav.recenter"
-  | "nav.follow"
-  | "speed.limit"
-  | "speed.current"
-  | "speed.average"
-  | "alerts.camera_ahead"
-  | "alerts.hazard"
-  | "alerts.slowdown"
-  | "alerts.speeding"
-  | "weather.rain"
-  | "weather.snow"
-  | "weather.clear"
-  | "eco.saving"
-  | "eco.route"
-  | "eco.score"
-  | "mode.classic"
-  | "mode.3d"
-  | "mode.cinematic"
-  | "mode.ar"
-  | "mode.vr"
-  | "mode.eco"
-  | "settings.language"
-  | "settings.units"
-  | "settings.theme"
-  | "voice.style"
-  | "voice.muted"
-  | "voice.enabled"
-  | "offline.banner_offline"
-  | "offline.banner_weak"
-  | "pricing.title"
-  | "pricing.subtitle"
-  | "pricing.monthly"
-  | "pricing.yearly"
-  | "pricing.save_yearly"
-  | "pricing.free"
-  | "pricing.premium"
-  | "pricing.pro"
-  | "pricing.current_plan"
-  | "pricing.get_plan"
-  | "pricing.upgrade"
-  | "pricing.per_month"
-  | "pricing.per_year"
-  | "pricing.feature_locked"
-  | "pricing.unlock_premium";
+/**
+ * TranslationKey is derived from en.json to ensure compile-time sync
+ * between the canonical translation file and TypeScript types.
+ * This prevents drift and eliminates manual maintenance.
+ */
+export type TranslationKey = keyof typeof baseTranslations;
 
 export type TranslationDict = Record<TranslationKey, string>;
 

@@ -89,7 +89,7 @@ export async function resilientFetch(
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const { serviceName, maxRetries, initialDelay, maxDelay, backoffMultiplier, timeout } = opts;
 
-  return HealthMonitor.executeWithHealth(
+  const result = await HealthMonitor.executeWithHealth(
     serviceName,
     async () => {
       let lastError: Error | null = null;
@@ -192,6 +192,9 @@ export async function resilientFetch(
       initialDelay: 0,
     }
   );
+  
+  // Extract Response from HealthMonitor result
+  return result.data;
 }
 
 /**

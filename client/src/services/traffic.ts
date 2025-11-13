@@ -1,4 +1,5 @@
 import { TrafficIncident } from '@shared/schema';
+import type { TrafficFlow } from '@/services/data/types';
 import { nanoid } from 'nanoid';
 import { TrafficIncidentSynthesizer } from './traffic/TrafficIncidentSynthesizer';
 
@@ -161,7 +162,9 @@ export class TrafficService {
           'traffic'
         );
         
-        const flowIncidents = synthesizer.synthesizeFromFlow(result.data);
+        // Extract flows array from CacheableData union type
+        const flows = (Array.isArray(result.data) ? result.data : []) as TrafficFlow[];
+        const flowIncidents = synthesizer.synthesizeFromFlow(flows);
         console.log('[TrafficService] Synthesized incidents from flow:', flowIncidents.length);
         incidents.push(...flowIncidents);
       }
