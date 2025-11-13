@@ -46,11 +46,12 @@ class FeatureFlagsService {
     this.currentRegion = region;
     
     // Defensive handling for invalid/missing country codes
-    if (!countryCode || typeof countryCode !== 'string') {
+    if (!countryCode || typeof countryCode !== 'string' || countryCode.trim() === '') {
       const countries = REGION_COUNTRIES[region] || [];
       this.currentCountry = countries[0] || 'US';
     } else {
-      this.currentCountry = countryCode.toUpperCase();
+      // Sanitize and normalize country code
+      this.currentCountry = String(countryCode).trim().toUpperCase();
     }
     
     // Update feature availability

@@ -110,6 +110,9 @@ class GeolocationService {
       if (!location.countryCode) {
         const countries = REGION_COUNTRIES[location.region as Region] || [];
         location.countryCode = countries[0] || 'US';
+        
+        // Persist migrated location back to localStorage
+        this.storeLocation(location);
       }
 
       return location;
