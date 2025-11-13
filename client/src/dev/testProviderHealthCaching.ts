@@ -81,8 +81,14 @@ if (typeof window !== 'undefined') {
     await CacheService.clearAll();
     console.log('✅ Provider cache cleared');
   };
+  
+  import('./testProviderFailover');
+  
   console.log('[Dev] Provider health & caching test functions registered:');
   console.log('  - window.__testProviderHealthCaching()');
   console.log('  - window.__resetCircuitBreakers()');
   console.log('  - window.__clearProviderCache()');
+  console.log('  - window.__testOfflineFailover()');
+  console.log('  - window.__testRegionSwitching()');
+  console.log('  - window.__testStaleCache()');
 }
