@@ -120,6 +120,35 @@ export class CacheService {
     }
   }
 
+  static async purgeOldEntries(): Promise<void> {
+    try {
+      const allKeys = await keys();
+      const providerKeys = allKeys.filter(key => 
+        typeof key === 'string' && key.startsWith(this.KEY_PREFIX)
+      );
+      
+      const MAX_AGE = 24 * 60 * 60 * 1000;
+      let purgedCount = 0;
+      
+      for (const key of providerKeys) {
+        const entry = await get<CacheEntry<any>>(key);
+        if (entry) {
+          const age = Date.now() - entry.timestamp;
+          if (age > MAX_AGE) {
+            await del(key);
+            purgedCount++;
+          }
+        }
+      }
+      
+      if (purgedCount > 0) {
+        console.log(`[CacheService] Purged ${purgedCount} cache entries older than 24h`);
+      }
+    } catch (error) {
+      console.error('[CacheService] Failed to purge old entries:', error);
+    }
+  }
+
   static getCacheDuration(serviceType: keyof typeof CACHE_DURATIONS): number {
     return CACHE_DURATIONS[serviceType];
   }
