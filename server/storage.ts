@@ -4,10 +4,22 @@ import { randomUUID } from "crypto";
 // modify the interface with any CRUD methods
 // you might need
 
+export interface CloudUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  passwordSalt: string;
+}
+
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // Cloud Auth
+  getCloudUser(id: string): Promise<CloudUser | undefined>;
+  getCloudUserByUsername(username: string): Promise<CloudUser | undefined>;
+  createCloudUser(username: string, passwordHash: string, passwordSalt: string): Promise<CloudUser>;
   
   // Community Reports
   getCommunityReports(): Promise<CommunityReport[]>;
@@ -20,11 +32,13 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private cloudUsers: Map<string, CloudUser>;
   private communityReports: Map<string, CommunityReport>;
   private reporterLastReportTime: Map<string, number>;
 
   constructor() {
     this.users = new Map();
+    this.cloudUsers = new Map();
     this.communityReports = new Map();
     this.reporterLastReportTime = new Map();
     
@@ -47,6 +61,24 @@ export class MemStorage implements IStorage {
     const user: User = { ...insertUser, id };
     this.users.set(id, user);
     return user;
+  }
+
+  async getCloudUser(id: string): Promise<CloudUser | undefined> {
+    return this.cloudUsers.get(id);
+  }
+
+  async getCloudUserByUsername(username: string): Promise<CloudUser | undefined> {
+    return Array.from(this.cloudUsers.values()).find(
+      (user) => user.username === username,
+    );
+  }
+
+  async createCloudUser(username: string, passwordHash: string, passwordSalt: string): Promise<CloudUser> {
+    const id = randomUUID();
+    const cloudUser: CloudUser = { id, username, passwordHash, passwordSalt };
+    this.cloudUsers.set(id, cloudUser);
+    console.log('[MemStorage] Created cloud user:', username);
+    return cloudUser;
   }
 
   async getCommunityReports(): Promise<CommunityReport[]> {
