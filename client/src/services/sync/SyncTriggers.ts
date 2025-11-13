@@ -19,37 +19,37 @@ class SyncTriggers {
   }
 
   private setupTriggers(): void {
-    EventBus.subscribe('favorite:added', this.onFavoriteAdded.bind(this));
-    EventBus.subscribe('favorite:updated', this.onFavoriteUpdated.bind(this));
-    EventBus.subscribe('favorite:deleted', this.onFavoriteDeleted.bind(this));
+    EventBus.subscribe('favorites:itemAdded', this.onFavoriteAdded.bind(this));
+    EventBus.subscribe('favorites:itemUpdated', this.onFavoriteUpdated.bind(this));
+    EventBus.subscribe('favorites:itemRemoved', this.onFavoriteRemoved.bind(this));
     
     EventBus.subscribe('route:completed', this.onRouteCompleted.bind(this));
-    EventBus.subscribe('trip:saved', this.onTripSaved.bind(this));
+    EventBus.subscribe('trips:recorded', this.onTripRecorded.bind(this));
     
     EventBus.subscribe('mode:changed', this.onModeChanged.bind(this));
-    EventBus.subscribe('ui:mode_changed', this.onUIModeChanged.bind(this));
+    EventBus.subscribe('uiMode:changed', this.onUIModeChanged.bind(this));
     
     EventBus.subscribe('settings:changed', this.onSettingsChanged.bind(this));
     EventBus.subscribe('preferences:updated', this.onPreferencesUpdated.bind(this));
     
-    EventBus.subscribe('profile:updated', this.onProfileUpdated.bind(this));
+    EventBus.subscribe('user:profileUpdated', this.onProfileUpdated.bind(this));
     
     console.log('[SyncTriggers] Event listeners registered');
   }
 
-  private onFavoriteAdded(data: { favoriteId: string; label: string }): void {
-    console.log('[SyncTriggers] Favorite added:', data.label);
+  private onFavoriteAdded(data: { favorite: any }): void {
+    console.log('[SyncTriggers] Favorite added:', data.favorite.label);
     this.debouncedSync('favorite_added');
   }
 
-  private onFavoriteUpdated(data: { favoriteId: string }): void {
-    console.log('[SyncTriggers] Favorite updated:', data.favoriteId);
+  private onFavoriteUpdated(data: { favorite: any }): void {
+    console.log('[SyncTriggers] Favorite updated:', data.favorite.id);
     this.debouncedSync('favorite_updated');
   }
 
-  private onFavoriteDeleted(data: { favoriteId: string }): void {
-    console.log('[SyncTriggers] Favorite deleted:', data.favoriteId);
-    this.debouncedSync('favorite_deleted');
+  private onFavoriteRemoved(data: { favoriteId: string }): void {
+    console.log('[SyncTriggers] Favorite removed:', data.favoriteId);
+    this.debouncedSync('favorite_removed');
   }
 
   private onRouteCompleted(data: { distanceKm: number; durationSec: number }): void {
@@ -60,9 +60,9 @@ class SyncTriggers {
     this.debouncedSync('route_completed');
   }
 
-  private onTripSaved(data: { tripId: string }): void {
-    console.log('[SyncTriggers] Trip saved:', data.tripId);
-    this.debouncedSync('trip_saved');
+  private onTripRecorded(data: { trip: any }): void {
+    console.log('[SyncTriggers] Trip recorded:', data.trip.id);
+    this.debouncedSync('trip_recorded');
   }
 
   private onModeChanged(data: { from: string; to: string }): void {
@@ -70,8 +70,8 @@ class SyncTriggers {
     this.debouncedSync('mode_changed');
   }
 
-  private onUIModeChanged(data: { mode: string }): void {
-    console.log('[SyncTriggers] UI mode changed:', data.mode);
+  private onUIModeChanged(data: { mode: any; previousMode: any }): void {
+    console.log('[SyncTriggers] UI mode changed:', data.previousMode, '->', data.mode);
     this.debouncedSync('ui_mode_changed');
   }
 
@@ -85,8 +85,8 @@ class SyncTriggers {
     this.debouncedSync('preferences_updated');
   }
 
-  private onProfileUpdated(data: { userId: string }): void {
-    console.log('[SyncTriggers] Profile updated:', data.userId);
+  private onProfileUpdated(data: { profile: any }): void {
+    console.log('[SyncTriggers] Profile updated:', data.profile.id);
     this.debouncedSync('profile_updated');
   }
 

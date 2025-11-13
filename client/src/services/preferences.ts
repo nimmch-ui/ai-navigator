@@ -1,6 +1,7 @@
 import { UiMode } from "@/types/ui";
 import type { Locale } from "@/services/i18n";
 import type { Region } from "@/services/data/types";
+import { EventBus } from "./eventBus";
 
 export type TransportMode = "car" | "bike" | "walk" | "transit";
 export type RoutePreference = "fastest" | "shortest" | "eco";
@@ -136,6 +137,9 @@ export class PreferencesService {
       const current = this.getPreferences();
       const updated = { ...current, ...preferences };
       localStorage.setItem(PREFERENCES_KEY, JSON.stringify(updated));
+      
+      const keys = Object.keys(preferences);
+      EventBus.emit('preferences:updated', { keys });
     } catch (error) {
       console.error("Failed to save preferences:", error);
     }
@@ -146,6 +150,7 @@ export class PreferencesService {
     value: UserPreferences[K]
   ): void {
     this.savePreferences({ [key]: value });
+    EventBus.emit('settings:changed', { key: key as string, value });
   }
 
   static resetPreferences(): void {
