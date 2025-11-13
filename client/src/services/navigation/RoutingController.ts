@@ -13,7 +13,7 @@ import { trafficFusionEngine } from '../ai/TrafficFusionEngine';
 import { computeETA, type ETAResult } from './SmartETA';
 import { EventBus } from '../eventBus';
 import { PreferencesService } from '../preferences';
-import { voiceGuidanceService } from '../voiceGuidance';
+import { voiceGuidance } from '../voiceGuidance';
 import { SharedNavigationState } from '../ui/SharedNavigationState';
 
 export type RerouteMode = 'auto' | 'manual';
@@ -216,7 +216,7 @@ export class RoutingController {
       this.state.rerouteCooldownUntil = Date.now() + REJECTION_COOLDOWN_MS;
       console.log('[RoutingController] 2 consecutive rejections - entering 10min cooldown');
       
-      voiceGuidanceService.announce('Reroute suggestions paused', {
+      voiceGuidance.announce('Reroute suggestions paused', {
         priority: 'low',
       });
     }
@@ -283,7 +283,7 @@ export class RoutingController {
       console.log('[RoutingController] Traffic ahead detected, evaluating alternatives...');
       
       // Voice prompt: "Traffic ahead, recalculating best route."
-      voiceGuidanceService.announce('Traffic ahead, recalculating best route.', {
+      voiceGuidance.announce('Traffic ahead, recalculating best route.', {
         priority: 'normal',
       });
       
@@ -332,7 +332,7 @@ export class RoutingController {
         const minutesSaved = Math.round(proposal.timeSaved / 60);
         const voiceText = `New route available, ${minutesSaved} ${minutesSaved === 1 ? 'minute' : 'minutes'} faster.`;
         
-        voiceGuidanceService.announce(voiceText, {
+        voiceGuidance.announce(voiceText, {
           priority: proposal.severity === 'high' ? 'high' : 'normal',
         });
 
@@ -408,16 +408,16 @@ export class RoutingController {
 
     // Severe incidents
     const severeIncidents = incidents.filter(
-      i => i.severity === 'severe' || i.severity === 'high'
+      i => i.severity === 'severe'
     );
     
     if (severeIncidents.length > 0) {
       return true;
     }
 
-    // Medium severity with multiple incidents
-    const mediumIncidents = incidents.filter(i => i.severity === 'medium');
-    if (mediumIncidents.length >= 2) {
+    // Moderate severity with multiple incidents
+    const moderateIncidents = incidents.filter(i => i.severity === 'moderate');
+    if (moderateIncidents.length >= 2) {
       return true;
     }
 
