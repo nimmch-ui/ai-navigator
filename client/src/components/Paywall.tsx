@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Check, Zap, Star, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,15 +10,29 @@ import { monetizationService, PRICING_PLANS } from '@/services/monetization/Mone
 import type { SubscriptionTier } from '@shared/schema';
 
 interface PaywallProps {
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   requiredTier?: SubscriptionTier;
   feature?: string;
 }
 
-export function Paywall({ onClose, requiredTier, feature }: PaywallProps) {
+export function Paywall({ open, onOpenChange, requiredTier, feature }: PaywallProps) {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('yearly');
   const [isPurchasing, setIsPurchasing] = useState<SubscriptionTier | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        onOpenChange(false);
+      }
+    };
+
+    if (open) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [open, onOpenChange]);
 
   const handlePurchase = async (tier: SubscriptionTier) => {
     if (tier === 'free') {
@@ -81,6 +95,8 @@ export function Paywall({ onClose, requiredTier, feature }: PaywallProps) {
     }
   };
 
+  if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4">
@@ -88,7 +104,7 @@ export function Paywall({ onClose, requiredTier, feature }: PaywallProps) {
           variant="ghost"
           size="icon"
           className="absolute right-6 top-6 z-10"
-          onClick={onClose}
+          onClick={() => onOpenChange(false)}
           data-testid="button-close-paywall"
         >
           <X className="h-4 w-4" />
