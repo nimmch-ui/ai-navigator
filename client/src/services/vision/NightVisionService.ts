@@ -24,6 +24,7 @@ export interface DetectionResult {
 
 export interface NightVisionResult {
   enhancedFrame: ImageData;
+  edgeMap?: ImageData;
   detections: DetectionResult[];
   colorMode: ColorMode;
   processingTimeMs: number;
@@ -133,6 +134,13 @@ class NightVisionService {
     // Normalize CDF
     const totalPixels = data.length / 4;
     const cdfMin = cdf.find(v => v > 0) || 0;
+    
+    // Guard against uniform frames (all pixels same value)
+    if (totalPixels === cdfMin || cdfMin === totalPixels) {
+      console.warn('[NightVision] Uniform frame detected, skipping histogram equalization');
+      return;
+    }
+
     const equalizationTable = new Uint8Array(256);
     for (let i = 0; i < 256; i++) {
       equalizationTable[i] = Math.floor(((cdf[i] - cdfMin) / (totalPixels - cdfMin)) * 255);
@@ -329,6 +337,7 @@ class NightVisionService {
     const startTime = performance.now();
 
     let enhanced = imageData;
+    let edgeMap: ImageData | undefined;
     const detections: DetectionResult[] = [];
 
     // Apply low-light enhancement
@@ -346,8 +355,17 @@ class NightVisionService {
 
     // Detect edges
     if (options.enableEdgeDetection) {
-      const edges = this.detectEdges(enhanced);
-      // TODO: Extract edge detections as results
+      edgeMap = this.detectEdges(enhanced);
+      
+      // Extract edge detections as results
+      const edgePoints = this.extractEdgePoints(edgeMap);
+      if (edgePoints.length > 0) {
+        detections.push({
+          type: 'edge',
+          confidence: 1.0,
+          points: edgePoints,
+        });
+      }
     }
 
     // Object detection
@@ -364,10 +382,32 @@ class NightVisionService {
 
     return {
       enhancedFrame: enhanced,
+      edgeMap,
       detections,
       colorMode: mode,
       processingTimeMs,
     };
+  }
+
+  /**
+   * Extract edge points from edge map for detection results
+   */
+  private extractEdgePoints(edgeMap: ImageData): Array<{ x: number; y: number }> {
+    const points: Array<{ x: number; y: number }> = [];
+    const width = edgeMap.width;
+    const height = edgeMap.height;
+    
+    // Sample edge points (every 10th pixel to avoid too many points)
+    for (let y = 0; y < height; y += 10) {
+      for (let x = 0; x < width; x += 10) {
+        const idx = (y * width + x) * 4;
+        if (edgeMap.data[idx] > 128) { // Edge pixel threshold
+          points.push({ x, y });
+        }
+      }
+    }
+    
+    return points;
   }
 
   /**
