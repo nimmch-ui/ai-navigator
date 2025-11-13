@@ -31,6 +31,14 @@ export interface EventPayloadMap {
   'trips:deleted': { tripId: string };
   'trips:cleared': Record<string, never>;
   'userdata:migrationCompleted': { from: string | number; to: number | string; count?: number };
+  'sync:enabled': undefined;
+  'sync:disabled': undefined;
+  'sync:completed': { conflicts: number; recordsPushed: number; recordsPulled: number; durationMs: number };
+  'sync:failed': { error: string };
+  'sync:push_completed': { recordsPushed: number };
+  'sync:pull_completed': { recordsPulled: number };
+  'sync:cloud_cleared': undefined;
+  'sync:identityChanged': { previousUserId: string; canonicalUserId: string };
 }
 
 type EventName = keyof EventPayloadMap;

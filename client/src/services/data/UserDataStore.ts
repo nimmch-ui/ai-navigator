@@ -401,6 +401,27 @@ class UserDataStore {
       throw error;
     }
   }
+
+  async exportData(): Promise<UserDataEnvelope> {
+    await this.ensureInitialized();
+    return JSON.parse(JSON.stringify(this.envelope!));
+  }
+
+  async importData(data: UserDataEnvelope, preserveLocalIdentity: boolean = false): Promise<void> {
+    await this.ensureInitialized();
+    
+    this.envelope = {
+      ...data,
+      identity: preserveLocalIdentity ? this.envelope!.identity : data.identity,
+      metadata: {
+        ...data.metadata,
+        updatedAt: Date.now(),
+      },
+    };
+    
+    await this.persist();
+    console.log('[UserDataStore] Data imported successfully');
+  }
 }
 
 export const userDataStore = new UserDataStore();

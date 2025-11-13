@@ -1,4 +1,6 @@
-import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge, Vibrate, Sparkles, Globe } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge, Vibrate, Sparkles, Globe, Cloud, CloudOff, RefreshCw, Trash2 } from 'lucide-react';
+import { EventBus } from '@/services/eventBus';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -22,6 +24,8 @@ import type { Region } from '@/services/data/types';
 import { UiMode } from '@/types/ui';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { syncService } from '@/services/sync/SyncService';
+import { userDataStore } from '@/services/data/UserDataStore';
 
 interface SettingsProps {
   // Immersive Experience
@@ -122,6 +126,97 @@ export default function Settings({
 }: SettingsProps) {
   const { toast } = useToast();
   const { t, locale, changeLocale, availableLocales, getLocaleName } = useTranslation();
+  
+  const [syncEnabled, setSyncEnabled] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [userId, setUserId] = useState<string>('');
+
+  useEffect(() => {
+    setSyncEnabled(syncService.isSyncEnabled());
+    userDataStore.getIdentity().then(id => setUserId(id));
+
+    const unsubscribe = EventBus.subscribe('sync:identityChanged', ({ canonicalUserId }) => {
+      console.log('[Settings] Identity changed to:', canonicalUserId);
+      setUserId(canonicalUserId);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const handleSyncToggle = async (enabled: boolean) => {
+    syncService.setSyncEnabled(enabled);
+    setSyncEnabled(enabled);
+    
+    if (enabled) {
+      toast({
+        title: 'Cloud Sync Enabled',
+        description: 'Performing initial sync...',
+      });
+      
+      setIsSyncing(true);
+      const result = await syncService.syncAll();
+      setIsSyncing(false);
+      
+      if (result.success) {
+        if (result.canonicalUserId) {
+          setUserId(result.canonicalUserId);
+        }
+        toast({
+          title: 'Sync Complete',
+          description: 'Your data is now synced across devices.',
+        });
+      } else if (result.error) {
+        toast({
+          title: 'Sync Failed',
+          description: result.error,
+          variant: 'destructive',
+        });
+      }
+    } else {
+      toast({
+        title: 'Cloud Sync Disabled',
+        description: 'Data will only be stored locally on this device.',
+      });
+    }
+  };
+
+  const handleSyncNow = async () => {
+    setIsSyncing(true);
+    const result = await syncService.syncAll();
+    setIsSyncing(false);
+
+    if (result.success) {
+      if (result.canonicalUserId) {
+        setUserId(result.canonicalUserId);
+      }
+      toast({
+        title: 'Sync Complete',
+        description: `Synced ${result.recordsPushed || 0} records. All data is up to date.`,
+      });
+    } else {
+      toast({
+        title: 'Sync Failed',
+        description: result.error || 'Unknown error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleClearCloud = async () => {
+    try {
+      await syncService.clearCloudData();
+      toast({
+        title: 'Cloud Data Cleared',
+        description: 'Your cloud backup has been removed. Local data is unchanged.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Failed to Clear',
+        description: 'Could not clear cloud data. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   /**
    * Handle UI Mode change with AR permission request for iOS compatibility
@@ -722,6 +817,68 @@ export default function Settings({
               data-testid="switch-radar-pulse"
             />
           </div>
+
+          <Separator />
+
+          <div>
+            <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5">
+              {syncEnabled ? <Cloud className="h-3.5 w-3.5" /> : <CloudOff className="h-3.5 w-3.5" />}
+              Cloud Sync
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Keep your profile, favorites, and trip history synced across devices. Uses a local cloud simulation ready for real backend integration.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="sync-enabled" className="text-sm font-medium">
+                Enable multi-device sync
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Data is stored anonymously and ready for cloud backup
+              </p>
+            </div>
+            <Switch
+              id="sync-enabled"
+              checked={syncEnabled}
+              onCheckedChange={handleSyncToggle}
+              data-testid="switch-sync-enabled"
+            />
+          </div>
+
+          {syncEnabled && (
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleSyncNow}
+                disabled={isSyncing}
+                data-testid="button-sync-now"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Syncing...' : 'Sync Now'}
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleClearCloud}
+                data-testid="button-clear-cloud"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear Cloud Copy
+              </Button>
+              
+              <p className="text-xs text-muted-foreground">
+                Anonymous ID: {userId.substring(0, 8)}...
+              </p>
+            </div>
+          )}
+
+          <Separator />
 
           {voiceEnabled && voiceSupported && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
