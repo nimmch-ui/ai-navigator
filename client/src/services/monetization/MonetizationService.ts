@@ -277,6 +277,40 @@ class MonetizationService {
     
     return true;
   }
+
+  canUse3D(): boolean {
+    return this.hasFeature('premium');
+  }
+
+  canUseCinematic(): boolean {
+    return this.hasFeature('premium');
+  }
+
+  canUseAR(): boolean {
+    return this.hasFeature('premium');
+  }
+
+  canUseRadars(): boolean {
+    return this.hasFeature('premium');
+  }
+
+  canUseSync(): boolean {
+    return this.hasFeature('premium');
+  }
+
+  getLockedFeatureReason(featureName: string): string {
+    const currentTier = this.getCurrentTier();
+    
+    if (currentTier === 'free') {
+      return `${featureName} requires Premium or Pro subscription`;
+    }
+    
+    if (!this.isSubscriptionActive()) {
+      return `Your subscription has expired. Please renew to access ${featureName}`;
+    }
+    
+    return `${featureName} is not available on your current plan`;
+  }
 }
 
 export const monetizationService = new MonetizationService();
