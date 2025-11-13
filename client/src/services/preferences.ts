@@ -1,5 +1,6 @@
 import { UiMode } from "@/types/ui";
 import type { Locale } from "@/services/i18n";
+import type { Region } from "@/services/data/types";
 
 export type TransportMode = "car" | "bike" | "walk" | "transit";
 export type RoutePreference = "fastest" | "shortest" | "eco";
@@ -34,6 +35,7 @@ export interface UserPreferences {
   schemaVersion?: number;
   language: Locale;
   timeFormat: TimeFormat;
+  region: Region;
   transportMode: TransportMode;
   routePreference: RoutePreference;
   voiceGuidance: boolean;
@@ -69,6 +71,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   schemaVersion: CURRENT_SCHEMA_VERSION,
   language: "en",
   timeFormat: "24h",
+  region: "EU",
   transportMode: "car",
   routePreference: "fastest",
   voiceGuidance: true,
