@@ -22,6 +22,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { CarModeToggle } from '@/components/CarModeToggle';
 import Settings from '@/components/Settings';
 import { ModeSwitcher, ModeSwitcherCompact } from '@/components/ModeSwitcher';
+import { Paywall } from '@/components/Paywall';
 import Favorites from '@/components/Favorites';
 import TripHistory from '@/components/TripHistory';
 import ReportButton from '@/components/ReportButton';
@@ -96,6 +97,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 export default function Home() {
   const [showChat, setShowChat] = useState(false);
   const [showRoute, setShowRoute] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([37.7749, -122.4194]);
   const [mapZoom, setMapZoom] = useState(13);
   const [markers, setMarkers] = useState<Array<{ lat: number; lng: number; label?: string }>>([
@@ -1152,12 +1154,12 @@ export default function Home() {
 
         {/* Desktop: Mode Switcher at top-right */}
         <div className="absolute top-4 right-4 z-30 hidden md:block">
-          <ModeSwitcher />
+          <ModeSwitcher onUpgradeClick={() => setShowPaywall(true)} />
         </div>
 
         {/* Mobile: Compact Mode Switcher at bottom-center */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 md:hidden">
-          <ModeSwitcherCompact />
+          <ModeSwitcherCompact onUpgradeClick={() => setShowPaywall(true)} />
         </div>
 
         {/* Control cluster: bottom-right */}
@@ -1359,6 +1361,9 @@ export default function Home() {
           onClose={() => toggleAR(false)}
         />
       )}
+
+      {/* Paywall Modal */}
+      <Paywall open={showPaywall} onOpenChange={setShowPaywall} />
     </div>
   );
 }

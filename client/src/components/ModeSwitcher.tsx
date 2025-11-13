@@ -6,15 +6,18 @@
 import { useState, useEffect } from 'react';
 import { UiMode } from '@/types/ui';
 import { ModeService } from '@/services/mode';
+import { monetizationService } from '@/services/monetization/MonetizationService';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { 
   Navigation, 
   Box, 
   Video, 
   Camera, 
   Glasses, 
-  Leaf 
+  Leaf,
+  Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +27,7 @@ interface ModeConfig {
   icon: React.ComponentType<{ className?: string }>;
   description: string;
   shortcuts: string[];
+  requiresPremium?: boolean;
 }
 
 const MODE_CONFIGS: ModeConfig[] = [
@@ -32,52 +36,75 @@ const MODE_CONFIGS: ModeConfig[] = [
     label: 'Classic',
     icon: Navigation,
     description: 'Traditional 2D map navigation',
-    shortcuts: ['1']
+    shortcuts: ['1'],
+    requiresPremium: false
   },
   {
     mode: UiMode.THREED,
     label: '3D',
     icon: Box,
     description: 'Interactive 3D map with terrain',
-    shortcuts: ['2']
+    shortcuts: ['2'],
+    requiresPremium: true
   },
   {
     mode: UiMode.CINEMATIC,
     label: 'Cinematic',
     icon: Video,
     description: 'Immersive camera following',
-    shortcuts: ['3', 'c', 'C']
+    shortcuts: ['3', 'c', 'C'],
+    requiresPremium: true
   },
   {
     mode: UiMode.AR,
     label: 'AR',
     icon: Camera,
     description: 'Augmented reality overlay',
-    shortcuts: ['4', 'a', 'A']
+    shortcuts: ['4', 'a', 'A'],
+    requiresPremium: true
   },
   {
     mode: UiMode.VR,
     label: 'VR',
     icon: Glasses,
     description: 'Virtual reality mode',
-    shortcuts: ['5']
+    shortcuts: ['5'],
+    requiresPremium: false
   },
   {
     mode: UiMode.ECO,
     label: 'Eco',
     icon: Leaf,
     description: 'Energy-efficient minimal UI',
-    shortcuts: ['6', 'e', 'E']
+    shortcuts: ['6', 'e', 'E'],
+    requiresPremium: false
   }
 ];
 
 interface ModeSwitcherProps {
   className?: string;
   onModeChange?: (mode: UiMode) => void;
+  onUpgradeClick?: () => void;
 }
 
-export function ModeSwitcher({ className, onModeChange }: ModeSwitcherProps) {
+export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSwitcherProps) {
   const [currentMode, setCurrentMode] = useState<UiMode>(ModeService.getMode());
+  const [canUsePremium, setCanUsePremium] = useState(false);
+
+  useEffect(() => {
+    const checkEntitlements = () => {
+      setCanUsePremium(monetizationService.canUse3D());
+    };
+
+    checkEntitlements();
+    const unsubscribe = monetizationService.subscribe(() => {
+      checkEntitlements();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     // Subscribe to mode changes from service
@@ -104,15 +131,19 @@ export function ModeSwitcher({ className, onModeChange }: ModeSwitcherProps) {
       
       if (config) {
         e.preventDefault();
-        handleModeSelect(config.mode);
+        handleModeSelect(config.mode, config);
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
+  }, [canUsePremium, onUpgradeClick]);
 
-  const handleModeSelect = (mode: UiMode) => {
+  const handleModeSelect = (mode: UiMode, config: ModeConfig) => {
+    if (config.requiresPremium && !canUsePremium) {
+      onUpgradeClick?.();
+      return;
+    }
     ModeService.setMode(mode);
   };
 
@@ -129,36 +160,62 @@ export function ModeSwitcher({ className, onModeChange }: ModeSwitcherProps) {
       {MODE_CONFIGS.map((config) => {
         const Icon = config.icon;
         const isActive = currentMode === config.mode;
+        const isLocked = config.requiresPremium && !canUsePremium;
 
         return (
           <Tooltip key={config.mode}>
             <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant={isActive ? "default" : "ghost"}
-                onClick={() => handleModeSelect(config.mode)}
-                aria-pressed={isActive}
-                aria-label={`${config.label} mode (${config.shortcuts.join('/')})`}
-                className={cn(
-                  "h-9 w-9 transition-all",
-                  isActive && "shadow-sm"
+              <div className="relative">
+                <Button
+                  size="icon"
+                  variant={isActive ? "default" : "ghost"}
+                  onClick={() => handleModeSelect(config.mode, config)}
+                  aria-pressed={isActive}
+                  aria-label={`${config.label} mode (${config.shortcuts.join('/')})`}
+                  className={cn(
+                    "h-9 w-9 transition-all",
+                    isActive && "shadow-sm",
+                    isLocked && "opacity-60"
+                  )}
+                  data-testid={`button-mode-${config.mode.toLowerCase()}`}
+                >
+                  {isLocked ? (
+                    <Lock className="h-4 w-4" />
+                  ) : (
+                    <Icon className="h-4 w-4" />
+                  )}
+                </Button>
+                {isLocked && (
+                  <Badge 
+                    variant="secondary" 
+                    className="absolute -top-1 -right-1 h-3 w-3 p-0 flex items-center justify-center text-[8px] pointer-events-none"
+                    data-testid={`badge-premium-${config.mode.toLowerCase()}`}
+                  >
+                    P
+                  </Badge>
                 )}
-                data-testid={`button-mode-${config.mode.toLowerCase()}`}
-              >
-                <Icon className="h-4 w-4" />
-              </Button>
+              </div>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              <div className="font-medium">{config.label}</div>
-              <div className="text-muted-foreground">{config.description}</div>
-              <div className="text-muted-foreground mt-1">
-                Press {config.shortcuts.map((key, i) => (
-                  <span key={key}>
-                    {i > 0 && ' or '}
-                    <kbd className="px-1 py-0.5 bg-muted rounded text-xs">{key}</kbd>
-                  </span>
-                ))}
+              <div className="font-medium">
+                {config.label}
+                {isLocked && <span className="ml-1 text-primary">🔒</span>}
               </div>
+              <div className="text-muted-foreground">{config.description}</div>
+              {isLocked ? (
+                <div className="text-primary mt-1 font-medium">
+                  Premium feature - Click to upgrade
+                </div>
+              ) : (
+                <div className="text-muted-foreground mt-1">
+                  Press {config.shortcuts.map((key, i) => (
+                    <span key={key}>
+                      {i > 0 && ' or '}
+                      <kbd className="px-1 py-0.5 bg-muted rounded text-xs">{key}</kbd>
+                    </span>
+                  ))}
+                </div>
+              )}
             </TooltipContent>
           </Tooltip>
         );
@@ -170,8 +227,24 @@ export function ModeSwitcher({ className, onModeChange }: ModeSwitcherProps) {
 /**
  * Compact version for mobile (bottom sheet style)
  */
-export function ModeSwitcherCompact({ className, onModeChange }: ModeSwitcherProps) {
+export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }: ModeSwitcherProps) {
   const [currentMode, setCurrentMode] = useState<UiMode>(ModeService.getMode());
+  const [canUsePremium, setCanUsePremium] = useState(false);
+
+  useEffect(() => {
+    const checkEntitlements = () => {
+      setCanUsePremium(monetizationService.canUse3D());
+    };
+
+    checkEntitlements();
+    const unsubscribe = monetizationService.subscribe(() => {
+      checkEntitlements();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = ModeService.onChange((mode) => {
@@ -184,7 +257,11 @@ export function ModeSwitcherCompact({ className, onModeChange }: ModeSwitcherPro
     };
   }, [onModeChange]);
 
-  const handleModeSelect = (mode: UiMode) => {
+  const handleModeSelect = (mode: UiMode, config: ModeConfig) => {
+    if (config.requiresPremium && !canUsePremium) {
+      onUpgradeClick?.();
+      return;
+    }
     ModeService.setMode(mode);
   };
 
@@ -207,16 +284,17 @@ export function ModeSwitcherCompact({ className, onModeChange }: ModeSwitcherPro
       <div className="flex items-center gap-0.5">
         {MODE_CONFIGS.map((config, index) => {
           const isActive = currentMode === config.mode;
+          const isLocked = config.requiresPremium && !canUsePremium;
           
           return (
             <button
               key={config.mode}
-              onClick={() => handleModeSelect(config.mode)}
+              onClick={() => handleModeSelect(config.mode, config)}
               aria-pressed={isActive}
-              aria-label={config.label}
+              aria-label={`${config.label}${isLocked ? ' (Premium)' : ''}`}
               className={cn(
                 "h-1.5 w-1.5 rounded-full transition-all",
-                isActive ? "bg-primary w-4" : "bg-muted hover:bg-muted-foreground/30"
+                isActive ? "bg-primary w-4" : isLocked ? "bg-muted-foreground/50 hover:bg-primary/50" : "bg-muted hover:bg-muted-foreground/30"
               )}
               data-testid={`button-mode-dot-${config.mode.toLowerCase()}-${index}`}
             />
