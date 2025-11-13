@@ -24,6 +24,8 @@ import { userDataStore } from "@/services/data/UserDataStore";
 import { PredictiveNavigation } from "@/services/ai/PredictiveNavigation";
 import { SafetyController } from "@/services/ai/SafetyController";
 import { EmotionEngine } from "@/services/emotion/EmotionEngine";
+import { syncTriggers } from "@/services/sync/SyncTriggers";
+import { authProvider } from "@/services/auth/AuthProvider";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 
@@ -85,6 +87,13 @@ function App() {
     SafetyController.init();
     console.log('[App] AI services initialized: EmotionEngine, PredictiveNavigation, SafetyController');
     
+    // Initialize sync triggers for multi-device support
+    syncTriggers.initialize();
+    console.log('[App] Sync triggers initialized');
+    
+    // AuthProvider is automatically initialized on import
+    console.log('[App] AuthProvider initialized');
+    
     console.log('[App] Analytics session started:', Analytics.getSessionSummary().sessionId);
 
     return () => {
@@ -93,6 +102,7 @@ function App() {
       Analytics.endSession();
       SafetyController.shutdown();
       PredictiveNavigation.shutdown();
+      syncTriggers.destroy();
     };
   }, []);
 
