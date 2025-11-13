@@ -20,26 +20,36 @@ export default function GlobalRolloutStatus() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Wait a brief moment for services to initialize
-    const timer = setTimeout(() => {
-      // Get available currencies
-      setCurrencies(currencyService.getAvailableCurrencies());
-      setCurrentCurrency(currencyService.getCurrency());
+    // Wait for services to be ready using the global servicesReady promise
+    const loadData = async () => {
+      try {
+        // Wait for services to initialize
+        if (typeof window !== 'undefined' && (window as any).__servicesReady) {
+          await (window as any).__servicesReady;
+        }
 
-      // Get available languages
-      setLanguages(i18n.getAvailableLocales());
-      setCurrentLocale(i18n.getLocale());
+        // Get available currencies
+        setCurrencies(currencyService.getAvailableCurrencies());
+        setCurrentCurrency(currencyService.getCurrency());
 
-      // Get feature flags
-      setFeatureFlags(featureFlagsService.getFeatureAvailability());
+        // Get available languages
+        setLanguages(i18n.getAvailableLocales());
+        setCurrentLocale(i18n.getLocale());
 
-      // Get pricing plans
-      setPricingPlans(monetizationService.getLocalizedPricingPlans());
-      
-      setIsLoading(false);
-    }, 500);
+        // Get feature flags
+        setFeatureFlags(featureFlagsService.getFeatureAvailability());
 
-    return () => clearTimeout(timer);
+        // Get pricing plans
+        setPricingPlans(monetizationService.getLocalizedPricingPlans());
+        
+        setIsLoading(false);
+      } catch (err) {
+        console.error('[GlobalRolloutStatus] Failed to load data:', err);
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   const requiredCurrencies = ['USD', 'EUR', 'INR', 'ALL', 'CHF'];
