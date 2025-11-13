@@ -93,7 +93,17 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
 
   useEffect(() => {
     const checkEntitlements = () => {
-      setCanUsePremium(monetizationService.canUse3D());
+      const canUse = monetizationService.canUse3D();
+      setCanUsePremium(canUse);
+      
+      // If entitlements revoked and user is in a premium mode, force downgrade
+      // Query ModeService directly to avoid stale React state
+      const actualMode = ModeService.getMode();
+      const currentConfig = MODE_CONFIGS.find(c => c.mode === actualMode);
+      // Only downgrade if needed - prevents infinite loops
+      if (!canUse && currentConfig?.requiresPremium && actualMode !== UiMode.CLASSIC) {
+        ModeService.setMode(UiMode.CLASSIC);
+      }
     };
 
     checkEntitlements();
@@ -111,6 +121,17 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
     const unsubscribe = ModeService.onChange((mode) => {
       setCurrentMode(mode);
       onModeChange?.(mode);
+      
+      // Validate entitlements on every mode change (use passed mode param to avoid race)
+      // Only validate if switching TO a premium mode (not FROM one)
+      if (mode !== UiMode.CLASSIC) {
+        const canUse = monetizationService.canUse3D();
+        const modeConfig = MODE_CONFIGS.find(c => c.mode === mode);
+        if (!canUse && modeConfig?.requiresPremium) {
+          // Force downgrade if user switched to a premium mode without access
+          ModeService.setMode(UiMode.CLASSIC);
+        }
+      }
     });
 
     return () => {
@@ -197,9 +218,9 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
               </div>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              <div className="font-medium">
+              <div className="font-medium flex items-center gap-1">
                 {config.label}
-                {isLocked && <span className="ml-1 text-primary">🔒</span>}
+                {isLocked && <Lock className="h-3 w-3 text-primary" />}
               </div>
               <div className="text-muted-foreground">{config.description}</div>
               {isLocked ? (
@@ -233,7 +254,17 @@ export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }:
 
   useEffect(() => {
     const checkEntitlements = () => {
-      setCanUsePremium(monetizationService.canUse3D());
+      const canUse = monetizationService.canUse3D();
+      setCanUsePremium(canUse);
+      
+      // If entitlements revoked and user is in a premium mode, force downgrade
+      // Query ModeService directly to avoid stale React state
+      const actualMode = ModeService.getMode();
+      const currentConfig = MODE_CONFIGS.find(c => c.mode === actualMode);
+      // Only downgrade if needed - prevents infinite loops
+      if (!canUse && currentConfig?.requiresPremium && actualMode !== UiMode.CLASSIC) {
+        ModeService.setMode(UiMode.CLASSIC);
+      }
     };
 
     checkEntitlements();
@@ -250,6 +281,17 @@ export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }:
     const unsubscribe = ModeService.onChange((mode) => {
       setCurrentMode(mode);
       onModeChange?.(mode);
+      
+      // Validate entitlements on every mode change (use passed mode param to avoid race)
+      // Only validate if switching TO a premium mode (not FROM one)
+      if (mode !== UiMode.CLASSIC) {
+        const canUse = monetizationService.canUse3D();
+        const modeConfig = MODE_CONFIGS.find(c => c.mode === mode);
+        if (!canUse && modeConfig?.requiresPremium) {
+          // Force downgrade if user switched to a premium mode without access
+          ModeService.setMode(UiMode.CLASSIC);
+        }
+      }
     });
 
     return () => {
