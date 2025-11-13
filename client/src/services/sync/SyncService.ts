@@ -2,8 +2,10 @@ import { userDataStore } from '../data/UserDataStore';
 import type { UserDataEnvelope, UserProfile, FavoritePlace, TripRecord } from '../data/userDataModels';
 import type { ISyncBackend, SyncResult } from './ISyncBackend';
 import { FakeSyncBackend } from './FakeSyncBackend';
+import { CloudSyncBackend } from './CloudSyncBackend';
 import { EventBus } from '../eventBus';
 import { offlineModeService } from '../system/OfflineModeService';
+import type { AuthLoginResponse } from '@shared/schema';
 
 interface SyncQueueItem {
   userId: string;
@@ -16,12 +18,14 @@ const MAX_RETRIES = 3;
 
 class SyncService {
   private backend: ISyncBackend;
+  private cloudBackend: CloudSyncBackend | null = null;
   private syncEnabled: boolean = false;
   private syncQueue: SyncQueueItem[] = [];
   private isSyncing: boolean = false;
   private retryTimeoutId: NodeJS.Timeout | null = null;
   private networkStatusUnsubscribe: (() => void) | null = null;
   private CANONICAL_USER_KEY = 'sync:canonicalUserId';
+  private SESSION_KEY = 'cloudSync_session';
 
   constructor() {
     this.backend = new FakeSyncBackend();
@@ -29,6 +33,7 @@ class SyncService {
     const stored = localStorage.getItem('sync:enabled');
     this.syncEnabled = stored === 'true';
 
+    this.restoreCloudSession();
     this.setupNetworkMonitoring();
   }
 
@@ -38,6 +43,64 @@ class SyncService {
 
   private setPersistedCanonicalUserId(userId: string): void {
     localStorage.setItem(this.CANONICAL_USER_KEY, userId);
+  }
+
+  private restoreCloudSession(): void {
+    try {
+      const stored = localStorage.getItem(this.SESSION_KEY);
+      if (stored) {
+        const session: AuthLoginResponse = JSON.parse(stored);
+        
+        if (session.expiresAt > Date.now()) {
+          this.cloudBackend = new CloudSyncBackend(session.sessionToken);
+          this.backend = this.cloudBackend;
+          console.log('[SyncService] Cloud session restored for user:', session.userId);
+        } else {
+          localStorage.removeItem(this.SESSION_KEY);
+          console.log('[SyncService] Cloud session expired');
+        }
+      }
+    } catch (error) {
+      console.error('[SyncService] Failed to restore cloud session:', error);
+    }
+  }
+
+  async loginCloud(username: string, password: string): Promise<AuthLoginResponse> {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Login failed');
+      }
+
+      const data: AuthLoginResponse = await response.json();
+      
+      localStorage.setItem(this.SESSION_KEY, JSON.stringify(data));
+      this.cloudBackend = new CloudSyncBackend(data.sessionToken);
+      this.backend = this.cloudBackend;
+      
+      console.log('[SyncService] Cloud login successful:', data.username);
+      return data;
+    } catch (error) {
+      console.error('[SyncService] Cloud login failed:', error);
+      throw error;
+    }
+  }
+
+  logoutCloud(): void {
+    localStorage.removeItem(this.SESSION_KEY);
+    this.cloudBackend = null;
+    this.backend = new FakeSyncBackend();
+    console.log('[SyncService] Cloud logout successful');
+  }
+
+  isCloudEnabled(): boolean {
+    return this.cloudBackend !== null;
   }
 
   private setupNetworkMonitoring(): void {
