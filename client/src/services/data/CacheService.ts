@@ -1,7 +1,7 @@
 import { get, set, del, keys } from 'idb-keyval';
-import type { TrafficFlow, SpeedCamera, WeatherNow } from './types';
+import type { TrafficFlow, SpeedCamera, WeatherNow, RadarTileData } from './types';
 
-export type CacheableData = TrafficFlow[] | SpeedCamera[] | WeatherNow | string;
+export type CacheableData = TrafficFlow[] | SpeedCamera[] | WeatherNow | RadarTileData | string;
 
 interface CacheEntry<T> {
   data: T;
@@ -21,6 +21,7 @@ const CACHE_DURATIONS = {
   traffic: 5 * 60 * 1000,
   radar: 24 * 60 * 60 * 1000,
   weather: 30 * 60 * 1000,
+  weatherRadar: 15 * 60 * 1000,
 };
 
 export class CacheService {

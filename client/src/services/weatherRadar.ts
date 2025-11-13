@@ -1,49 +1,40 @@
 /**
- * Weather Radar Service - RainViewer API Integration
- * Provides weather radar tile overlay for maps
+ * Weather Radar Service - Regional Provider Integration
+ * Provides weather radar tile overlay for maps with failover support
  */
 
-export interface RadarFrame {
-  time: number; // Unix timestamp
-  path: string; // Tile path for this frame
-}
+import type { RadarTileData, RadarFrame } from './data/types';
 
-export interface RadarData {
-  version: string;
-  generated: number;
-  host: string;
-  radar: {
-    past: RadarFrame[];
-    nowcast: RadarFrame[];
-  };
-}
+export type { RadarFrame };
+export type RadarData = RadarTileData;
 
-const RAINVIEWER_API_URL = 'https://api.rainviewer.com/public/weather-maps.json';
-const RAINVIEWER_HOST = 'https://tilecache.rainviewer.com';
-
-// Color scheme: 2 = Universal Blue (default)
-// Options: 1_1 = smooth + snow colors
 const TILE_SIZE = 256;
 const COLOR_SCHEME = 2;
 const OPTIONS = '1_1';
 const FORMAT = 'png';
 
 /**
- * Fetch available radar frames from RainViewer API
+ * Fetch available radar frames via provider layer with failover
  */
 export async function fetchRadarData(): Promise<RadarData | null> {
   try {
-    const response = await fetch(RAINVIEWER_API_URL);
+    const { ProviderRegistry } = await import('@/services/data/ProviderRegistry');
+    const { RegionDetector } = await import('@/services/data/regionDetector');
     
-    if (!response.ok) {
-      console.error('Failed to fetch radar data:', response.status, response.statusText);
-      return null;
-    }
+    const region = await RegionDetector.detectRegion();
+    const providerSet = ProviderRegistry.for(region);
     
-    const data = await response.json();
-    return data as RadarData;
+    const result = await ProviderRegistry.withFailover(
+      providerSet.weatherRadar,
+      (provider) => provider.getRadarData(),
+      'Weather Radar',
+      'radar_tiles',
+      'weatherRadar'
+    );
+    
+    return result.data as any;
   } catch (error) {
-    console.error('Error fetching radar data:', error);
+    console.error('[WeatherRadar] Provider error:', error);
     return null;
   }
 }
@@ -59,14 +50,14 @@ export function getMostRecentRadarTileUrl(data: RadarData): string {
   }
   
   const latestFrame = frames[frames.length - 1];
-  return constructTileUrl(latestFrame.path);
+  return constructTileUrl(latestFrame.path, data.host);
 }
 
 /**
  * Construct tile URL for a radar frame
  */
-export function constructTileUrl(path: string): string {
-  return `${RAINVIEWER_HOST}${path}/${TILE_SIZE}/{z}/{x}/{y}/${COLOR_SCHEME}/${OPTIONS}.${FORMAT}`;
+export function constructTileUrl(path: string, host = 'https://tilecache.rainviewer.com'): string {
+  return `${host}${path}/${TILE_SIZE}/{z}/{x}/{y}/${COLOR_SCHEME}/${OPTIONS}.${FORMAT}`;
 }
 
 /**

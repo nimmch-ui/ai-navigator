@@ -1,8 +1,9 @@
-import type { Region, ProviderSet, IMapTiles, ITraffic, IRadar, IWeather, ProviderFailoverResult } from './types';
+import type { Region, ProviderSet, IMapTiles, ITraffic, IRadar, IWeather, IWeatherRadar, ProviderFailoverResult } from './types';
 import { MapboxTiles, MapTilerTiles, MockMapTiles } from './providers/MapTilesProviders';
 import { MapboxTraffic, HereTraffic, TomTomTraffic, MockTraffic } from './providers/TrafficProviders';
 import { RemoteGeoJSONRadar, StaticGeoJSONRadar, MockRadar } from './providers/RadarProviders';
 import { OpenWeather, MeteoFuse, MockWeather } from './providers/WeatherProviders';
+import { RainViewerWeatherRadar, MockWeatherRadar } from './providers/WeatherRadarProviders';
 import { HealthMonitor } from './HealthMonitor';
 import { CacheService, type CacheableData } from './CacheService';
 import { EventBus } from '@/services/eventBus';
@@ -27,6 +28,7 @@ export class ProviderRegistry {
       traffic: this.getTrafficProviders(region),
       radar: this.getRadarProviders(region),
       weather: this.getWeatherProviders(region),
+      weatherRadar: this.getWeatherRadarProviders(region),
     };
   }
 
@@ -110,12 +112,26 @@ export class ProviderRegistry {
     return providers;
   }
 
+  private static getWeatherRadarProviders(region: Region): IWeatherRadar[] {
+    const providers: IWeatherRadar[] = [];
+
+    try {
+      providers.push(new RainViewerWeatherRadar());
+    } catch (e) {
+      console.warn(`[ProviderRegistry] RainViewer not available for ${region}:`, e);
+    }
+
+    providers.push(new MockWeatherRadar());
+
+    return providers;
+  }
+
   static async withFailover<T extends CacheableData>(
     providers: Array<{ getName(): string }>,
     operation: (provider: any) => Promise<T>,
     operationName: string,
     cacheKey?: string,
-    serviceType?: 'map' | 'traffic' | 'radar' | 'weather'
+    serviceType?: 'map' | 'traffic' | 'radar' | 'weather' | 'weatherRadar'
   ): Promise<ProviderFailoverResult<T>> {
     let lastError: Error | null = null;
     let previousProvider: string | null = null;

@@ -30,12 +30,18 @@ The design system incorporates the Inter font, a hierarchical sizing scale, an 8
 - **Telemetry & Deep Links:** Includes a production-ready analytics service for observability and supports URL-based deep links for shareable navigation.
 - **Global Availability:** Configured for global deployment across EU, US, ASIA, MENA, AFRICA, LATAM regions with automatic geolocation, regional infrastructure, and high-latency region optimization.
 - **Localization:** Supports 14 languages with automatic locale detection, unit conversion (metric/imperial), RTL support for Arabic, and a custom, lightweight i18n implementation.
-- **Regional Data Provider Layer:** Implements a robust, region-aware data provider system with automatic failover, health monitoring, and caching for Maps, Traffic, Radar, and Weather services across 6 global regions (EU, CH, US, IN, ME, GLOBAL).
+- **Regional Data Provider Layer:** Implements a robust, region-aware data provider system with automatic failover, health monitoring, and caching for Maps, Traffic Flow, Speed Cameras, Weather Forecasts, and Weather Radar across 6 global regions (EU, CH, US, IN, ME, GLOBAL).
   - **Health Monitoring:** HealthMonitor with 3-5s timeouts, exponential backoff (0.5s→1s→2s), and circuit breaker (60s lockout after 3 failures).
-  - **Caching:** IndexedDB-based cache via idb-keyval with service-specific TTLs (Maps: 7d, Traffic: 5min, Radar: 24h, Weather: 30min).
+  - **Caching:** IndexedDB-based cache via idb-keyval with service-specific TTLs (Maps: 7d, Traffic: 5min, Radar: 24h, Weather: 30min, WeatherRadar: 15min). Automatic cache cleanup runs on startup and every 60 minutes, purging entries older than 24h.
   - **Failover:** Automatic provider failover with telemetry events, toast notifications on failures, and stale cache fallback.
   - **Telemetry:** EventBus integration with provider_failover, circuit_breaker_opened, radar_loaded, traffic_loaded, weather_loaded events including latency metrics.
   - **Settings UI:** Region selector (EU/CH/US/IN/ME/GLOBAL) in Settings panel with auto-detection and manual override.
+  - **Service Integration:**
+    - **Weather Service** (`weather.ts`): Uses ProviderRegistry for weather forecasts with OpenWeather → MeteoFuse → Mock failover
+    - **Speed Camera Service** (`radar.ts`): Uses ProviderRegistry for camera data with Remote → Static → Mock failover
+    - **Weather Radar Service** (`weatherRadar.ts`): Uses ProviderRegistry for radar tiles with RainViewer → Mock failover
+    - **Traffic Service** (`traffic.ts`): Synthesizes traffic incidents from provider flow data using TrafficIncidentSynthesizer, merging real-time congestion with static incidents
+  - **E2E Testing:** Dev test functions (`window.__testOfflineFailover`, `__testRegionSwitching`, `__testStaleCache`) for QA validation of provider failover scenarios
 
 ## External Dependencies
 

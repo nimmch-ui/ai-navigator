@@ -1,7 +1,7 @@
 import { ProviderRegistry } from '@/services/data/ProviderRegistry';
 import { RegionDetector } from '@/services/data/regionDetector';
 import { CacheService } from '@/services/data/CacheService';
-import { Health Monitor } from '@/services/data/HealthMonitor';
+import { HealthMonitor } from '@/services/data/HealthMonitor';
 import type { Region } from '@/services/data/types';
 
 export async function testOfflineFailover() {

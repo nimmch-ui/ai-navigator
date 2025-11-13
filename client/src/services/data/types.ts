@@ -60,11 +60,32 @@ export interface IWeather {
   getName(): string;
 }
 
+export interface RadarFrame {
+  time: number;
+  path: string;
+}
+
+export interface RadarTileData {
+  version: string;
+  generated: number;
+  host: string;
+  radar: {
+    past: RadarFrame[];
+    nowcast: RadarFrame[];
+  };
+}
+
+export interface IWeatherRadar {
+  getRadarData(): Promise<RadarTileData>;
+  getName(): string;
+}
+
 export interface ProviderSet {
   map: IMapTiles[];
   traffic: ITraffic[];
   radar: IRadar[];
   weather: IWeather[];
+  weatherRadar: IWeatherRadar[];
 }
 
 export interface ProviderFailoverResult<T> {

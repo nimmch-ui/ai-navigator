@@ -1,5 +1,8 @@
 import { TrafficIncident } from '@shared/schema';
 import { nanoid } from 'nanoid';
+import { TrafficIncidentSynthesizer } from './traffic/TrafficIncidentSynthesizer';
+
+const synthesizer = new TrafficIncidentSynthesizer();
 
 const MOCK_INCIDENTS: TrafficIncident[] = [
   {
@@ -120,8 +123,6 @@ export class TrafficService {
   async getIncidentsAlongRoute(
     routeCoordinates: [number, number][]
   ): Promise<TrafficIncident[]> {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
     console.log('[TrafficService] getIncidentsAlongRoute called', {
       testMode: this.config.testMode,
       routeCoordinatesLength: routeCoordinates.length,
@@ -133,12 +134,48 @@ export class TrafficService {
       return synthetic;
     }
 
-    const incidents = this.incidents.map((incident) => ({
+    const incidents = [...this.incidents];
+    
+    try {
+      const { ProviderRegistry } = await import('@/services/data/ProviderRegistry');
+      const { RegionDetector } = await import('@/services/data/regionDetector');
+      
+      const region = await RegionDetector.detectRegion();
+      const providerSet = ProviderRegistry.for(region);
+      
+      if (routeCoordinates.length >= 2) {
+        const [minLat, maxLat] = [
+          Math.min(...routeCoordinates.map(c => c[0])),
+          Math.max(...routeCoordinates.map(c => c[0]))
+        ];
+        const [minLng, maxLng] = [
+          Math.min(...routeCoordinates.map(c => c[1])),
+          Math.max(...routeCoordinates.map(c => c[1]))
+        ];
+        
+        const result = await ProviderRegistry.withFailover(
+          providerSet.traffic,
+          (provider) => provider.getFlow({ minLat, minLng, maxLat, maxLng }),
+          'Traffic Flow',
+          `traffic_flow_${minLat}_${minLng}_${maxLat}_${maxLng}`,
+          'traffic'
+        );
+        
+        const flowIncidents = synthesizer.synthesizeFromFlow(result.data);
+        console.log('[TrafficService] Synthesized incidents from flow:', flowIncidents.length);
+        incidents.push(...flowIncidents);
+      }
+    } catch (error) {
+      console.warn('[TrafficService] Failed to fetch traffic flow, using static incidents only:', error);
+    }
+    
+    const enrichedIncidents = incidents.map((incident) => ({
       ...incident,
       affectsRoute: isPointNearPath(incident.location, routeCoordinates, 500),
     }));
-    console.log('[TrafficService] Returning mock incidents:', incidents.filter(i => i.affectsRoute));
-    return incidents;
+    
+    console.log('[TrafficService] Returning incidents:', enrichedIncidents.filter(i => i.affectsRoute).length, 'affecting route');
+    return enrichedIncidents;
   }
 
   async getIncidentById(incidentId: string): Promise<TrafficIncident | null> {
