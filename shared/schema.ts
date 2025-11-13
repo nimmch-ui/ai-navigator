@@ -258,3 +258,35 @@ export type SyncPullResponse = z.infer<typeof syncPullResponseSchema>;
 export type AuthLoginRequest = z.infer<typeof authLoginRequestSchema>;
 export type AuthLoginResponse = z.infer<typeof authLoginResponseSchema>;
 export type AuthRestoreRequest = z.infer<typeof authRestoreRequestSchema>;
+
+// Subscription & Monetization Schemas
+export const subscriptionTierSchema = z.enum(['free', 'premium', 'pro']);
+
+export const subscriptionSchema = z.object({
+  userId: z.string(),
+  tier: subscriptionTierSchema,
+  status: z.enum(['active', 'canceled', 'expired', 'trialing']),
+  stripeCustomerId: z.string().optional(),
+  stripeSubscriptionId: z.string().optional(),
+  currentPeriodEnd: z.number().optional(),
+  cancelAtPeriodEnd: z.boolean().default(false),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+
+export const pricingPlanSchema = z.object({
+  tier: subscriptionTierSchema,
+  name: z.string(),
+  monthlyPrice: z.number(),
+  yearlyPrice: z.number(),
+  features: z.array(z.string()),
+  limits: z.object({
+    maxFavorites: z.number(),
+    maxTrips: z.number(),
+    cloudSyncEnabled: z.boolean(),
+  }),
+});
+
+export type SubscriptionTier = z.infer<typeof subscriptionTierSchema>;
+export type Subscription = z.infer<typeof subscriptionSchema>;
+export type PricingPlan = z.infer<typeof pricingPlanSchema>;
