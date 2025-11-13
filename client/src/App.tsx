@@ -20,6 +20,7 @@ import { Analytics } from "@/services/analytics";
 import { regionRouter } from "@/services/regionRouter";
 import { i18n } from "@/services/i18n";
 import { geolocationService } from "@/services/geolocation";
+import { userDataStore } from "@/services/data/UserDataStore";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 
@@ -34,6 +35,11 @@ function Router() {
 
 function App() {
   useEffect(() => {
+    // Initialize user data store
+    userDataStore.initialize().then(() => {
+      console.log('[App] User data store initialized');
+    });
+
     // Initialize region router and i18n for global availability
     Promise.all([
       regionRouter.initialize(),

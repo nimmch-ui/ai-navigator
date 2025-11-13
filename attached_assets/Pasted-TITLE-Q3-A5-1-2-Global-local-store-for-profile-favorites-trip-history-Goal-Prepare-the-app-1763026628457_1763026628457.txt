@@ -1,0 +1,49 @@
+TITLE: Q3-A5 (1/2) – Global local store for profile, favorites & trip history
+
+Goal: Prepare the app for a commercial version by adding a robust local data layer for:
+- user profile,
+- favorite locations,
+- trip history,
+with offline-first behavior and a clean API for future cloud sync.
+
+Context:
+- Reuse existing architecture: EventBus, PreferencesService, OfflineModeService, RouteCache, etc.
+- Keep everything type-safe (TypeScript) and production-ready.
+
+Tasks:
+
+1) Data models
+- Add strongly typed models in a shared domain file, e.g. shared/domain/userData.ts:
+  - UserProfile { id, displayName, avatarColor | emoji, preferredLanguage, units, createdAt }
+  - FavoritePlace { id, label, coordinates, type (home, work, custom), createdAt, lastUsedAt }
+  - TripRecord { id, start, end, distanceKm, durationSec, ecoScore, avgSpeed, timestamp, modeUsed }
+- Make them serializable and versioned (e.g. schemaVersion field) for future migrations.
+
+2) Local store implementation
+- Create a unified local store service, e.g. client/src/services/data/UserDataStore.ts with methods:
+  - getProfile() / saveProfile(profile)
+  - listFavorites() / addFavorite(place) / removeFavorite(id) / renameFavorite(id, label)
+  - listTrips() / addTrip(record) / clearTripHistory()
+- Implement using an offline-friendly storage backend (IndexedDB via a small wrapper, or a well-structured localStorage fallback).
+- Ensure all operations are promise-based and safe to call in offline mode.
+
+3) Integration with existing systems
+- Connect UserDataStore to:
+  - Navigation flow → when a route completes, automatically create a TripRecord and store it.
+  - Home/Map UI → allow adding/removing a favorite from the current map location or search result.
+  - Settings → basic profile editor (display name, avatar color/emoji).
+- Emit EventBus events:
+  - "user/profileUpdated"
+  - "favorites/changed"
+  - "trips/historyUpdated"
+  so that other components can react without tight coupling.
+
+4) Resilience & privacy
+- Generate a local anonymous userId (UUID) and store it once; this will later be used for sync.
+- Make sure failures in UserDataStore (e.g. storage quota) are handled gracefully with user-friendly error messages and logs (no crashes).
+
+Deliverables:
+- New domain types and UserDataStore service with tests.
+- Wiring into navigation completion, favorites UI, and settings.
+- EventBus events for profile/favorites/trip history changes.
+- Documentation in replit.md explaining the local data layer and how it will support future cloud sync.

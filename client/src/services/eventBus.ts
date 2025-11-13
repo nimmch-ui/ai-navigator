@@ -1,6 +1,7 @@
 import { UiMode, DriverState } from "@/types/ui";
 import type { Locale } from "@/services/i18n";
 import type { NetworkStatus } from "@/services/system/OfflineModeService";
+import type { UserProfile, FavoritePlace, TripRecord } from "@/services/data/userDataModels";
 
 export interface EventPayloadMap {
   'uiMode:changed': { mode: UiMode; previousMode: UiMode };
@@ -22,6 +23,14 @@ export interface EventPayloadMap {
   'provider:traffic_loaded': { provider: string; latency: number; flowCount: number; cached: boolean };
   'provider:weather_loaded': { provider: string; latency: number; cached: boolean };
   'provider:map_tiles_loaded': { provider: string; cached: boolean };
+  'user:profileUpdated': { profile: UserProfile };
+  'favorites:itemAdded': { favorite: FavoritePlace };
+  'favorites:itemRemoved': { favoriteId: string };
+  'favorites:itemUpdated': { favorite: FavoritePlace };
+  'trips:recorded': { trip: TripRecord };
+  'trips:deleted': { tripId: string };
+  'trips:cleared': Record<string, never>;
+  'userdata:migrationCompleted': { from: string | number; to: number | string; count?: number };
 }
 
 type EventName = keyof EventPayloadMap;

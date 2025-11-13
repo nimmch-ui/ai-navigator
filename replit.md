@@ -8,6 +8,42 @@ AI Navigator is a map-first, AI-assisted Progressive Web App (PWA) designed to r
 
 Preferred communication style: Simple, everyday language.
 
+## User Data & Local Store
+
+### Architecture
+The app includes a robust offline-first local data layer for user profile, favorites, and trip history. All data is stored in IndexedDB with automatic migration and EventBus integration.
+
+### Core Services
+- **UserDataStore** (`client/src/services/data/UserDataStore.ts`): Singleton service managing all user data with IndexedDB persistence
+  - Profile management (display name, avatar, language, units)
+  - Favorites management (home, work, custom locations with coordinates)
+  - Trip history tracking (routes, distances, modes, timestamps)
+  - Anonymous UUID generation for future cloud sync
+  - Schema versioning (v1) with migration support
+  - Storage quota handling with graceful errors
+  
+### Data Models (`client/src/services/data/userDataModels.ts`)
+- **UserIdentity**: Anonymous UUID for cloud sync preparation
+- **UserProfile**: Display name, avatar (emoji/color), language, units
+- **FavoritePlace**: Labeled locations with coordinates, type (home/work/custom), usage tracking
+- **TripRecord**: Complete trip data with start/end coordinates, distance, duration, eco score, transport mode
+- **UserDataEnvelope**: Versioned container for all user data with metadata
+
+### Integration Points
+- **Navigation**: Auto-records trips when navigation starts via TripHistoryService wrapper
+- **EventBus**: Emits events for profile updates, favorites changes, trip recording
+  - `user:profileUpdated` - Profile changes
+  - `favorites:itemAdded/itemRemoved/itemUpdated` - Favorites management
+  - `trips:recorded/cleared` - Trip history events
+  - `userdata:migrationCompleted` - Legacy data migration
+- **Legacy Migration**: Automatic migration from localStorage-based TripHistoryService on first init
+- **Future Ready**: Anonymous UUID and schema versioning prepare for cloud sync
+
+### Storage Limits
+- Favorites: 50 max
+- Trips: 100 max (LRU eviction)
+- Quota exceeded errors handled gracefully with user notifications
+
 ## System Architecture
 
 ### Frontend

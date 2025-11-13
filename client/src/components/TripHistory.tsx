@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { History, Clock, MapPin, Navigation2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,14 +16,17 @@ interface TripHistoryProps {
 }
 
 export default function TripHistory({ onReplayTrip }: TripHistoryProps) {
-  const [trips, setTrips] = useState<TripRecord[]>(TripHistoryService.getTripHistory());
+  const [trips, setTrips] = useState<TripRecord[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Refresh trip history when popover opens
+  useEffect(() => {
+    TripHistoryService.getTripHistory().then(setTrips);
+  }, []);
+
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (open) {
-      setTrips(TripHistoryService.getTripHistory());
+      TripHistoryService.getTripHistory().then(setTrips);
     }
   };
 

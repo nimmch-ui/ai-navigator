@@ -245,16 +245,17 @@ export default function Home() {
 
   useEffect(() => {
     const prefs = PreferencesService.getPreferences();
-    const smartDefaults = TripHistoryService.getSmartDefaults();
     
-    if (smartDefaults) {
-      setTransportMode(smartDefaults.transportMode);
-      setRoutePreference(smartDefaults.routePreference);
-    } else {
-      setTransportMode(prefs.transportMode);
-      setRoutePreference(prefs.routePreference);
-    }
-    
+    TripHistoryService.getSmartDefaults().then(smartDefaults => {
+      if (smartDefaults) {
+        setTransportMode(smartDefaults.transportMode);
+        setRoutePreference(smartDefaults.routePreference);
+      } else {
+        setTransportMode(prefs.transportMode);
+        setRoutePreference(prefs.routePreference);
+      }
+    });
+
     setEcoMode(prefs.ecoMode);
     setVehicleType(prefs.vehicleType);
     setVoiceEnabledState(prefs.voiceGuidance);
@@ -813,14 +814,18 @@ export default function Home() {
       const distanceKm = routeResult.distance / 1000;
       const durationMin = routeResult.duration / 60;
       
-      TripHistoryService.addTrip({
-        origin,
-        destination,
-        transportMode,
-        routePreference,
-        distance: distanceKm,
-        duration: durationMin
-      });
+      await TripHistoryService.addTrip(
+        {
+          origin,
+          destination,
+          transportMode,
+          routePreference,
+          distance: distanceKm,
+          duration: durationMin
+        },
+        { lat: originCoords[0], lng: originCoords[1] },
+        { lat: destinationCoords[0], lng: destinationCoords[1] }
+      );
       
       if (voiceEnabled) {
         announce(
