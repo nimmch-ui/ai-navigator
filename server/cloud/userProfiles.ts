@@ -44,13 +44,20 @@ export class UserProfilesCloud {
   async mergeVersion(profile: CloudUserProfile): Promise<CloudUserProfile> {
     const existing = this.profiles.get(profile.userId);
 
-    if (!existing || profile.version > existing.version) {
+    if (!existing) {
       this.profiles.set(profile.userId, profile);
-      console.log('[UserProfilesCloud] Merged profile (version', profile.version, '):', profile.userId);
+      console.log('[UserProfilesCloud] Merged profile (new, version', profile.version, '):', profile.userId);
       return profile;
     }
 
-    console.log('[UserProfilesCloud] Kept existing profile (version', existing.version, 'vs', profile.version, ')');
+    if (profile.version > existing.version || 
+        (profile.version === existing.version && profile.updatedAt > existing.updatedAt)) {
+      this.profiles.set(profile.userId, profile);
+      console.log('[UserProfilesCloud] Merged profile (version', profile.version, 'updatedAt', profile.updatedAt, '):', profile.userId);
+      return profile;
+    }
+
+    console.log('[UserProfilesCloud] Kept existing profile (version', existing.version, 'updatedAt', existing.updatedAt, ')');
     return existing;
   }
 }

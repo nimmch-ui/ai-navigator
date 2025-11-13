@@ -152,6 +152,9 @@ export class CloudSyncBackend implements ISyncBackend {
         type: fav.type,
         createdAt: fav.createdAt,
         lastUsedAt: fav.lastUsedAt,
+        updatedAt: fav.updatedAt,
+        version: fav.version,
+        deletedAt: fav.deletedAt,
         schemaVersion: fav.schemaVersion,
       }));
 
@@ -168,6 +171,9 @@ export class CloudSyncBackend implements ISyncBackend {
         timestamp: trip.timestamp,
         modeUsed: trip.modeUsed,
         routePreference: trip.routePreference,
+        updatedAt: trip.updatedAt,
+        version: trip.version,
+        deletedAt: trip.deletedAt,
         schemaVersion: trip.schemaVersion,
       }));
 
@@ -186,6 +192,7 @@ export class CloudSyncBackend implements ISyncBackend {
         units: cloud.profile.units,
         createdAt: cloud.profile.createdAt,
         updatedAt: cloud.profile.updatedAt,
+        version: cloud.profile.version,
         schemaVersion: cloud.profile.schemaVersion,
       },
       favorites,
@@ -209,7 +216,7 @@ export class CloudSyncBackend implements ISyncBackend {
       units: local.profile.units,
       createdAt: local.profile.createdAt,
       updatedAt: local.profile.updatedAt,
-      version: local.metadata.version,
+      version: local.profile.version || 1,
       schemaVersion: local.profile.schemaVersion,
     };
 
@@ -222,8 +229,9 @@ export class CloudSyncBackend implements ISyncBackend {
       type: fav.type,
       createdAt: fav.createdAt,
       lastUsedAt: fav.lastUsedAt,
-      updatedAt: fav.lastUsedAt,
-      version: 1,
+      updatedAt: fav.updatedAt || fav.lastUsedAt,
+      version: fav.version || 1,
+      deletedAt: fav.deletedAt,
       schemaVersion: fav.schemaVersion,
     }));
 
@@ -239,8 +247,9 @@ export class CloudSyncBackend implements ISyncBackend {
       timestamp: trip.timestamp,
       modeUsed: trip.modeUsed,
       routePreference: trip.routePreference,
-      updatedAt: trip.timestamp,
-      version: 1,
+      updatedAt: trip.updatedAt || trip.timestamp,
+      version: trip.version || 1,
+      deletedAt: trip.deletedAt,
       schemaVersion: trip.schemaVersion,
     }));
 

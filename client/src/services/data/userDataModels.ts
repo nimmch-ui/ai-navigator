@@ -15,6 +15,7 @@ export interface UserProfile {
   units: 'metric' | 'imperial';
   createdAt: number;
   updatedAt: number;
+  version?: number;
   schemaVersion: number;
 }
 
@@ -31,6 +32,9 @@ export interface FavoritePlace {
   type: FavoritePlaceType;
   createdAt: number;
   lastUsedAt: number;
+  updatedAt?: number;
+  version?: number;
+  deletedAt?: number;
   schemaVersion: number;
 }
 
@@ -53,6 +57,9 @@ export interface TripRecord {
   timestamp: number;
   modeUsed: 'car' | 'bike' | 'walk' | 'transit';
   routePreference?: 'fastest' | 'shortest' | 'eco';
+  updatedAt?: number;
+  version?: number;
+  deletedAt?: number;
   schemaVersion: number;
 }
 

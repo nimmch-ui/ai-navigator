@@ -66,13 +66,20 @@ export class HistoryCloud {
   async mergeVersion(trip: CloudTripRecord): Promise<CloudTripRecord> {
     const existing = this.trips.get(trip.id);
 
-    if (!existing || trip.version > existing.version) {
+    if (!existing) {
       this.trips.set(trip.id, trip);
-      console.log('[HistoryCloud] Merged trip (version', trip.version, '):', trip.id);
+      console.log('[HistoryCloud] Merged trip (new, version', trip.version, '):', trip.id);
       return trip;
     }
 
-    console.log('[HistoryCloud] Kept existing trip (version', existing.version, 'vs', trip.version, ')');
+    if (trip.version > existing.version || 
+        (trip.version === existing.version && trip.updatedAt > existing.updatedAt)) {
+      this.trips.set(trip.id, trip);
+      console.log('[HistoryCloud] Merged trip (version', trip.version, 'updatedAt', trip.updatedAt, '):', trip.id);
+      return trip;
+    }
+
+    console.log('[HistoryCloud] Kept existing trip (version', existing.version, 'updatedAt', existing.updatedAt, ')');
     return existing;
   }
 

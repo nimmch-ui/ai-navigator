@@ -64,13 +64,20 @@ export class FavoritesCloud {
   async mergeVersion(favorite: CloudFavoritePlace): Promise<CloudFavoritePlace> {
     const existing = this.favorites.get(favorite.id);
 
-    if (!existing || favorite.version > existing.version) {
+    if (!existing) {
       this.favorites.set(favorite.id, favorite);
-      console.log('[FavoritesCloud] Merged favorite (version', favorite.version, '):', favorite.id);
+      console.log('[FavoritesCloud] Merged favorite (new, version', favorite.version, '):', favorite.id);
       return favorite;
     }
 
-    console.log('[FavoritesCloud] Kept existing favorite (version', existing.version, 'vs', favorite.version, ')');
+    if (favorite.version > existing.version || 
+        (favorite.version === existing.version && favorite.updatedAt > existing.updatedAt)) {
+      this.favorites.set(favorite.id, favorite);
+      console.log('[FavoritesCloud] Merged favorite (version', favorite.version, 'updatedAt', favorite.updatedAt, '):', favorite.id);
+      return favorite;
+    }
+
+    console.log('[FavoritesCloud] Kept existing favorite (version', existing.version, 'updatedAt', existing.updatedAt, ')');
     return existing;
   }
 
