@@ -1,5 +1,6 @@
 import { UiMode, DriverState } from "@/types/ui";
 import type { Locale } from "@/services/i18n";
+import type { NetworkStatus } from "@/services/system/OfflineModeService";
 
 export interface EventPayloadMap {
   'uiMode:changed': { mode: UiMode; previousMode: UiMode };
@@ -9,6 +10,7 @@ export interface EventPayloadMap {
   'navigation:stateChanged': { updates: Record<string, any> };
   'preferences:voiceStyleChanged': { voiceStyle: string };
   'i18n:changed': { locale: Locale; unitSystem: string };
+  'network:statusChanged': { previous: NetworkStatus; current: NetworkStatus };
   'provider:circuit_breaker_opened': { provider: string; failures: number; timeout: number };
   'provider:failover': { service: string; from: string; to: string; latency: number; reason: string };
   'provider:radar_loaded': { provider: string; latency: number; cameraCount: number; cached: boolean };

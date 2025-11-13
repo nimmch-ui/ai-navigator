@@ -1,35 +1,60 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { offlineCacheService } from '@/services/offline';
+import { offlineModeService, type NetworkStatus, type NetworkQuality } from '@/services/system/OfflineModeService';
+import { tileCache } from '@/services/map/TileCache';
+import { routeCache } from '@/services/navigation/RouteCache';
 
 interface OfflineContextType {
   isOnline: boolean;
-  cacheSize: number;
+  quality: NetworkQuality;
+  status: NetworkStatus;
+  tileCacheSize: number;
+  routeCacheSize: number;
   updateCacheSize: () => Promise<void>;
+  canUseOnlineFeatures: () => boolean;
 }
 
 const OfflineContext = createContext<OfflineContextType | null>(null);
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [cacheSize, setCacheSize] = useState(0);
+  const [status, setStatus] = useState<NetworkStatus>(offlineModeService.getStatus());
+  const [tileCacheSize, setTileCacheSize] = useState(0);
+  const [routeCacheSize, setRouteCacheSize] = useState(0);
 
   useEffect(() => {
-    const cleanup = offlineCacheService.addOnlineListener((online) => {
-      setIsOnline(online);
+    const unsubscribe = offlineModeService.onStatusChange((newStatus) => {
+      setStatus(newStatus);
     });
 
     updateCacheSize();
 
-    return cleanup;
+    return unsubscribe;
   }, []);
 
   const updateCacheSize = async () => {
-    const size = await offlineCacheService.getCacheSize();
-    setCacheSize(size);
+    const [tileStats, routeSize] = await Promise.all([
+      tileCache.getCacheStats(),
+      routeCache.getCacheSize(),
+    ]);
+    setTileCacheSize(tileStats.size);
+    setRouteCacheSize(routeSize);
+  };
+
+  const canUseOnlineFeatures = () => {
+    return offlineModeService.canUseOnlineFeatures();
   };
 
   return (
-    <OfflineContext.Provider value={{ isOnline, cacheSize, updateCacheSize }}>
+    <OfflineContext.Provider
+      value={{
+        isOnline: !status.isOffline,
+        quality: status.quality,
+        status,
+        tileCacheSize,
+        routeCacheSize,
+        updateCacheSize,
+        canUseOnlineFeatures,
+      }}
+    >
       {children}
     </OfflineContext.Provider>
   );
@@ -41,4 +66,19 @@ export function useOffline() {
     throw new Error('useOffline must be used within OfflineProvider');
   }
   return context;
+}
+
+export function useOfflineCapabilities() {
+  const { canUseOnlineFeatures, quality, isOnline } = useOffline();
+  
+  return {
+    canGeocode: canUseOnlineFeatures(),
+    canFetchLiveTraffic: canUseOnlineFeatures(),
+    canFetchLiveRadar: canUseOnlineFeatures(),
+    canPlanRoute: true,
+    canNavigate: true,
+    canUseCachedData: true,
+    quality,
+    isOnline,
+  };
 }

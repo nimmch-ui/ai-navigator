@@ -94,5 +94,11 @@
   "settings.theme": "Theme",
   "voice.style": "Voice Style",
   "voice.muted": "Muted",
-  "voice.enabled": "Enabled"
+  "voice.enabled": "Enabled",
+  "offline.banner_offline": "Offline – using saved maps & routes only",
+  "offline.banner_weak": "Weak connection – app may be slower",
+  "offline.back_online": "Back online – maps and traffic updated",
+  "offline.no_cached_route": "No saved route for this destination. Please go online to plan it.",
+  "offline.use_cached_route": "Use saved route from cache",
+  "offline.feature_unavailable": "This feature requires an internet connection"
 }

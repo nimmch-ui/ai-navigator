@@ -1,0 +1,74 @@
+TITLE: Q3-A4 (1/2) – Offline Maps & Route Cache
+
+Goal:
+Add a robust offline mode so the navigation app still works when the network is weak or unavailable, using cached map tiles and stored routes.
+
+Context:
+- App already uses Mapbox for 2D/3D and AR modes, with global navigation, radar, speed limits, eco mode, and voice guidance.
+- We now want a graceful offline experience, especially for users who drive in areas with poor coverage.
+
+Tasks:
+
+1) OfflineModeService
+- Create services/system/OfflineModeService.ts with:
+  - state: { isOffline, quality: "good" | "weak" | "offline" }
+  - methods: setStatus(), onStatusChange(), isNavigationRestricted()
+- Detect network changes using:
+  - window.navigator.onLine
+  - "online"/"offline" events
+  - optional: small ping check to routing backend to distinguish "weak" vs "offline".
+- Expose events over EventBus: "network:statusChanged" with current status.
+
+2) Map tile caching (browser friendly)
+- Implement lightweight tile caching for Mapbox:
+  - Prefer IndexedDB (or a small abstraction wrapper) to store tile responses.
+  - Cache up to ~100–150 MB of tiles (configurable constant).
+  - Eviction policy: LRU or "oldest tiles first" when the limit is exceeded.
+- Prefetch tiles:
+  - Around the user’s defined “Home” area (or last known map center).
+  - Along the current active route when navigation starts.
+- When offline:
+  - Map rendering should try cached tiles first; fallback to a neutral background if a tile is missing.
+  - Display a subtle "Offline tiles" hint somewhere in the UI (e.g. map corner).
+
+3) Route cache
+- Create services/navigation/RouteCache.ts:
+  - Store last N (e.g. 10) routes:
+    - polyline/geometry
+    - maneuvers and turn instructions
+    - speed limits and radar points
+    - ETA and distance metadata
+  - Persist to IndexedDB or localStorage (prefer IndexedDB if already used).
+- When user selects a destination:
+  - If online: plan route as normal and update cache.
+  - If offline:
+    - If there is a cached route between similar origin/destination (within small distance threshold), offer:
+      - "Use saved route from cache" option.
+    - If no cached route exists, show friendly message:
+      - “No saved route for this destination. Please go online to plan it.”
+
+4) Offline UI & restrictions
+- Add an offline banner component (e.g. components/OfflineBanner.tsx) with states:
+  - "Weak connection – app may be slower"
+  - "Offline – using saved maps & routes only"
+- In Home.tsx and Settings:
+  - Disable or gray-out actions that require online:
+    - new geocoding search
+    - live traffic / live radar feed if backend strictly requires network
+  - Show clear tooltips about what still works (saved maps, saved routes, TTS cache later).
+
+5) Sync & recovery
+- When network returns:
+  - Automatically:
+    - refresh current route from server (if navigation is active)
+    - refresh radar/speed limit and hazard feeds
+  - Show a small non-intrusive toast:
+    - “Back online – maps and traffic updated.”
+- Make sure switching modes (Classic/3D/AR/Eco/Cinematic) continues to work in both offline and online states.
+
+Deliverables:
+- services/system/OfflineModeService.ts with EventBus integration.
+- services/navigation/RouteCache.ts with persistence.
+- Tile caching logic wired into Mapbox map loader.
+- OfflineBanner component, integrated into Home.tsx.
+- Clean architecture notes in replit.md explaining how offline mode and caching work.
