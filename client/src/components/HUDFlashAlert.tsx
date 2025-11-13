@@ -4,19 +4,43 @@ import { EventBus } from '@/services/eventBus';
 export default function HUDFlashAlert() {
   const [isFlashing, setIsFlashing] = useState(false);
   const [flashColor, setFlashColor] = useState('red');
+  const [flashTimeout, setFlashTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const unsubscribe = EventBus.subscribe('safety:hudFlash', ({ color, duration }) => {
+    const unsubscribeFlash = EventBus.subscribe('safety:hudFlash', ({ color, duration }) => {
+      // Clear any existing flash timeout to prevent stacking
+      if (flashTimeout) {
+        clearTimeout(flashTimeout);
+      }
+
       setFlashColor(color);
       setIsFlashing(true);
 
-      setTimeout(() => {
+      // Set new timeout and track it
+      const newTimeout = setTimeout(() => {
         setIsFlashing(false);
+        setFlashTimeout(null);
       }, duration);
+      setFlashTimeout(newTimeout);
     });
 
-    return () => unsubscribe();
-  }, []);
+    const unsubscribeClear = EventBus.subscribe('safety:clearAlert', () => {
+      // Clear flash when risk de-escalates
+      if (flashTimeout) {
+        clearTimeout(flashTimeout);
+      }
+      setIsFlashing(false);
+      setFlashTimeout(null);
+    });
+
+    return () => {
+      unsubscribeFlash();
+      unsubscribeClear();
+      if (flashTimeout) {
+        clearTimeout(flashTimeout);
+      }
+    };
+  }, [flashTimeout]);
 
   if (!isFlashing) {
     return null;

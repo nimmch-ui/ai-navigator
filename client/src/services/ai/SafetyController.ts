@@ -189,6 +189,11 @@ class SafetyControllerImpl {
 
     if (alert) {
       this.processAlert(alert);
+    } else if (adaptedScore < RISK_THRESHOLDS.WARNING) {
+      // Risk has de-escalated below warning threshold - clear alerts
+      EventBus.emit('safety:clearAlert', {
+        timestamp: Date.now(),
+      });
     }
   }
 
@@ -281,9 +286,10 @@ class SafetyControllerImpl {
   private processAlert(alert: SafetyAlert): void {
     const now = Date.now();
     
-    // Per-level cooldown tracking with escalation support
-    const cooldown = COOLDOWN[alert.level.toUpperCase() as keyof typeof COOLDOWN];
-    const lastAlertTime = this.lastAlertTimes.get(alert.level);
+    // Normalize level to uppercase for consistent cooldown tracking
+    const levelKey = alert.level.toUpperCase();
+    const cooldown = COOLDOWN[levelKey as keyof typeof COOLDOWN];
+    const lastAlertTime = this.lastAlertTimes.get(levelKey);
     
     if (lastAlertTime && (now - lastAlertTime) < cooldown) {
       // Skip - still in cooldown for this level, unless escalating
@@ -306,15 +312,15 @@ class SafetyControllerImpl {
       this.triggerHUDFlash();
     }
 
-    // Update last alert time for this level
-    this.lastAlertTimes.set(alert.level, now);
+    // Update last alert time for this level (using uppercase key)
+    this.lastAlertTimes.set(levelKey, now);
     
-    // Clear lower-level cooldowns on escalation
+    // Clear lower-level cooldowns on escalation (using uppercase keys)
     if (alert.level === 'critical') {
-      this.lastAlertTimes.delete('warning');
-      this.lastAlertTimes.delete('caution');
+      this.lastAlertTimes.delete('WARNING');
+      this.lastAlertTimes.delete('CAUTION');
     } else if (alert.level === 'caution') {
-      this.lastAlertTimes.delete('warning');
+      this.lastAlertTimes.delete('WARNING');
     }
 
     // Emit safety alert event for UI components

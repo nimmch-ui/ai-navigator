@@ -19,7 +19,7 @@ export default function PredictiveSafetyBadge({
   const [isPulsing, setIsPulsing] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = EventBus.subscribe('ai:riskUpdate', ({ scores, factors }) => {
+    const unsubscribeRisk = EventBus.subscribe('ai:riskUpdate', ({ scores, factors }) => {
       setRiskScores(scores);
       setFactors(factors);
       
@@ -30,7 +30,17 @@ export default function PredictiveSafetyBadge({
       }
     });
 
-    return () => unsubscribe();
+    const unsubscribeClear = EventBus.subscribe('safety:clearAlert', () => {
+      // Reset to safe state when risk de-escalates
+      setRiskScores({ overspeed: 0, sharpTurn: 0, collision: 0, lateBraking: 0, laneDeviation: 0, overall: 0 });
+      setFactors([]);
+      setIsPulsing(false);
+    });
+
+    return () => {
+      unsubscribeRisk();
+      unsubscribeClear();
+    };
   }, []);
 
   // Use default safe score of 0 if no data yet

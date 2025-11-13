@@ -46,6 +46,7 @@ export interface EventPayloadMap {
   'ai:riskUpdate': { scores: RiskScores; timestamp: number; factors: RiskFactor[] };
   'weather:updated': { weather: WeatherNow | null; timestamp: number };
   'safety:alert': { alert: SafetyAlert; timestamp: number };
+  'safety:clearAlert': { timestamp: number };
   'safety:hudFlash': { color: string; duration: number; timestamp: number };
   'safety:weatherAdapted': { adaptation: WeatherAdaptation; timestamp: number };
   'safety:driverStateAdapted': { adaptation: DriverStateAdaptation; timestamp: number };
