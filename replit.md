@@ -43,6 +43,15 @@ The design system features the Inter font, a hierarchical sizing scale, an 8-pix
 - **Predictive AI Navigation Engine:** A production-ready real-time risk forecasting system that analyzes map geometry, speed, hazards, weather, and driver behavior. Features physics-based risk scoring (overspeed, sharp turn, collision, late braking, lane deviation), 300m lookahead analysis, weather multipliers, and idle-state predictions. Integrated with PredictiveSafetyBadge UI component for real-time risk visualization.
 - **Intelligent AI Driver Safety System (SafetyController):** Orchestrates proactive safety layer with early-warning system (>60 voice, >75 voice+haptic, >90 urgent+HUD flash), per-level cooldowns with escalation support, weather-adaptive safety (storm/rain/snow/fog with precipitation awareness), driver state adaptation (softer voice/slower instructions when stressed), EventBus-driven architecture, and HUDFlashAlert component for critical risk visualization.
 
+- **Monetization & Payments (Q4-A1 Part 1/3 Complete):** Production-ready subscription billing framework with Stripe integration:
+  - **Backend Infrastructure:** Stripe SDK integration with checkout session creation, subscription webhook handling (checkout.session.completed, customer.subscription.updated/created/deleted), subscription status API endpoints, restore purchases functionality
+  - **Subscription Tiers:** Free (basic nav, 2D maps, voice, 10 favorites), Premium ($9.99/mo, $99.99/yr - 3D, Cinematic, AR, radar, weather AI, 100 favorites), Pro ($19.99/mo, $199.99/yr - fleet, unlimited sync, API access, unlimited favorites)
+  - **MonetizationService:** Client-side subscription management with localStorage persistence, tier-based feature gating, hasFeature() checks, purchasePremium() with Stripe Checkout redirect, restorePurchases() API, backend sync for subscription status
+  - **Paywall Component:** Full-featured pricing UI with monthly/yearly toggle (17% yearly discount display), tier comparison cards (Free/Premium/Pro), feature lists with limits display, responsive grid layout, loading states during purchase flow
+  - **Integration:** Settings popover displays current tier with "Upgrade to Premium" button, useSubscription() hook for reactive subscription state, feature gating ready for premium mode restrictions (3D, Cinematic, AR require Premium tier)
+  - **Stripe Configuration:** Test mode keys (STRIPE_SECRET_KEY, VITE_STRIPE_PUBLIC_KEY) configured as environment secrets, webhook endpoint ready for production deployment
+  - **Next Steps:** Add feature enforcement to mode switcher (block premium modes for free users), App Store/Play Store IAP integration for mobile platforms
+
 ## External Dependencies
 
 - **UI & Component Libraries:** @radix-ui/*, lucide-react, class-variance-authority, cmdk
@@ -53,3 +62,4 @@ The design system features the Inter font, a hierarchical sizing scale, an 8-pix
 - **Database & ORM:** Drizzle ORM, @neondatabase/serverless, drizzle-zod
 - **Utilities:** date-fns, nanoid, clsx + tailwind-merge, idb-keyval (IndexedDB caching)
 - **Regional Data Providers:** HERE Traffic, TomTom Traffic, ipapi.co (Geolocation)
+- **Payments:** Stripe SDK, @stripe/stripe-js, @stripe/react-stripe-js

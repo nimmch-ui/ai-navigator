@@ -160,7 +160,8 @@ export class MemStorage implements IStorage {
 
   async cleanupExpiredReports(): Promise<void> {
     const now = Date.now();
-    for (const [id, report] of this.communityReports.entries()) {
+    const entries = Array.from(this.communityReports.entries());
+    for (const [id, report] of entries) {
       if (report.expiresAt <= now) {
         report.status = 'expired';
         this.communityReports.set(id, report);

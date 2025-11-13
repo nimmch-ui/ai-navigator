@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge, Vibrate, Sparkles, Globe, Cloud, CloudOff, RefreshCw, Trash2, LogIn, LogOut, User } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, AlertTriangle, Camera, Gauge, Vibrate, Sparkles, Globe, Cloud, CloudOff, RefreshCw, Trash2, LogIn, LogOut, User, Crown } from 'lucide-react';
 import { EventBus } from '@/services/eventBus';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -29,6 +29,8 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { syncService } from '@/services/sync/SyncService';
 import { userDataStore } from '@/services/data/UserDataStore';
 import { authProvider } from '@/services/auth/AuthProvider';
+import { useSubscription } from '@/hooks/useSubscription';
+import { Paywall } from '@/components/Paywall';
 
 interface SettingsProps {
   // Immersive Experience
@@ -139,6 +141,9 @@ export default function Settings({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  
+  const { subscription, currentTier, hasFeature } = useSubscription();
 
   useEffect(() => {
     setSyncEnabled(syncService.isSyncEnabled());
@@ -407,6 +412,7 @@ export default function Settings({
   };
 
   return (
+    <>
     <Popover>
       <PopoverTrigger asChild>
         <Button
@@ -1181,6 +1187,37 @@ export default function Settings({
 
           <Separator />
 
+          <div>
+            <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5">
+              <Crown className="h-3.5 w-3.5" />
+              Subscription
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Current plan: <span className="font-semibold capitalize">{currentTier}</span>
+            </p>
+          </div>
+
+          <Button
+            variant={currentTier === 'free' ? 'default' : 'outline'}
+            size="sm"
+            className="w-full"
+            onClick={() => setShowPaywall(true)}
+            data-testid="button-manage-subscription"
+          >
+            <Crown className="h-4 w-4 mr-2" />
+            {currentTier === 'free' ? 'Upgrade to Premium' : 'Manage Subscription'}
+          </Button>
+
+          {subscription && subscription.currentPeriodEnd && (
+            <p className="text-xs text-muted-foreground text-center">
+              {subscription.cancelAtPeriodEnd
+                ? `Expires on ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
+                : `Renews on ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`}
+            </p>
+          )}
+
+          <Separator />
+
           {voiceEnabled && voiceSupported && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
               <Volume2 className="h-4 w-4" />
@@ -1197,5 +1234,10 @@ export default function Settings({
         </div>
       </PopoverContent>
     </Popover>
+
+    {showPaywall && (
+      <Paywall onClose={() => setShowPaywall(false)} />
+    )}
+  </>
   );
 }
