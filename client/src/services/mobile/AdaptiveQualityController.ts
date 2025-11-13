@@ -4,7 +4,7 @@
  */
 
 import { performanceMonitor, type PerformanceTier, type PerformanceMetrics } from './PerformanceMonitor';
-import { EventBus } from '@/services/events/EventBus';
+import { EventBus } from '@/services/eventBus';
 
 export interface QualitySettings {
   // Map rendering
@@ -122,11 +122,6 @@ export class AdaptiveQualityController {
       console.log(`[AdaptiveQuality] Applied ${tier} tier settings`, newSettings);
       
       this.notifySettingsChange();
-      
-      EventBus.emit('quality:changed', {
-        tier,
-        settings: newSettings
-      });
     }
   }
 
@@ -176,7 +171,6 @@ export class AdaptiveQualityController {
 
     if (settingsChanged) {
       this.notifySettingsChange();
-      EventBus.emit('quality:dynamic_adjustment', { metrics, settings: this.currentSettings });
     }
   }
 

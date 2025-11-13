@@ -6,22 +6,24 @@
  * Safe requestIdleCallback with fallback for Safari
  */
 export function requestIdleCallback(callback: () => void, options?: { timeout?: number }): number {
-  if ('requestIdleCallback' in window) {
-    return window.requestIdleCallback(callback, options);
+  const win = window as any;
+  if ('requestIdleCallback' in win) {
+    return win.requestIdleCallback(callback, options);
   }
   
   // Fallback for Safari: use setTimeout with low priority
-  return window.setTimeout(callback, options?.timeout || 1) as unknown as number;
+  return setTimeout(callback, options?.timeout || 1) as unknown as number;
 }
 
 /**
  * Safe cancelIdleCallback with fallback for Safari
  */
 export function cancelIdleCallback(handle: number): void {
-  if ('cancelIdleCallback' in window) {
-    window.cancelIdleCallback(handle);
+  const win = window as any;
+  if ('cancelIdleCallback' in win) {
+    win.cancelIdleCallback(handle);
   } else {
-    window.clearTimeout(handle);
+    clearTimeout(handle);
   }
 }
 

@@ -75,7 +75,7 @@ export class WebGLDetector {
     const maxRenderBufferSize = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
 
     // Detect low-end GPU (small texture size or software renderer)
-    const isLowEnd = this.isLowEndGPU(renderer, maxTextureSize);
+    const isLowEnd = this.evaluateLowEndGPU(renderer, maxTextureSize);
 
     this.capabilities = {
       isSupported: true,
@@ -92,9 +92,9 @@ export class WebGLDetector {
   }
 
   /**
-   * Check if GPU is low-end based on renderer and capabilities
+   * Evaluate if GPU is low-end based on renderer and capabilities (internal helper)
    */
-  private static isLowEndGPU(renderer: string, maxTextureSize: number): boolean {
+  private static evaluateLowEndGPU(renderer: string, maxTextureSize: number): boolean {
     const lowEndIndicators = [
       'swiftshader',
       'software',

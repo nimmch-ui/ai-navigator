@@ -47,6 +47,7 @@ import {
 } from '@/services/map/trafficVisualization';
 import type { TrafficSegment } from '@/services/ai/TrafficFusionEngine';
 import { EventBus } from '@/services/eventBus';
+import { usePerformance } from '@/contexts/PerformanceContext';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -137,6 +138,9 @@ export default function MapboxMap({
   // Traffic visualization cache
   const lastTrafficSegmentsRef = useRef<TrafficSegment[]>([]);
 
+  // Performance monitoring and adaptive quality
+  const { qualitySettings, shouldUse2DMap, webglCapabilities } = usePerformance();
+
   // Toast notifications
   const { toast } = useToast();
 
@@ -176,10 +180,16 @@ export default function MapboxMap({
   };
 
   /**
-   * Add 3D buildings layer to the map
+   * Add 3D buildings layer to the map (respects adaptive quality settings)
    */
   const add3DBuildingsLayer = (mapInstance: mapboxgl.Map) => {
     try {
+      // Skip 3D buildings if quality settings disable them or WebGL is limited
+      if (!qualitySettings.enableBuildings || shouldUse2DMap) {
+        console.log('[3D Buildings] Skipped due to quality settings or WebGL limitations');
+        return;
+      }
+
       if (!mapInstance.isStyleLoaded()) {
         console.warn('[3D Buildings] Style not loaded yet, deferring building layer setup');
         return;
@@ -219,7 +229,7 @@ export default function MapboxMap({
                 15.05,
                 ['get', 'min_height']
               ],
-              'fill-extrusion-opacity': 0.6
+              'fill-extrusion-opacity': 0.6 * qualitySettings.textureQuality
             }
           },
           labelLayerId
