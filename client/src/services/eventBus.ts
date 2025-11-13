@@ -11,6 +11,11 @@ export interface EventPayloadMap {
   'preferences:voiceStyleChanged': { voiceStyle: string };
   'i18n:changed': { locale: Locale; unitSystem: string };
   'network:statusChanged': { previous: NetworkStatus; current: NetworkStatus };
+  'offline:mode_entered': { timestamp: number; quality: string };
+  'offline:mode_exit': { timestamp: number; duration: number };
+  'offline:route_loaded_from_cache': { routeId: string; distance: number };
+  'offline:tts_cache_hit': { text: string; language: string };
+  'offline:tts_cache_miss': { text: string; language: string };
   'provider:circuit_breaker_opened': { provider: string; failures: number; timeout: number };
   'provider:failover': { service: string; from: string; to: string; latency: number; reason: string };
   'provider:radar_loaded': { provider: string; latency: number; cameraCount: number; cached: boolean };

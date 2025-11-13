@@ -1,0 +1,86 @@
+TITLE: Q3-A4 (2/2) – TTS Cache, Reconnect Logic & Offline QA
+
+Goal:
+Complete the offline experience with a TTS audio cache, smooth reconnection behavior, and a QA checklist so navigation feels reliable even with unstable networks.
+
+Tasks:
+
+1) TTS cache service
+- Create services/audio/TTSCacheService.ts with:
+  - getOrGenerate(key, text, voiceProfile): Promise<AudioBuffer | HTMLAudioElement>
+  - preloadStandardPhrases(language, voiceProfile)
+  - clearOldEntries() with max size and retention policy.
+- Key design:
+  - key = hash(language + voiceStyle + text or phraseId)
+- Storage:
+  - Use IndexedDB or Cache API to store small audio blobs.
+- Integrations:
+  - Voice guidance / Maneuver announcements should:
+    - call TTSCacheService.getOrGenerate() instead of always calling live TTS.
+  - Preload standard phrases on app start or route start:
+    - “In 100 meters, turn left/right”
+    - “Speed camera ahead”
+    - “Speed limit changed”
+    - “Route recalculated”
+    - “You have arrived”
+- Offline behavior:
+  - When offlineMode.isOffline:
+    - Prefer cached audio; if not available, fall back to:
+      - simple local synthesized voice if browser supports it, OR
+      - short textual toast if audio cannot be generated.
+
+2) Reconnection & continuity
+- Add a small NetworkStatusChip or icon in the UI (e.g. top bar) that reflects OfflineModeService state.
+- When transitioning from offline -> online:
+  - If navigation is active:
+    - softly refresh:
+      - live traffic/hazard feed
+      - radar & speed limit updates
+      - weather/road condition layer
+    - keep current step and camera viewpoint (no jump).
+- Make sure:
+  - TTS cache continues working after reconnect.
+  - No duplicate announcements (debounce route-updated events while catching up).
+
+3) AR / 3D fallback behavior while offline
+- AR:
+  - If offline, AR mode should still render last known route and radars if cached.
+  - If AR requires live data for some overlays, hide those gracefully and show a small “Using offline data” badge.
+- 3D and Cinematic:
+  - Must work with cached tiles and cached route geometry.
+  - Do not crash if some tiles are missing; just show neutral background with path line.
+
+4) Settings & user control
+- In Settings:
+  - Add toggles:
+    - “Allow offline map caching (uses storage)” with size hint.
+    - “Preload voice prompts for offline use”.
+  - Show approximate storage usage (even rough, e.g. “~80 MB cached”).
+- Provide a button:
+  - “Clear offline data” that:
+    - clears map tiles
+    - clears route cache
+    - clears TTS cache
+  - Ask for confirmation before wiping.
+
+5) QA & Monitoring
+- Manual test matrix:
+  - Start a route online, then:
+    - turn on Airplane mode mid-route
+    - verify:
+      - map and route remain visible from cache
+      - upcoming maneuver announcements still play (from TTS cache)
+      - AR and 3D modes degrade gracefully
+  - Go back online:
+    - verify live traffic and radar warnings resume, no crash, and no double-voice.
+- Add a few telemetry events:
+  - offline_mode_entered, offline_mode_exit
+  - route_loaded_from_cache
+  - tts_cache_hit, tts_cache_miss
+- Summarize the offline behavior and any limitations in replit.md.
+
+Deliverables:
+- services/audio/TTSCacheService.ts integrated with existing voice guidance.
+- Reconnection UX (banner/icon + silent data refresh).
+- Settings options and “Clear offline data” flow.
+- Telemetry events and a short QA section in replit.md confirming offline + reconnect scenarios were tested.

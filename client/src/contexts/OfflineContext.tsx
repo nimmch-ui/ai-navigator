@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useRef } fro
 import { offlineModeService, type NetworkStatus, type NetworkQuality } from '@/services/system/OfflineModeService';
 import { tileCache } from '@/services/map/TileCache';
 import { routeCache } from '@/services/navigation/RouteCache';
+import { ttsCacheService } from '@/services/audio/TTSCacheService';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -11,8 +12,10 @@ interface OfflineContextType {
   status: NetworkStatus;
   tileCacheSize: number;
   routeCacheSize: number;
+  ttsCacheSize: number;
   updateCacheSize: () => Promise<void>;
   canUseOnlineFeatures: () => boolean;
+  clearAllOfflineData: () => Promise<void>;
 }
 
 const OfflineContext = createContext<OfflineContextType | null>(null);
@@ -21,6 +24,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<NetworkStatus>(offlineModeService.getStatus());
   const [tileCacheSize, setTileCacheSize] = useState(0);
   const [routeCacheSize, setRouteCacheSize] = useState(0);
+  const [ttsCacheSize, setTtsCacheSize] = useState(0);
   const { toast } = useToast();
   const { t } = useTranslation();
   const wasOfflineRef = useRef(false);
@@ -48,16 +52,31 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [toast, t]);
 
   const updateCacheSize = async () => {
-    const [tileStats, routeSize] = await Promise.all([
+    const [tileStats, routeSize, ttsStats] = await Promise.all([
       tileCache.getCacheStats(),
       routeCache.getCacheSize(),
+      ttsCacheService.getCacheStats(),
     ]);
     setTileCacheSize(tileStats.size);
     setRouteCacheSize(routeSize);
+    setTtsCacheSize(ttsStats.totalSize);
   };
 
   const canUseOnlineFeatures = () => {
     return offlineModeService.canUseOnlineFeatures();
+  };
+
+  const clearAllOfflineData = async () => {
+    await Promise.all([
+      tileCache.clearAll(),
+      routeCache.clearAll(),
+      ttsCacheService.clearAll(),
+    ]);
+    await updateCacheSize();
+    toast({
+      title: 'Offline data cleared',
+      description: 'All cached maps, routes, and voice data have been removed.',
+    });
   };
 
   return (
@@ -68,8 +87,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         status,
         tileCacheSize,
         routeCacheSize,
+        ttsCacheSize,
         updateCacheSize,
         canUseOnlineFeatures,
+        clearAllOfflineData,
       }}
     >
       {children}
