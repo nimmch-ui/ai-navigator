@@ -71,6 +71,28 @@ class MonetizationService {
 
   constructor() {
     this.loadSubscription();
+    this.initializeSubscription();
+  }
+
+  private async initializeSubscription(): Promise<void> {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const checkoutSuccess = urlParams.get('subscription') === 'success';
+      
+      if (checkoutSuccess) {
+        const pendingTier = localStorage.getItem('ai_navigator_pending_checkout');
+        if (pendingTier) {
+          localStorage.removeItem('ai_navigator_pending_checkout');
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
+      
+      const { userDataStore } = await import('@/services/data/UserDataStore');
+      const userId = await userDataStore.getIdentity();
+      await this.syncWithBackend(userId);
+    } catch (error) {
+      console.error('[MonetizationService] Failed to initialize subscription:', error);
+    }
   }
 
   private loadSubscription(): void {
@@ -175,6 +197,7 @@ class MonetizationService {
       const data = await response.json();
       
       if (data.checkoutUrl) {
+        localStorage.setItem('ai_navigator_pending_checkout', tier);
         window.location.href = data.checkoutUrl;
       }
 

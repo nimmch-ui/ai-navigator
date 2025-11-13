@@ -21,7 +21,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-10-29.clover",
+  apiVersion: "2022-11-15",
 });
 
 const USER_DATA_SCHEMA_VERSION = 1;
