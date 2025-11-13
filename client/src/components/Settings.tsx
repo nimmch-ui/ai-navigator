@@ -971,7 +971,7 @@ export default function Settings({
 
           <Separator className="my-4" />
 
-          <div>
+          <div data-testid="section-night-vision">
             <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
               {t('settings.night_vision')}
               <Crown className="h-4 w-4 text-primary" />

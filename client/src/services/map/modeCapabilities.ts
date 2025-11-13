@@ -59,6 +59,14 @@ export const MODE_CAPABILITIES: Record<UiMode, ModeCapability> = {
       webgl: false
     },
     fallbackPriority: 90
+  },
+  [UiMode.NIGHT_VISION]: {
+    mode: UiMode.NIGHT_VISION,
+    requires: {
+      webgl: false, // Night Vision uses canvas 2D, not WebGL
+      camera: true  // Requires camera for live feed
+    },
+    fallbackPriority: 40
   }
 };
 

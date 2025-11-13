@@ -77,6 +77,10 @@ function App() {
           (window as any).__i18n = i18n;
           (window as any).__currency = currencyService;
           (window as any).__featureFlags = featureFlagsService;
+          
+          // Expose monetizationService for testing
+          const { monetizationService } = await import('@/services/monetization/MonetizationService');
+          (window as any).__monetizationService = monetizationService;
         }
 
         // Step 5: Initialize remaining services after feature flags are ready

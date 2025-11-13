@@ -76,6 +76,16 @@ class MonetizationService {
     this.initializeSubscription();
   }
 
+  /**
+   * Check if test mode is enabled (checked lazily to allow addInitScript to run)
+   */
+  private isTestMode(): boolean {
+    if (typeof window !== 'undefined') {
+      return (window as any).__MONETIZATION_TEST_MODE__ === true;
+    }
+    return false;
+  }
+
   private async initializeSubscription(): Promise<void> {
     try {
       const urlParams = new URLSearchParams(window.location.search);
@@ -87,6 +97,12 @@ class MonetizationService {
           localStorage.removeItem('ai_navigator_pending_checkout');
           window.history.replaceState({}, '', window.location.pathname);
         }
+      }
+      
+      // Skip backend sync in test mode
+      if (this.isTestMode()) {
+        console.log('[MonetizationService] Running in TEST MODE - backend sync disabled');
+        return;
       }
       
       const { userDataStore } = await import('@/services/data/UserDataStore');
@@ -117,6 +133,20 @@ class MonetizationService {
       localStorage.setItem(STORAGE_KEY_SUBSCRIPTION, JSON.stringify(this.subscription));
       this.notifyListeners();
     }
+  }
+
+  /**
+   * Set subscription directly (for testing only)
+   * @param subscription - The subscription to set
+   */
+  setSubscriptionForTesting(subscription: Subscription): void {
+    if (!this.isTestMode()) {
+      console.warn('[MonetizationService] setSubscriptionForTesting can only be used in test mode');
+      return;
+    }
+    this.subscription = subscription;
+    this.saveSubscription();
+    console.log('[MonetizationService] Subscription set for testing:', subscription.tier);
   }
 
   private createFreeSubscription(): Subscription {
