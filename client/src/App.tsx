@@ -30,6 +30,7 @@ import { syncTriggers } from "@/services/sync/SyncTriggers";
 import { authProvider } from "@/services/auth/AuthProvider";
 import Home from "@/pages/Home";
 import NightVisionDemo from "@/pages/night-vision-demo";
+import GlobalRolloutStatus from "@/pages/global-rollout-status";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -37,6 +38,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/night-vision-demo" component={NightVisionDemo} />
+      <Route path="/global-rollout" component={GlobalRolloutStatus} />
       <Route component={NotFound} />
     </Switch>
   );
