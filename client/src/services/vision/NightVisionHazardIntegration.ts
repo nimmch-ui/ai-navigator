@@ -76,14 +76,14 @@ class NightVisionHazardIntegration {
 
     // Publish low visibility event if detected
     if (lowVisibility) {
-      EventBus.publish('nightVision:lowVisibility', {
+      EventBus.emit('nightVision:lowVisibility', {
         severity: 'moderate',
         timestamp: Date.now(),
       });
     }
 
     // Publish summary statistics
-    EventBus.publish('nightVision:stats', {
+    EventBus.emit('nightVision:stats', {
       totalDetections: result.detections.length,
       animals: result.detections.filter(d => d.type === 'animal').length,
       pedestrians: result.detections.filter(d => d.type === 'pedestrian').length,
@@ -190,19 +190,19 @@ class NightVisionHazardIntegration {
   private publishHazardEvents(hazards: NightVisionHazard[]): void {
     hazards.forEach(hazard => {
       // Publish individual hazard event
-      EventBus.publish('nightVision:hazardDetected', {
+      EventBus.emit('nightVision:hazardDetected', {
         hazard,
       });
 
       // Publish type-specific events
       if (hazard.type === 'animal') {
-        EventBus.publish('nightVision:animalDetected', {
+        EventBus.emit('nightVision:animalDetected', {
           direction: hazard.direction,
           confidence: hazard.confidence,
           severity: hazard.severity,
         });
       } else if (hazard.type === 'pedestrian') {
-        EventBus.publish('nightVision:pedestrianDetected', {
+        EventBus.emit('nightVision:pedestrianDetected', {
           direction: hazard.direction,
           confidence: hazard.confidence,
           severity: hazard.severity,

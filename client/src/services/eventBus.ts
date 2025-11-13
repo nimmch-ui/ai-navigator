@@ -65,6 +65,11 @@ export interface EventPayloadMap {
   'safety:hudFlash': { color: string; duration: number; timestamp: number };
   'safety:weatherAdapted': { adaptation: WeatherAdaptation; timestamp: number };
   'safety:driverStateAdapted': { adaptation: DriverStateAdaptation; timestamp: number };
+  'nightVision:hazardDetected': { hazard: any };
+  'nightVision:animalDetected': { direction?: string; confidence: number; severity: string };
+  'nightVision:pedestrianDetected': { direction?: string; confidence: number; severity: string };
+  'nightVision:lowVisibility': { severity: string; timestamp: number };
+  'nightVision:stats': { totalDetections: number; animals: number; pedestrians: number; edges: number; processingTime: number; activeHazards: number };
 }
 
 type EventName = keyof EventPayloadMap;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { nightVisionService, type ColorMode, type NightVisionResult } from '@/services/vision/NightVisionService';
+import { nightVisionHazardIntegration } from '@/services/vision/NightVisionHazardIntegration';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,11 @@ export function NightVisionOverlay({
   useEffect(() => {
     nightVisionService.initialize(640, 480);
     nightVisionService.setColorMode(colorMode);
+    nightVisionHazardIntegration.enable();
+
+    return () => {
+      nightVisionHazardIntegration.disable();
+    };
   }, [colorMode]);
 
   // Main processing loop
@@ -109,6 +115,9 @@ export function NightVisionOverlay({
       // Update stats
       setProcessingTime(result.processingTimeMs);
       setDetectionCount(result.detections.length);
+
+      // Integrate with hazard pipeline
+      nightVisionHazardIntegration.processNightVisionResult(result);
 
       // Notify parent
       if (onDetection) {

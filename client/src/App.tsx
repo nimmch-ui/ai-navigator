@@ -29,12 +29,14 @@ import { EmotionEngine } from "@/services/emotion/EmotionEngine";
 import { syncTriggers } from "@/services/sync/SyncTriggers";
 import { authProvider } from "@/services/auth/AuthProvider";
 import Home from "@/pages/Home";
+import NightVisionDemo from "@/pages/night-vision-demo";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/night-vision-demo" component={NightVisionDemo} />
       <Route component={NotFound} />
     </Switch>
   );
