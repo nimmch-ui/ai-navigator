@@ -2,6 +2,7 @@ import { GlobalConfig, type Region } from "@shared/global.config";
 
 export interface UserLocation {
   continentCode: string;
+  countryCode: string;
   region: Region;
   language: string;
   timezone: string;
@@ -41,12 +42,14 @@ class GeolocationService {
       const data = await response.json();
       
       const continentCode = data.continent_code || "EU";
+      const countryCode = data.country_code || "US";
       const region = this.mapContinentToRegion(continentCode);
       const language = this.detectLanguage();
       const timezone = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
       return {
         continentCode,
+        countryCode,
         region,
         language,
         timezone,
@@ -70,6 +73,7 @@ class GeolocationService {
   private getDefaultLocation(): UserLocation {
     return {
       continentCode: "EU",
+      countryCode: "US",
       region: GlobalConfig.defaultRegion,
       language: this.detectLanguage(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,

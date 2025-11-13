@@ -4,6 +4,7 @@
  */
 
 import type { Locale } from '../i18n';
+import { i18n } from '../i18n';
 
 export type Currency = 'USD' | 'EUR' | 'INR' | 'ALL' | 'CHF';
 
@@ -85,7 +86,7 @@ class CurrencyService {
   }
 
   /**
-   * Format price with currency symbol
+   * Format price with currency symbol using locale-appropriate number formatting
    */
   formatPrice(usdPrice: number, currency?: Currency): string {
     const target = currency || this.currentCurrency;
@@ -97,8 +98,9 @@ class CurrencyService {
       ? Math.round(convertedPrice)
       : Number(convertedPrice.toFixed(config.decimalPlaces));
     
-    // Format with symbol
-    const formattedNumber = rounded.toLocaleString('en-US', {
+    // Use the current i18n locale for number formatting
+    const locale = i18n.getLocale() || 'en';
+    const formattedNumber = rounded.toLocaleString(locale, {
       minimumFractionDigits: config.decimalPlaces,
       maximumFractionDigits: config.decimalPlaces,
     });

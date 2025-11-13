@@ -40,22 +40,14 @@ class FeatureFlagsService {
   };
 
   /**
-   * Initialize feature flags based on user's region
+   * Initialize feature flags based on user's region and country code
    */
-  async initialize(region: Region, country?: string): Promise<void> {
+  async initialize(region: Region, countryCode: string): Promise<void> {
     this.currentRegion = region;
-    this.currentCountry = country || this.detectCountryFromRegion(region);
+    this.currentCountry = countryCode.toUpperCase();
     
     // Update feature availability
     this.updateFeatureAvailability();
-  }
-
-  /**
-   * Detect country from region (fallback)
-   */
-  private detectCountryFromRegion(region: Region): string {
-    const countries = REGION_COUNTRIES[region] || [];
-    return countries[0] || 'US';
   }
 
   /**

@@ -60,8 +60,8 @@ function App() {
         currencyService.initialize(locale);
         console.log('[App] Currency service initialized:', currencyService.getCurrency());
         
-        // Initialize feature flags service with region
-        featureFlagsService.initialize(location.region);
+        // Initialize feature flags service with region and country code
+        featureFlagsService.initialize(location.region, location.countryCode);
         console.log('[App] Feature flags initialized:', featureFlagsService.getFeatureAvailability());
         
         // Expose i18n globally for testing
