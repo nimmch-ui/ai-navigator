@@ -107,14 +107,28 @@ export async function calculateRoute(
   const isOffline = !offlineModeService.canUseOnlineFeatures();
   
   if (isOffline) {
-    const cachedRoute = await routeCache.findRoute(destination);
+    const cachedRoute = await routeCache.findRoute(
+      { lat: origin[0], lng: origin[1] },
+      { lat: destination[0], lng: destination[1] }
+    );
     if (cachedRoute) {
       console.log('[Routing] Using cached route (offline mode)');
+      
+      const steps: RouteStep[] = cachedRoute.maneuvers.map(m => ({
+        instruction: m.instruction,
+        distance: m.distance,
+        duration: m.duration,
+        maneuver: {
+          type: m.type,
+          location: m.location,
+        }
+      }));
+      
       return {
-        distance: cachedRoute.distance,
-        duration: cachedRoute.duration,
-        geometry: cachedRoute.geometry,
-        steps: cachedRoute.maneuvers,
+        distance: cachedRoute.metadata.distance,
+        duration: cachedRoute.metadata.duration,
+        geometry: cachedRoute.geometry.coordinates,
+        steps,
         profile: mode,
       };
     }
@@ -197,13 +211,30 @@ export async function calculateRoute(
       profile
     };
 
-    routeCache.saveRoute(destination, {
-      geometry: result.geometry,
-      maneuvers: steps,
-      distance: result.distance,
-      duration: result.duration,
+    const routeId = `route_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    routeCache.saveRoute({
+      id: routeId,
+      origin: { lat: origin[0], lng: origin[1] },
+      destination: { lat: destination[0], lng: destination[1] },
+      geometry: {
+        type: 'LineString',
+        coordinates: result.geometry,
+      },
+      maneuvers: steps.map(s => ({
+        instruction: s.instruction,
+        distance: s.distance,
+        duration: s.duration,
+        location: s.maneuver.location,
+        type: s.maneuver.type,
+      })),
       speedLimits: [],
       radarPoints: [],
+      metadata: {
+        distance: result.distance,
+        duration: result.duration,
+        createdAt: Date.now(),
+        lastUsedAt: Date.now(),
+      }
     }).catch(err => {
       console.warn('[Routing] Failed to cache route:', err);
     });

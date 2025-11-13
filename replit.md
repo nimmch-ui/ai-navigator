@@ -42,6 +42,13 @@ The design system incorporates the Inter font, a hierarchical sizing scale, an 8
     - **Weather Radar Service** (`weatherRadar.ts`): Uses ProviderRegistry for radar tiles with RainViewer → Mock failover
     - **Traffic Service** (`traffic.ts`): Synthesizes traffic incidents from provider flow data using TrafficIncidentSynthesizer, merging real-time congestion with static incidents
   - **E2E Testing:** Dev test functions (`window.__testOfflineFailover`, `__testRegionSwitching`, `__testStaleCache`) for QA validation of provider failover scenarios
+- **Offline Mode & Caching:** Comprehensive offline support with intelligent network detection and automatic cache management.
+  - **OfflineModeService** (`client/src/services/system/OfflineModeService.ts`): Network quality detection (good/weak/offline) via periodic ping checks, EventBus integration for `network:statusChanged` events, and `canUseOnlineFeatures()` API for feature gating.
+  - **RouteCache** (`client/src/services/navigation/RouteCache.ts`): IndexedDB-based route storage (max 10 routes) with LRU eviction, 500m location matching threshold, stores complete route geometry, maneuvers, speed limits, and radar points. Integrated with `routing.calculateRoute()` for automatic cache-save on successful route planning and cache-hit on offline requests.
+  - **TileCache** (`client/src/services/map/TileCache.ts`): IndexedDB tile storage (150MB limit) with LRU eviction and 7-day TTL, prefetch capability for map bounds, designed for Mapbox tile URL generation and future integration with Mapbox GL request pipeline.
+  - **OfflineContext** (`client/src/contexts/OfflineContext.tsx`): React context providing offline state (isOnline, quality, tileCacheSize, routeCacheSize, canUseOnlineFeatures), integrates OfflineModeService as single source of network truth, includes `useOfflineCapabilities()` hook for UI feature gating.
+  - **OfflineBanner** (`client/src/components/OfflineBanner.tsx`): Visual indicator for offline/weak connection states with translated messages, automatic dismissal when back online with toast notification.
+  - **Recovery & Sync:** Toast notifications when transitioning from offline→online, automatic cache size updates, EventBus-driven state synchronization across components.
 
 ## External Dependencies
 
