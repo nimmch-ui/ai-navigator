@@ -4,9 +4,9 @@ export class OpenWeather implements IWeather {
   private apiKey: string;
 
   constructor() {
-    const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
+    const apiKey = import.meta.env.VITE_OPENWEATHER_KEY;
     if (!apiKey) {
-      throw new Error('[OpenWeather] VITE_OPENWEATHER_API_KEY not configured');
+      throw new Error('[OpenWeather] VITE_OPENWEATHER_KEY not configured');
     }
     this.apiKey = apiKey;
   }

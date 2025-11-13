@@ -3,6 +3,10 @@ import { MapboxTiles, MapTilerTiles, MockMapTiles } from './providers/MapTilesPr
 import { MapboxTraffic, HereTraffic, TomTomTraffic, MockTraffic } from './providers/TrafficProviders';
 import { RemoteGeoJSONRadar, StaticGeoJSONRadar, MockRadar } from './providers/RadarProviders';
 import { OpenWeather, MeteoFuse, MockWeather } from './providers/WeatherProviders';
+import { HealthMonitor } from './HealthMonitor';
+import { CacheService, type CacheableData } from './CacheService';
+import { EventBus } from '@/services/eventBus';
+import { toast } from '@/hooks/use-toast';
 
 export class ProviderRegistry {
   private static providersCache: Map<Region, ProviderSet> = new Map();
@@ -106,37 +110,99 @@ export class ProviderRegistry {
     return providers;
   }
 
-  static async withFailover<T>(
+  static async withFailover<T extends CacheableData>(
     providers: Array<{ getName(): string }>,
     operation: (provider: any) => Promise<T>,
-    operationName: string
+    operationName: string,
+    cacheKey?: string,
+    serviceType?: 'map' | 'traffic' | 'radar' | 'weather'
   ): Promise<ProviderFailoverResult<T>> {
     let lastError: Error | null = null;
+    let previousProvider: string | null = null;
     
+    if (cacheKey && serviceType) {
+      const cached = await CacheService.get<T>(serviceType, cacheKey);
+      if (cached) {
+        console.log(`[ProviderRegistry] Using cached data for ${operationName}`);
+        return {
+          data: cached,
+          provider: 'Cache',
+          fallbackUsed: false,
+          attempts: 0,
+        };
+      }
+    }
+
     for (let i = 0; i < providers.length; i++) {
       const provider = providers[i];
+      const providerName = provider.getName();
+      
       try {
-        console.log(`[ProviderRegistry] Attempting ${operationName} with ${provider.getName()} (attempt ${i + 1}/${providers.length})`);
-        const data = await operation(provider);
+        console.log(`[ProviderRegistry] Attempting ${operationName} with ${providerName} (attempt ${i + 1}/${providers.length})`);
         
+        const { data, latency, attempts } = await HealthMonitor.executeWithHealth(
+          providerName,
+          () => operation(provider)
+        );
+        
+        if (cacheKey && serviceType) {
+          await CacheService.set(serviceType, cacheKey, data, providerName);
+        }
+
         const result: ProviderFailoverResult<T> = {
           data,
-          provider: provider.getName(),
+          provider: providerName,
           fallbackUsed: i > 0,
-          attempts: i + 1,
+          attempts: i + attempts,
         };
 
-        if (i > 0) {
-          console.warn(`[ProviderRegistry] ${operationName} succeeded with fallback provider: ${provider.getName()}`);
+        if (i > 0 && previousProvider) {
+          console.warn(`[ProviderRegistry] ${operationName} failed over from ${previousProvider} to ${providerName}`);
+          
+          EventBus.emit('provider:failover', {
+            service: operationName,
+            from: previousProvider,
+            to: providerName,
+            latency,
+            reason: lastError?.message || 'Unknown error',
+          });
         }
 
         return result;
       } catch (error) {
         lastError = error as Error;
-        console.warn(`[ProviderRegistry] ${provider.getName()} failed for ${operationName}:`, error);
+        previousProvider = providerName;
+        console.warn(`[ProviderRegistry] ${providerName} failed for ${operationName}:`, error);
         
         if (i === providers.length - 1) {
           console.error(`[ProviderRegistry] All providers failed for ${operationName}`);
+          
+          if (cacheKey && serviceType) {
+            const staleCached = await CacheService.get<T>(serviceType, cacheKey);
+            if (staleCached) {
+              console.warn(`[ProviderRegistry] Using stale cached data for ${operationName}`);
+              
+              toast({
+                title: 'Using Cached Data',
+                description: `All ${operationName} providers unavailable. Showing cached data.`,
+                variant: 'default',
+              });
+
+              return {
+                data: staleCached,
+                provider: 'Cache (Stale)',
+                fallbackUsed: true,
+                attempts: providers.length,
+              };
+            }
+          }
+          
+          toast({
+            title: 'Provider Error',
+            description: `All ${operationName} providers failed. Using fallback data.`,
+            variant: 'destructive',
+          });
+          
           throw new Error(
             `All ${providers.length} providers failed for ${operationName}. Last error: ${lastError?.message}`
           );

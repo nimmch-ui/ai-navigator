@@ -9,6 +9,12 @@ export interface EventPayloadMap {
   'navigation:stateChanged': { updates: Record<string, any> };
   'preferences:voiceStyleChanged': { voiceStyle: string };
   'i18n:changed': { locale: Locale; unitSystem: string };
+  'provider:circuit_breaker_opened': { provider: string; failures: number; timeout: number };
+  'provider:failover': { service: string; from: string; to: string; latency: number; reason: string };
+  'provider:radar_loaded': { provider: string; latency: number; cameraCount: number; cached: boolean };
+  'provider:traffic_loaded': { provider: string; latency: number; flowCount: number; cached: boolean };
+  'provider:weather_loaded': { provider: string; latency: number; cached: boolean };
+  'provider:map_tiles_loaded': { provider: string; cached: boolean };
 }
 
 type EventName = keyof EventPayloadMap;

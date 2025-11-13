@@ -24,9 +24,9 @@ export class MapTilerTiles implements IMapTiles {
   private token: string;
 
   constructor() {
-    const token = import.meta.env.VITE_MAPTILER_TOKEN;
+    const token = import.meta.env.VITE_MAPTILER_KEY;
     if (!token) {
-      throw new Error('[MapTilerTiles] VITE_MAPTILER_TOKEN not configured');
+      throw new Error('[MapTilerTiles] VITE_MAPTILER_KEY not configured');
     }
     this.token = token;
   }

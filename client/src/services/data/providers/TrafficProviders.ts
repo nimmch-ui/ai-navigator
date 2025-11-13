@@ -62,9 +62,9 @@ export class HereTraffic implements ITraffic {
   private apiKey: string;
 
   constructor() {
-    const apiKey = import.meta.env.VITE_HERE_API_KEY;
+    const apiKey = import.meta.env.VITE_HERE_KEY;
     if (!apiKey) {
-      throw new Error('[HereTraffic] VITE_HERE_API_KEY not configured');
+      throw new Error('[HereTraffic] VITE_HERE_KEY not configured');
     }
     this.apiKey = apiKey;
   }
@@ -111,9 +111,9 @@ export class TomTomTraffic implements ITraffic {
   private apiKey: string;
 
   constructor() {
-    const apiKey = import.meta.env.VITE_TOMTOM_API_KEY;
+    const apiKey = import.meta.env.VITE_TOMTOM_KEY;
     if (!apiKey) {
-      throw new Error('[TomTomTraffic] VITE_TOMTOM_API_KEY not configured');
+      throw new Error('[TomTomTraffic] VITE_TOMTOM_KEY not configured');
     }
     this.apiKey = apiKey;
   }
