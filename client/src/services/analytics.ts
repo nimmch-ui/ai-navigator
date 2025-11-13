@@ -19,7 +19,11 @@ export type AnalyticsEvent =
   | 'navigation_started'
   | 'navigation_ended'
   | 'hazard_announced'
-  | 'radar_announced';
+  | 'radar_announced'
+  | 'sync_started'
+  | 'sync_completed'
+  | 'sync_conflict'
+  | 'device_linked';
 
 interface AnalyticsEventData {
   event: AnalyticsEvent;

@@ -6,6 +6,7 @@ import { CloudSyncBackend } from './CloudSyncBackend';
 import { EventBus } from '../eventBus';
 import { offlineModeService } from '../system/OfflineModeService';
 import type { AuthLoginResponse } from '@shared/schema';
+import { Analytics } from '../analytics';
 
 interface SyncQueueItem {
   userId: string;
@@ -199,6 +200,11 @@ class SyncService {
 
     this.isSyncing = true;
     const startTime = Date.now();
+    
+    Analytics.track('sync_started', {
+      userId: initialUserId,
+      isOffline: networkStatus.isOffline,
+    });
 
     try {
       await userDataStore.initialize();
@@ -252,6 +258,14 @@ class SyncService {
           recordsPulled: 0,
           durationMs: Date.now() - startTime,
         });
+        
+        Analytics.track('sync_completed', {
+          userId: localUserId,
+          conflicts: 0,
+          recordsPushed: this.countRecords(localData),
+          recordsPulled: 0,
+          durationMs: Date.now() - startTime,
+        });
 
         console.log('[SyncService] Initial push completed successfully');
 
@@ -265,6 +279,18 @@ class SyncService {
 
       const merged = this.mergeData(localData, remoteData);
       const mergedUserId = merged.identity.userId;
+      
+      const conflictCount = merged.metadata.version - Math.max(localData.metadata.version, remoteData.metadata.version);
+      
+      if (conflictCount > 0) {
+        Analytics.track('sync_conflict', {
+          userId: mergedUserId,
+          conflicts: conflictCount,
+          localVersion: localData.metadata.version,
+          remoteVersion: remoteData.metadata.version,
+          mergedVersion: merged.metadata.version,
+        });
+      }
 
       if (mergedUserId !== localData.identity.userId) {
         EventBus.emit('sync:identityChanged', {
@@ -294,7 +320,15 @@ class SyncService {
       const duration = Date.now() - startTime;
       
       EventBus.emit('sync:completed', {
-        conflicts: merged.metadata.version - Math.max(localData.metadata.version, remoteData.metadata.version),
+        conflicts: conflictCount,
+        recordsPushed: this.countRecords(localData),
+        recordsPulled: this.countRecords(remoteData),
+        durationMs: duration,
+      });
+      
+      Analytics.track('sync_completed', {
+        userId: mergedUserId,
+        conflicts: conflictCount,
         recordsPushed: this.countRecords(localData),
         recordsPulled: this.countRecords(remoteData),
         durationMs: duration,

@@ -1,6 +1,7 @@
 import { syncService } from '../sync/SyncService';
 import { EventBus } from '../eventBus';
 import type { AuthLoginResponse } from '@shared/schema';
+import { Analytics } from '../analytics';
 
 export type AuthMethod = 'email' | 'google' | 'apple' | 'github';
 
@@ -281,6 +282,13 @@ class AuthProvider {
           canonicalUserId: result.canonicalUserId,
           recordsPushed: result.recordsPushed,
           recordsPulled: result.recordsPulled,
+        });
+        
+        Analytics.track('device_linked', {
+          userId: this.state.session.userId,
+          canonicalUserId: result.canonicalUserId,
+          recordsPushed: result.recordsPushed || 0,
+          recordsPulled: result.recordsPulled || 0,
         });
         
         EventBus.emit('sync:device_paired', {
