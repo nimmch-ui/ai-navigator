@@ -27,13 +27,18 @@ class SyncService {
   private networkStatusUnsubscribe: (() => void) | null = null;
   private CANONICAL_USER_KEY = 'sync:canonicalUserId';
   private SESSION_KEY = 'cloudSync_session';
+  private LAST_SYNC_KEY = 'sync:lastSyncTime';
   private readyPromise: Promise<void>;
+  private lastSyncTime: number | null = null;
 
   constructor() {
     this.backend = new FakeSyncBackend();
     
     const stored = localStorage.getItem('sync:enabled');
     this.syncEnabled = stored === 'true';
+    
+    const lastSync = localStorage.getItem(this.LAST_SYNC_KEY);
+    this.lastSyncTime = lastSync ? parseInt(lastSync, 10) : null;
 
     this.readyPromise = this.initialize();
     this.setupNetworkMonitoring();
@@ -266,6 +271,9 @@ class SyncService {
           recordsPulled: 0,
           durationMs: Date.now() - startTime,
         });
+        
+        this.lastSyncTime = Date.now();
+        localStorage.setItem(this.LAST_SYNC_KEY, this.lastSyncTime.toString());
 
         console.log('[SyncService] Initial push completed successfully');
 
@@ -333,6 +341,9 @@ class SyncService {
         recordsPulled: this.countRecords(remoteData),
         durationMs: duration,
       });
+      
+      this.lastSyncTime = Date.now();
+      localStorage.setItem(this.LAST_SYNC_KEY, this.lastSyncTime.toString());
 
       console.log('[SyncService] Sync completed successfully');
 
@@ -571,6 +582,10 @@ class SyncService {
 
   private countRecords(data: UserDataEnvelope): number {
     return 1 + data.favorites.length + data.trips.length;
+  }
+  
+  getLastSyncTime(): number | null {
+    return this.lastSyncTime;
   }
 }
 
