@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CommunityReport, type InsertCommunityReport } from "@shared/schema";
+import { type User, type InsertUser, type CommunityReport, type InsertCommunityReport, type Subscription } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // modify the interface with any CRUD methods
@@ -28,6 +28,11 @@ export interface IStorage {
   voteOnReport(reportId: string, voterId: string, voteType: 'confirm' | 'reject'): Promise<CommunityReport | undefined>;
   getLastReportTime(reporterId: string): Promise<number | undefined>;
   cleanupExpiredReports(): Promise<void>;
+  
+  // Subscriptions
+  getSubscription(userId: string): Promise<Subscription | undefined>;
+  createSubscription(subscription: Subscription): Promise<Subscription>;
+  updateSubscription(userId: string, subscription: Partial<Subscription>): Promise<Subscription | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -35,12 +40,14 @@ export class MemStorage implements IStorage {
   private cloudUsers: Map<string, CloudUser>;
   private communityReports: Map<string, CommunityReport>;
   private reporterLastReportTime: Map<string, number>;
+  private subscriptions: Map<string, Subscription>;
 
   constructor() {
     this.users = new Map();
     this.cloudUsers = new Map();
     this.communityReports = new Map();
     this.reporterLastReportTime = new Map();
+    this.subscriptions = new Map();
     
     // Cleanup expired reports every 5 minutes
     setInterval(() => this.cleanupExpiredReports(), 5 * 60 * 1000);
@@ -159,6 +166,29 @@ export class MemStorage implements IStorage {
         this.communityReports.set(id, report);
       }
     }
+  }
+
+  async getSubscription(userId: string): Promise<Subscription | undefined> {
+    return this.subscriptions.get(userId);
+  }
+
+  async createSubscription(subscription: Subscription): Promise<Subscription> {
+    this.subscriptions.set(subscription.userId, subscription);
+    return subscription;
+  }
+
+  async updateSubscription(userId: string, updates: Partial<Subscription>): Promise<Subscription | undefined> {
+    const existing = this.subscriptions.get(userId);
+    if (!existing) return undefined;
+    
+    const updated: Subscription = {
+      ...existing,
+      ...updates,
+      updatedAt: Date.now(),
+    };
+    
+    this.subscriptions.set(userId, updated);
+    return updated;
   }
 }
 

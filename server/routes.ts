@@ -9,9 +9,20 @@ import {
   authRestoreRequestSchema,
   syncPushRequestSchema,
   type CloudUserProfile,
+  type SubscriptionTier,
+  type Subscription,
 } from "@shared/schema";
 import { cloudStorage } from "./cloud/index";
 import { hashPassword, verifyPassword } from "./cloud/auth";
+import Stripe from "stripe";
+
+// Stripe Integration (from Replit blueprint:javascript_stripe)
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2024-11-20.acacia",
+});
 
 const USER_DATA_SCHEMA_VERSION = 1;
 
@@ -271,6 +282,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Pull error:", error);
       res.status(500).json({ error: "Sync pull failed" });
+    }
+  });
+
+  // Subscription Management Endpoints
+  app.post("/api/subscriptions/create-checkout", async (req, res) => {
+    try {
+      const { tier, billingPeriod, amount } = req.body as {
+        tier: SubscriptionTier;
+        billingPeriod: 'monthly' | 'yearly';
+        amount: number;
+      };
+
+      if (!tier || !billingPeriod || typeof amount !== 'number') {
+        return res.status(400).json({ error: "Invalid request parameters" });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `AI Navigator ${tier.charAt(0).toUpperCase() + tier.slice(1)}`,
+                description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} subscription - ${billingPeriod} billing`,
+              },
+              unit_amount: Math.round(amount * 100),
+              recurring: {
+                interval: billingPeriod === 'monthly' ? 'month' : 'year',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${req.headers.origin || 'http://localhost:5000'}?subscription=success&tier=${tier}`,
+        cancel_url: `${req.headers.origin || 'http://localhost:5000'}?subscription=canceled`,
+        metadata: {
+          tier,
+          billingPeriod,
+        },
+      });
+
+      res.json({ checkoutUrl: session.url });
+    } catch (error) {
+      console.error("Checkout creation error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to create checkout session" 
+      });
+    }
+  });
+
+  app.post("/api/subscriptions/restore", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const token = authHeader.substring(7);
+      const userId = cloudStorage.validateSession(token);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Invalid session" });
+      }
+
+      const subscription = await storage.getSubscription(userId);
+      
+      if (!subscription) {
+        return res.status(404).json({ error: "No active subscription found" });
+      }
+
+      res.json({ subscription });
+    } catch (error) {
+      console.error("Restore purchases error:", error);
+      res.status(500).json({ error: "Failed to restore purchases" });
+    }
+  });
+
+  app.get("/api/subscriptions/status", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID required" });
+      }
+
+      const subscription = await storage.getSubscription(userId);
+      
+      if (!subscription) {
+        const now = Date.now();
+        const freeSubscription: Subscription = {
+          userId,
+          tier: 'free',
+          status: 'active',
+          cancelAtPeriodEnd: false,
+          createdAt: now,
+          updatedAt: now,
+        };
+        return res.json({ subscription: freeSubscription });
+      }
+
+      res.json({ subscription });
+    } catch (error) {
+      console.error("Subscription status error:", error);
+      res.status(500).json({ error: "Failed to fetch subscription status" });
+    }
+  });
+
+  app.post("/api/subscriptions/webhook", async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+
+    if (!sig) {
+      return res.status(400).send('Missing signature');
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (!webhookSecret) {
+        console.warn('[Stripe] STRIPE_WEBHOOK_SECRET not set - using raw body');
+        event = req.body as Stripe.Event;
+      } else {
+        event = stripe.webhooks.constructEvent(
+          req.body,
+          sig,
+          webhookSecret
+        );
+      }
+    } catch (err) {
+      console.error('[Stripe] Webhook signature verification failed:', err);
+      return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session;
+          const tier = session.metadata?.tier as SubscriptionTier;
+          const customerId = session.customer as string;
+          const subscriptionId = session.subscription as string;
+
+          console.log('[Stripe] Checkout completed:', { tier, customerId, subscriptionId });
+          break;
+        }
+
+        case 'customer.subscription.updated':
+        case 'customer.subscription.created': {
+          const subscription = event.data.object as Stripe.Subscription;
+          console.log('[Stripe] Subscription updated:', subscription.id, subscription.status);
+          break;
+        }
+
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object as Stripe.Subscription;
+          console.log('[Stripe] Subscription deleted:', subscription.id);
+          break;
+        }
+
+        default:
+          console.log(`[Stripe] Unhandled event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error('[Stripe] Webhook processing error:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
 
