@@ -1,4 +1,6 @@
 import type { TransportMode, RoutePreference } from './preferences';
+import { routeCache } from './navigation/RouteCache';
+import { offlineModeService } from './system/OfflineModeService';
 
 export interface RouteStep {
   instruction: string;
@@ -102,6 +104,23 @@ export async function calculateRoute(
   routePreference: RoutePreference = 'fastest',
   signal?: AbortSignal
 ): Promise<RouteResult> {
+  const isOffline = !offlineModeService.canUseOnlineFeatures();
+  
+  if (isOffline) {
+    const cachedRoute = await routeCache.findRoute(destination);
+    if (cachedRoute) {
+      console.log('[Routing] Using cached route (offline mode)');
+      return {
+        distance: cachedRoute.distance,
+        duration: cachedRoute.duration,
+        geometry: cachedRoute.geometry,
+        steps: cachedRoute.maneuvers,
+        profile: mode,
+      };
+    }
+    throw new Error('No cached route available for this destination. Please go online to plan it.');
+  }
+
   const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
   
   if (!mapboxToken) {
@@ -170,13 +189,26 @@ export async function calculateRoute(
       }
     }));
 
-    return {
+    const result: RouteResult = {
       distance: route.distance,
       duration: route.duration,
       geometry: route.geometry.coordinates.map(coord => [coord[1], coord[0]]),
       steps,
       profile
     };
+
+    routeCache.saveRoute(destination, {
+      geometry: result.geometry,
+      maneuvers: steps,
+      distance: result.distance,
+      duration: result.duration,
+      speedLimits: [],
+      radarPoints: [],
+    }).catch(err => {
+      console.warn('[Routing] Failed to cache route:', err);
+    });
+
+    return result;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw error;
