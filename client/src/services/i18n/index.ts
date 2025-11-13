@@ -53,6 +53,8 @@ export type TranslationKey =
   | "voice.style"
   | "voice.muted"
   | "voice.enabled"
+  | "offline.banner_offline"
+  | "offline.banner_weak"
   | "pricing.title"
   | "pricing.subtitle"
   | "pricing.monthly"

@@ -11,6 +11,7 @@ import { CarModeProvider } from "@/contexts/CarModeContext";
 import { PWAUpdateNotification } from "@/components/PWAUpdateNotification";
 import { RegionFallbackBanner } from "@/components/RegionFallbackBanner";
 import OfflineBanner from "@/components/OfflineBanner";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { registerServiceWorker } from "@/lib/serviceWorker";
 import { initializeSubscriptions, cleanupSubscriptions } from "@/services/subscriptions";
 import { ModeManager } from "@/services/ui/ModeManager";
@@ -155,23 +156,25 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <UiModeProvider>
-          <CarModeProvider>
-            <OfflineProvider>
-              <ARExperienceProvider>
-                <Toaster />
-                <OfflineBanner />
-                <PWAUpdateNotification />
-                <RegionFallbackBanner />
-                <Router />
-              </ARExperienceProvider>
-            </OfflineProvider>
-          </CarModeProvider>
-        </UiModeProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <UiModeProvider>
+            <CarModeProvider>
+              <OfflineProvider>
+                <ARExperienceProvider>
+                  <Toaster />
+                  <OfflineBanner />
+                  <PWAUpdateNotification />
+                  <RegionFallbackBanner />
+                  <Router />
+                </ARExperienceProvider>
+              </OfflineProvider>
+            </CarModeProvider>
+          </UiModeProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }
 
