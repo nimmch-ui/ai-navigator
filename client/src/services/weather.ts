@@ -50,40 +50,35 @@ export async function fetchWeather(
   lng: number, 
   locationName: string
 ): Promise<WeatherData> {
-  const apiKey = import.meta.env.VITE_WEATHER_API_KEY;
-  
-  if (!apiKey) {
-    console.log('[Weather] No API key found, using mock data');
-    return getMockWeather(lat, lng, locationName);
-  }
-
   try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${apiKey}&units=metric`;
+    const { ProviderRegistry } = await import('@/services/data/ProviderRegistry');
+    const { RegionDetector } = await import('@/services/data/regionDetector');
     
-    const response = await fetch(url);
+    const region = await RegionDetector.detectRegion();
+    const providerSet = ProviderRegistry.for(region);
     
-    if (!response.ok) {
-      console.error('[Weather] API error:', response.status);
-      return getMockWeather(lat, lng, locationName);
-    }
-
-    const data = await response.json();
+    const result = await ProviderRegistry.withFailover(
+      providerSet.weather,
+      (provider) => provider.getWeatherNow(lat, lng),
+      'Weather',
+      `weather_${lat}_${lng}`,
+      'weather'
+    );
     
-    const weatherId = data.weather[0]?.id || 800;
-    const main = data.weather[0]?.main || 'Clear';
-    const condition = getWeatherCondition(weatherId, main);
-    const severity = getWeatherSeverity(condition, weatherId);
+    const weatherNow = result.data as any;
+    const condition = getWeatherCondition(weatherNow.weatherCode || 800, weatherNow.condition);
+    const severity = getWeatherSeverity(condition, weatherNow.weatherCode || 800);
     
     return {
       location: locationName,
       condition,
-      description: data.weather[0]?.description || 'Clear',
-      temperature: Math.round(data.main?.temp || 20),
+      description: weatherNow.description,
+      temperature: Math.round(weatherNow.temp),
       severity,
-      icon: data.weather[0]?.icon || '01d'
+      icon: weatherNow.icon
     };
   } catch (error) {
-    console.error('[Weather] Fetch error:', error);
+    console.error('[Weather] Provider error, using mock data:', error);
     return getMockWeather(lat, lng, locationName);
   }
 }

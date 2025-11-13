@@ -2,11 +2,29 @@ import type { SpeedCamera } from '@/data/speedCameras';
 import { mockSpeedCameras } from '@/data/speedCameras';
 
 export async function getSpeedCameras(): Promise<SpeedCamera[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(mockSpeedCameras);
-    }, 100);
-  });
+  try {
+    const { ProviderRegistry } = await import('@/services/data/ProviderRegistry');
+    const { RegionDetector } = await import('@/services/data/regionDetector');
+    
+    const region = await RegionDetector.detectRegion();
+    const providerSet = ProviderRegistry.for(region);
+    
+    const result = await ProviderRegistry.withFailover(
+      providerSet.radar,
+      (provider) => provider.getSpeedCameras(
+        { lat: -90, lon: -180 },
+        { lat: 90, lon: 180 }
+      ),
+      'Speed Cameras',
+      'global_cameras',
+      'radar'
+    );
+    
+    return result.data as any;
+  } catch (error) {
+    console.error('[Radar] Provider error, using mock data:', error);
+    return mockSpeedCameras;
+  }
 }
 
 export function getSpeedCameraById(id: string): SpeedCamera | undefined {
