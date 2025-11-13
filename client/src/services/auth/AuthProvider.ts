@@ -189,13 +189,15 @@ class AuthProvider {
   }
 
   async refresh(): Promise<boolean> {
-    const stored = localStorage.getItem('cloudSync_session');
-    
-    if (!stored) {
-      return false;
-    }
-
     try {
+      await syncService.ready();
+      
+      const stored = localStorage.getItem('cloudSync_session');
+      
+      if (!stored) {
+        return false;
+      }
+
       const savedSession = JSON.parse(stored) as StoredSession;
       
       if (savedSession.expiresAt < Date.now()) {
@@ -203,12 +205,15 @@ class AuthProvider {
         return false;
       }
 
-      syncService.restoreCloudSession();
+      const prepareResult = await syncService.prepareCloudSession(savedSession.sessionToken);
       
-      const isValid = await syncService.isCloudEnabled();
-      
-      if (!isValid) {
+      if (!prepareResult.ok) {
+        console.warn('[AuthProvider] Cloud session preparation failed:', prepareResult.reason);
         localStorage.removeItem('cloudSync_session');
+        this.setState({
+          isAuthenticated: false,
+          session: null,
+        });
         return false;
       }
 
@@ -225,10 +230,16 @@ class AuthProvider {
         session,
       });
 
+      await this.triggerDevicePairing();
+
       return true;
     } catch (error) {
       console.error('[AuthProvider] Session refresh failed:', error);
       localStorage.removeItem('cloudSync_session');
+      this.setState({
+        isAuthenticated: false,
+        session: null,
+      });
       return false;
     }
   }

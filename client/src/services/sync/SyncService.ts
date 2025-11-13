@@ -26,6 +26,7 @@ class SyncService {
   private networkStatusUnsubscribe: (() => void) | null = null;
   private CANONICAL_USER_KEY = 'sync:canonicalUserId';
   private SESSION_KEY = 'cloudSync_session';
+  private readyPromise: Promise<void>;
 
   constructor() {
     this.backend = new FakeSyncBackend();
@@ -33,8 +34,16 @@ class SyncService {
     const stored = localStorage.getItem('sync:enabled');
     this.syncEnabled = stored === 'true';
 
-    this.restoreCloudSession();
+    this.readyPromise = this.initialize();
     this.setupNetworkMonitoring();
+  }
+
+  private async initialize(): Promise<void> {
+    this.restoreCloudSession();
+  }
+
+  async ready(): Promise<void> {
+    return this.readyPromise;
   }
 
   private getPersistedCanonicalUserId(): string | null {
@@ -62,6 +71,39 @@ class SyncService {
       }
     } catch (error) {
       console.error('[SyncService] Failed to restore cloud session:', error);
+    }
+  }
+
+  async prepareCloudSession(sessionToken: string): Promise<{ ok: boolean; reason?: string }> {
+    try {
+      const stored = localStorage.getItem(this.SESSION_KEY);
+      if (!stored) {
+        return { ok: false, reason: 'No stored session found' };
+      }
+
+      const session: AuthLoginResponse = JSON.parse(stored);
+      
+      if (session.expiresAt < Date.now()) {
+        localStorage.removeItem(this.SESSION_KEY);
+        this.cloudBackend = null;
+        this.backend = new FakeSyncBackend();
+        return { ok: false, reason: 'Session expired' };
+      }
+
+      if (session.sessionToken !== sessionToken) {
+        return { ok: false, reason: 'Token mismatch' };
+      }
+
+      this.cloudBackend = new CloudSyncBackend(sessionToken);
+      this.backend = this.cloudBackend;
+      
+      console.log('[SyncService] Cloud session prepared for user:', session.userId);
+      return { ok: true };
+    } catch (error) {
+      console.error('[SyncService] Failed to prepare cloud session:', error);
+      this.cloudBackend = null;
+      this.backend = new FakeSyncBackend();
+      return { ok: false, reason: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
