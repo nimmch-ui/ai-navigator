@@ -18,6 +18,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import type { TransportMode, RoutePreference, VehicleType, SpeedUnit, VoiceStyle } from '@/services/preferences';
+import type { Region } from '@/services/data/types';
 import { UiMode } from '@/types/ui';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -68,6 +69,9 @@ interface SettingsProps {
   onMotionPolishChange: (enabled: boolean) => void;
   radarPulse: boolean;
   onRadarPulseChange: (enabled: boolean) => void;
+  // Regional Data Providers
+  region: Region;
+  onRegionChange: (region: Region) => void;
 }
 
 export default function Settings({
@@ -112,7 +116,9 @@ export default function Settings({
   motionPolish,
   onMotionPolishChange,
   radarPulse,
-  onRadarPulseChange
+  onRadarPulseChange,
+  region,
+  onRegionChange
 }: SettingsProps) {
   const { toast } = useToast();
   const { t, locale, changeLocale, availableLocales, getLocaleName } = useTranslation();
@@ -626,6 +632,35 @@ export default function Settings({
                 </Label>
               </div>
             </RadioGroup>
+          </div>
+
+          <Separator />
+
+          <div>
+            <h3 className="font-semibold text-sm mb-1">Regional Data Providers</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Configure data sources for maps, traffic, weather, and radar based on your region.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Region</Label>
+            <Select value={region} onValueChange={(value) => onRegionChange(value as Region)}>
+              <SelectTrigger data-testid="select-region">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="EU" data-testid="select-region-eu">Europe (EU)</SelectItem>
+                <SelectItem value="CH" data-testid="select-region-ch">China (CH)</SelectItem>
+                <SelectItem value="US" data-testid="select-region-us">United States (US)</SelectItem>
+                <SelectItem value="IN" data-testid="select-region-in">India (IN)</SelectItem>
+                <SelectItem value="ME" data-testid="select-region-me">Middle East (ME)</SelectItem>
+                <SelectItem value="GLOBAL" data-testid="select-region-global">Global (Auto-detect)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Providers are automatically selected based on your region for optimal performance.
+            </p>
           </div>
 
           <Separator />

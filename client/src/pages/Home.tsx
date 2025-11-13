@@ -43,6 +43,8 @@ import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled, getVoiceV
 import { calculateTripEstimate, type VehicleType } from '@/services/tripEstimates';
 import type { TripEstimate } from '@/services/tripEstimates';
 import { PreferencesService, type TransportMode, type RoutePreference, type SpeedUnit, type MapTheme, type VoiceStyle } from '@/services/preferences';
+import type { Region } from '@/services/data/types';
+import { RegionDetector } from '@/services/data/regionDetector';
 import { TripHistoryService, type TripRecord } from '@/services/tripHistory';
 import { FavoritesService, type Favorite } from '@/services/favorites';
 import { sendChatMessage, type ChatContext } from '@/services/chatApi';
@@ -169,6 +171,7 @@ export default function Home() {
   const [weatherLighting, setWeatherLighting] = useState(true);
   const [motionPolish, setMotionPolish] = useState(true);
   const [radarPulse, setRadarPulse] = useState(true);
+  const [region, setRegion] = useState<Region>(PreferencesService.getPreferences().region);
 
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -367,6 +370,12 @@ export default function Home() {
       ...prefs.realismPack,
       radarPulse: enabled
     });
+  };
+
+  const handleRegionChange = (newRegion: Region) => {
+    setRegion(newRegion);
+    PreferencesService.updatePreference('region', newRegion);
+    RegionDetector.setRegion(newRegion);
   };
 
   // Cinematic mode is now derived from uiMode (UiMode.CINEMATIC)
@@ -1028,6 +1037,8 @@ export default function Home() {
                 onMotionPolishChange={handleMotionPolishChange}
                 radarPulse={radarPulse}
                 onRadarPulseChange={handleRadarPulseChange}
+                region={region}
+                onRegionChange={handleRegionChange}
               />
               <ThemeToggle />
               <CarModeToggle />
