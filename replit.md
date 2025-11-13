@@ -42,3 +42,84 @@ The design system incorporates the Inter font, a hierarchical sizing scale, an 8
 - **Database & ORM:** Drizzle ORM, @neondatabase/serverless, drizzle-zod
 - **Utilities:** date-fns, nanoid, clsx + tailwind-merge, idb-keyval (IndexedDB caching)
 - **Regional Data Providers:** HERE Traffic, TomTom Traffic, ipapi.co (Geolocation)
+
+## User Data Store & Cloud Sync (Q3-A5)
+
+### Local User Data Store
+Centralized IndexedDB-based storage for user data with async CRUD operations, automatic migration from legacy localStorage, and event-driven updates.
+
+**Core Services:**
+- `UserDataStore` (`client/src/services/data/UserDataStore.ts`): Singleton managing user profile, favorites, trip history with IndexedDB
+- Async initialization with migration from legacy `TripHistoryService`
+- EventBus integration for real-time updates (`favorites:*`, `trips:*`, `userdata:migrationCompleted`)
+- Storage limits: 50 favorites (Map dedup), 100 trips (LRU eviction)
+
+### Cloud Sync & Multi-Device Support
+Production-ready cloud sync layer with clean backend abstraction, enabling multi-device convergence with identity reconciliation.
+
+**Architecture:**
+- `ISyncBackend` interface: loadUserData, saveUserData, clearUserData abstraction
+- `FakeSyncBackend`: IndexedDB-based cloud simulation using 'cloud-sync' namespace
+- `SyncService`: Singleton managing sync operations, queue, canonical identity, and offline integration
+  - syncAll(): Full sync with 3-phase discovery, returns canonical userId
+  - queueSync(): Offline operation queuing
+  - setSyncEnabled(): Toggle with localStorage persistence
+
+**Multi-Device Identity Reconciliation:**
+- Each device generates anonymous userId on first init
+- Canonical identity = earliest createdAt timestamp (first device wins)
+- 3-Phase Discovery: Local ID → Persisted canonical → Backend canonical
+- Automatic stale record cleanup (both local and remote)
+- Works in any sync order (A→B or B→A converges to same identity)
+- sync:identityChanged event for real-time UI updates
+
+**Conflict Resolution:**
+- Identity: Earliest createdAt wins
+- Profile: Latest updatedAt wins
+- Favorites: Latest lastUsedAt wins, Map-based deduplication
+- Trips: Union by ID, sorted by timestamp
+- Metadata: Version bumping, lastSyncedAt tracking
+
+**Offline Integration:**
+- Network status monitoring via EventBus
+- Auto-queue when offline with connectivity checks
+- Exponential backoff: 30s → 2min → 5min (max 3 retries)
+- Auto-process queue on reconnection
+
+**Settings UI:**
+- Cloud Sync toggle with automatic first-time sync
+- Sync Now button with loading states and metrics
+- Clear Cloud Copy (local data preserved)
+- Anonymous user ID display (first 8 chars)
+- Real-time identity updates via EventBus subscription
+- Comprehensive toast feedback
+
+**EventBus Events:**
+- sync:enabled/disabled, sync:completed, sync:failed
+- sync:push_completed, sync:pull_completed, sync:cloud_cleared
+- sync:identityChanged (previousUserId, canonicalUserId)
+
+**Backend Swap Ready:**
+To replace FakeSyncBackend with real backend (REST/GraphQL/Firebase):
+1. Implement ISyncBackend interface
+2. Update SyncService constructor
+3. Configure auth/API keys
+4. No changes needed to SyncService logic, UserDataStore, or UI
+
+**Data Flow:**
+1. User enables sync → syncAll() called
+2. Export local data via exportData()
+3. 3-phase discovery: local ID, persisted canonical, backend canonical
+4. Load remote data if found
+5. Merge with conflict resolution (earliest createdAt for identity)
+6. Emit sync:identityChanged if identity switches
+7. Save merged data to local (importData) and remote (saveUserData)
+8. Update backend canonical key
+9. Delete stale records (local and remote)
+10. Return canonicalUserId to caller
+
+**Security & Privacy:**
+- Anonymous UUIDs (no PII)
+- User-specific data keys
+- Separate IndexedDB namespaces (local vs cloud simulation)
+- Ready for encryption in production backend
