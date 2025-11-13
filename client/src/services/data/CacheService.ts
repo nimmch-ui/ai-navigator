@@ -1,4 +1,4 @@
-import { get, set, del } from 'idb-keyval';
+import { get, set, del, keys } from 'idb-keyval';
 import type { TrafficFlow, SpeedCamera, WeatherNow } from './types';
 
 export type CacheableData = TrafficFlow[] | SpeedCamera[] | WeatherNow | string;
@@ -6,6 +6,13 @@ export type CacheableData = TrafficFlow[] | SpeedCamera[] | WeatherNow | string;
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
+  provider: string;
+}
+
+export interface CacheResult<T> {
+  data: T;
+  isFresh: boolean;
+  age: number;
   provider: string;
 }
 
@@ -21,8 +28,9 @@ export class CacheService {
 
   static async get<T extends CacheableData>(
     serviceType: keyof typeof CACHE_DURATIONS,
-    key: string
-  ): Promise<T | null> {
+    key: string,
+    allowStale: boolean = false
+  ): Promise<CacheResult<T> | null> {
     try {
       const cacheKey = this.buildKey(serviceType, key);
       const entry = await get<CacheEntry<T>>(cacheKey);
@@ -33,18 +41,24 @@ export class CacheService {
 
       const maxAge = CACHE_DURATIONS[serviceType];
       const age = Date.now() - entry.timestamp;
+      const isFresh = age <= maxAge;
 
-      if (age > maxAge) {
-        console.log(`[CacheService] Cache expired for ${cacheKey} (age: ${Math.round(age / 1000)}s)`);
-        await this.delete(serviceType, key);
+      if (!isFresh && !allowStale) {
+        console.log(`[CacheService] Cache expired for ${cacheKey} (age: ${Math.round(age / 1000)}s), not allowing stale`);
         return null;
       }
 
       console.log(
-        `[CacheService] Cache hit for ${cacheKey} ` +
+        `[CacheService] Cache ${isFresh ? 'hit' : 'stale'} for ${cacheKey} ` +
         `(provider: ${entry.provider}, age: ${Math.round(age / 1000)}s)`
       );
-      return entry.data;
+      
+      return {
+        data: entry.data,
+        isFresh,
+        age,
+        provider: entry.provider,
+      };
     } catch (error) {
       console.error(`[CacheService] Failed to read cache:`, error);
       return null;
@@ -91,7 +105,16 @@ export class CacheService {
 
   static async clearAll(): Promise<void> {
     try {
-      console.log('[CacheService] Clearing all provider caches');
+      const allKeys = await keys();
+      const providerKeys = allKeys.filter(key => 
+        typeof key === 'string' && key.startsWith(this.KEY_PREFIX)
+      );
+      
+      console.log(`[CacheService] Clearing ${providerKeys.length} provider cache entries`);
+      
+      await Promise.all(providerKeys.map(key => del(key)));
+      
+      console.log('[CacheService] All provider caches cleared');
     } catch (error) {
       console.error('[CacheService] Failed to clear caches:', error);
     }

@@ -121,12 +121,12 @@ export class ProviderRegistry {
     let previousProvider: string | null = null;
     
     if (cacheKey && serviceType) {
-      const cached = await CacheService.get<T>(serviceType, cacheKey);
-      if (cached) {
-        console.log(`[ProviderRegistry] Using cached data for ${operationName}`);
+      const cached = await CacheService.get<T>(serviceType, cacheKey, false);
+      if (cached && cached.isFresh) {
+        console.log(`[ProviderRegistry] Using fresh cached data for ${operationName} (provider: ${cached.provider})`);
         return {
-          data: cached,
-          provider: 'Cache',
+          data: cached.data,
+          provider: `Cache (${cached.provider})`,
           fallbackUsed: false,
           attempts: 0,
         };
@@ -178,19 +178,23 @@ export class ProviderRegistry {
           console.error(`[ProviderRegistry] All providers failed for ${operationName}`);
           
           if (cacheKey && serviceType) {
-            const staleCached = await CacheService.get<T>(serviceType, cacheKey);
-            if (staleCached) {
-              console.warn(`[ProviderRegistry] Using stale cached data for ${operationName}`);
+            const staleCache = await CacheService.get<T>(serviceType, cacheKey, true);
+            if (staleCache) {
+              const ageMinutes = Math.round(staleCache.age / 60000);
+              console.warn(
+                `[ProviderRegistry] Using stale cached data for ${operationName} ` +
+                `(age: ${ageMinutes}min, provider: ${staleCache.provider})`
+              );
               
               toast({
                 title: 'Using Cached Data',
-                description: `All ${operationName} providers unavailable. Showing cached data.`,
+                description: `All ${operationName} providers unavailable. Showing cached data from ${ageMinutes} minute${ageMinutes !== 1 ? 's' : ''} ago.`,
                 variant: 'default',
               });
 
               return {
-                data: staleCached,
-                provider: 'Cache (Stale)',
+                data: staleCache.data,
+                provider: `Cache (Stale, ${staleCache.provider})`,
                 fallbackUsed: true,
                 attempts: providers.length,
               };
