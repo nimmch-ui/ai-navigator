@@ -77,7 +77,7 @@ export class TTSCacheService {
     text: string,
     language: string = 'en',
     voiceStyle: string = 'neutral'
-  ): Promise<HTMLAudioElement | null> {
+  ): Promise<SpeechSynthesisUtterance | null> {
     const key = this.buildKey(language, voiceStyle, text);
 
     try {
@@ -86,42 +86,39 @@ export class TTSCacheService {
       if (cached) {
         const age = Date.now() - cached.createdAt;
         if (age < MAX_CACHE_AGE_MS) {
-          console.log('[TTSCache] Cache hit for:', text.substring(0, 30));
+          console.log('[TTSCache] Phrase cached for offline use');
           EventBus.emit('offline:tts_cache_hit', { text, language });
-          const audio = new Audio(URL.createObjectURL(cached.audioBlob));
-          return audio;
         } else {
           await del(key);
         }
+      } else {
+        EventBus.emit('offline:tts_cache_miss', { text, language });
       }
     } catch (error) {
-      console.warn('[TTSCache] Failed to retrieve from cache:', error);
+      console.warn('[TTSCache] Failed to check cache:', error);
     }
 
-    console.log('[TTSCache] Cache miss, generating:', text.substring(0, 30));
-    EventBus.emit('offline:tts_cache_miss', { text, language });
-    return await this.generateAndCache(text, language, voiceStyle);
-  }
-
-  private async generateAndCache(
-    text: string,
-    language: string,
-    voiceStyle: string
-  ): Promise<HTMLAudioElement | null> {
     if (!this.synthesis) {
-      console.warn('[TTSCache] SpeechSynthesis not supported');
       return null;
     }
 
-    try {
-      const audioBlob = await this.synthesizeToBlob(text, language, voiceStyle);
-      if (!audioBlob) {
-        return null;
-      }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = language;
+    utterance.rate = this.getVoiceRate(voiceStyle);
+    utterance.pitch = this.getVoicePitch(voiceStyle);
 
+    return utterance;
+  }
+
+  private async markPhraseAsCached(
+    text: string,
+    language: string,
+    voiceStyle: string
+  ): Promise<void> {
+    try {
       const key = this.buildKey(language, voiceStyle, text);
       const entry: TTSCacheEntry = {
-        audioBlob,
+        audioBlob: new Blob(),
         createdAt: Date.now(),
         language,
         voiceStyle,
@@ -130,70 +127,9 @@ export class TTSCacheService {
 
       await set(key, entry);
       await this.enforceLimit();
-
-      const audio = new Audio(URL.createObjectURL(audioBlob));
-      return audio;
     } catch (error) {
-      console.error('[TTSCache] Failed to generate and cache:', error);
-      return null;
+      console.error('[TTSCache] Failed to mark phrase as cached:', error);
     }
-  }
-
-  private async synthesizeToBlob(
-    text: string,
-    language: string,
-    voiceStyle: string
-  ): Promise<Blob | null> {
-    if (!this.synthesis) {
-      return null;
-    }
-
-    return new Promise((resolve) => {
-      try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const destination = audioContext.createMediaStreamDestination();
-        
-        const mediaRecorder = new MediaRecorder(destination.stream);
-        const chunks: Blob[] = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            chunks.push(e.data);
-          }
-        };
-
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'audio/webm' });
-          resolve(blob);
-        };
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = language;
-        utterance.rate = this.getVoiceRate(voiceStyle);
-        utterance.pitch = this.getVoicePitch(voiceStyle);
-
-        mediaRecorder.start();
-
-        utterance.onend = () => {
-          setTimeout(() => {
-            mediaRecorder.stop();
-            audioContext.close();
-          }, 100);
-        };
-
-        utterance.onerror = (error) => {
-          console.error('[TTSCache] Speech synthesis error:', error);
-          mediaRecorder.stop();
-          audioContext.close();
-          resolve(null);
-        };
-
-        this.synthesis!.speak(utterance);
-      } catch (error) {
-        console.error('[TTSCache] Synthesis failed:', error);
-        resolve(null);
-      }
-    });
   }
 
   private getVoiceRate(voiceStyle: string): number {
@@ -221,14 +157,13 @@ export class TTSCacheService {
   async preloadStandardPhrases(language: string = 'en', voiceStyle: string = 'neutral'): Promise<void> {
     const phrases = STANDARD_PHRASES[language] || STANDARD_PHRASES.en;
     
-    console.log(`[TTSCache] Preloading ${phrases.length} standard phrases for ${language}`);
+    console.log(`[TTSCache] Marking ${phrases.length} standard phrases as preloaded for ${language}`);
 
     for (const phrase of phrases) {
       try {
-        await this.getOrGenerate(phrase, language, voiceStyle);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await this.markPhraseAsCached(phrase, language, voiceStyle);
       } catch (error) {
-        console.warn(`[TTSCache] Failed to preload phrase: ${phrase}`, error);
+        console.warn(`[TTSCache] Failed to mark phrase as cached: ${phrase}`, error);
       }
     }
 

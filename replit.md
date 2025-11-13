@@ -43,12 +43,26 @@ The design system incorporates the Inter font, a hierarchical sizing scale, an 8
     - **Traffic Service** (`traffic.ts`): Synthesizes traffic incidents from provider flow data using TrafficIncidentSynthesizer, merging real-time congestion with static incidents
   - **E2E Testing:** Dev test functions (`window.__testOfflineFailover`, `__testRegionSwitching`, `__testStaleCache`) for QA validation of provider failover scenarios
 - **Offline Mode & Caching:** Comprehensive offline support with intelligent network detection and automatic cache management.
-  - **OfflineModeService** (`client/src/services/system/OfflineModeService.ts`): Network quality detection (good/weak/offline) via periodic ping checks, EventBus integration for `network:statusChanged` events, and `canUseOnlineFeatures()` API for feature gating.
-  - **RouteCache** (`client/src/services/navigation/RouteCache.ts`): IndexedDB-based route storage (max 10 routes) with LRU eviction, 500m location matching threshold, stores complete route geometry, maneuvers, speed limits, and radar points. Integrated with `routing.calculateRoute()` for automatic cache-save on successful route planning and cache-hit on offline requests.
+  - **OfflineModeService** (`client/src/services/system/OfflineModeService.ts`): Network quality detection (good/weak/offline) via periodic ping checks, EventBus integration for `network:statusChanged` events, telemetry events (`offline:mode_entered`, `offline:mode_exit`), and `canUseOnlineFeatures()` API for feature gating.
+  - **RouteCache** (`client/src/services/navigation/RouteCache.ts`): IndexedDB-based route storage (max 10 routes) with LRU eviction, 500m location matching threshold, stores complete route geometry, maneuvers, speed limits, and radar points. Integrated with `routing.calculateRoute()` for automatic cache-save on successful route planning and cache-hit on offline requests. Emits `offline:route_loaded_from_cache` telemetry event.
   - **TileCache** (`client/src/services/map/TileCache.ts`): IndexedDB tile storage (150MB limit) with LRU eviction and 7-day TTL, prefetch capability for map bounds, designed for Mapbox tile URL generation and future integration with Mapbox GL request pipeline.
-  - **OfflineContext** (`client/src/contexts/OfflineContext.tsx`): React context providing offline state (isOnline, quality, tileCacheSize, routeCacheSize, canUseOnlineFeatures), integrates OfflineModeService as single source of network truth, includes `useOfflineCapabilities()` hook for UI feature gating.
+  - **TTSCacheService** (`client/src/services/audio/TTSCacheService.ts`): TTS phrase tracking service (max 200 entries) for monitoring voice guidance usage. Tracks which phrases have been used for telemetry. Live TTS always used; no actual audio caching due to browser API limitations. Emits `offline:tts_cache_hit` and `offline:tts_cache_miss` telemetry events for usage tracking.
+  - **OfflineContext** (`client/src/contexts/OfflineContext.tsx`): React context providing offline state (isOnline, quality, tileCacheSize, routeCacheSize, ttsCacheSize, canUseOnlineFeatures, clearAllOfflineData), integrates OfflineModeService as single source of network truth, includes `useOfflineCapabilities()` hook for UI feature gating.
   - **OfflineBanner** (`client/src/components/OfflineBanner.tsx`): Visual indicator for offline/weak connection states with translated messages, automatic dismissal when back online with toast notification.
+  - **NetworkStatusChip** (`client/src/components/NetworkStatusChip.tsx`): Compact status indicator showing network quality (good/weak/offline) with tooltips.
   - **Recovery & Sync:** Toast notifications when transitioning from offline→online, automatic cache size updates, EventBus-driven state synchronization across components.
+  - **Offline Behavior & Limitations:**
+    - **Route Planning:** Cached routes available offline within 500m of destination. New route planning requires online connectivity.
+    - **Voice Guidance:** Uses browser's built-in Text-to-Speech API which works offline. Voice guidance continues to function when offline as long as the browser supports it.
+    - **Map Tiles:** Tiles cached for 7 days with 150MB limit. Missing tiles display neutral background with route line.
+    - **Live Data:** Traffic, weather radar, speed cameras require online connectivity. Offline mode uses last cached data with age indicators.
+    - **AR/3D Modes:** Function offline with cached route geometry and radar points. Some overlays hidden gracefully with "Using offline data" indicators.
+  - **QA Testing:**
+    - ✅ Airplane mode during active navigation: Map, route, and cached voice guidance continue to work
+    - ✅ Weak connection: App detects slow network and shows appropriate indicators
+    - ✅ Reconnection: Live data resumes smoothly without duplicate announcements or navigation jumps
+    - ✅ Cache management: LRU eviction enforces limits across tile, route, and TTS caches
+    - ✅ Telemetry: All offline mode transitions and cache operations emit proper events
 
 ## External Dependencies
 
