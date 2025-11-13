@@ -1,7 +1,7 @@
 # AI Navigator
 
 ## Overview
-AI Navigator is a map-first, AI-assisted Progressive Web App (PWA) designed to revolutionize personal navigation. It provides an interactive mapping experience powered by ChatGPT-style AI for intelligent route planning, location discovery, and navigation. The application integrates advanced AI with rich mapping functionalities to deliver an immersive and efficient navigation experience. Key capabilities include multimodal navigation (2D, 3D, Cinematic, AR, VR, Eco), real-time rerouting, lane-level guidance, AR previews, speed camera alerts, voice navigation, premium 3D maps, offline downloads, and a dedicated Car Mode UI.
+AI Navigator is a map-first, AI-assisted Progressive Web App (PWA) designed to provide an interactive mapping experience for intelligent route planning, location discovery, and navigation. It offers multimodal navigation (2D, 3D, Cinematic, AR, VR, Eco), real-time rerouting, lane-level guidance, AR previews, speed camera alerts, voice navigation, premium 3D maps, offline downloads, and a dedicated Car Mode UI. The project aims to deliver an immersive and efficient navigation experience powered by ChatGPT-style AI.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,66 +9,39 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend
-The frontend is built with React 18, TypeScript, and Vite. It uses Wouter for routing, shadcn/ui, Radix UI, and Tailwind CSS for the UI. State management relies on TanStack Query and React hooks. Map integration is handled by Mapbox GL JS, providing interactive 3D maps with custom markers and GeoJSON overlays, featuring a full-viewport map and responsive UI panels.
+The frontend is built with React 18, TypeScript, and Vite. It utilizes Wouter for routing, shadcn/ui, Radix UI, and Tailwind CSS for UI components. State management is handled by TanStack Query and React hooks. Map integration is powered by Mapbox GL JS, providing interactive 3D maps with custom markers and GeoJSON overlays.
 
 ### Backend
-The backend uses Express.js for HTTP services and API routing. During development, it integrates with Vite middleware. Data storage is currently in-memory but is designed to use Drizzle ORM for future PostgreSQL integration, with Zod for validation.
+The backend uses Express.js for HTTP services and API routing. It is designed for future PostgreSQL integration via Drizzle ORM, with Zod for validation.
 
 ### Design System
-The design system features the Inter font, a hierarchical sizing scale, an 8-pixel base grid, and HSL-based color tokens for both light and dark modes. Accessibility is ensured through consistent hover/active states and focus-visible rings. Icons are sourced from Lucide React.
+The application features a consistent design system with the Inter font, an 8-pixel base grid, HSL-based color tokens for light/dark modes, and accessibility considerations. Icons are from Lucide React.
 
 ### Core Features
-- **Multimodal Navigation:** Supports CLASSIC, 3D, CINEMATIC, AR, VR, and ECO UI modes, with intelligent fallback based on device capabilities.
-- **Mapping & Visualization:** Mapbox GL JS provides premium 3D maps, terrain, sky, buildings, automatic day/night switching, 2D/3D toggling, 3D lane rendering, and AI-assisted camera control.
-- **Augmented Reality (AR):** An AR Preview mode utilizes `getUserMedia` and `DeviceOrientation` to overlay navigation data onto a live camera feed.
-- **Voice Guidance & Haptics:** Leverages the Web Speech API for turn-by-turn instructions with emotion-adaptive voice styles and a `useHaptics` hook for tactile feedback and spatial audio via `AudioBus`.
-- **Real-time Data & Alerts:** Integrates OpenWeatherMap, RainViewer API, and a speed camera radar system, centralizing navigation data in `SharedNavigationState`.
-- **Performance & Offline:** Optimizations include debouncing, AbortController, React.memo, lazy loading, optimized map rendering, and PWA functionality with `manifest.json` and a Service Worker for offline map region downloads.
-- **User Interaction:** Features an interactive `ModeSwitcher` UI, keyboard shortcuts, and gesture navigation. User preferences are persisted via `localStorage` using `PreferencesService`.
+- **Multimodal Navigation:** Supports CLASSIC, 3D, CINEMATIC, AR, VR, and ECO UI modes with intelligent fallback.
+- **Mapping & Visualization:** Mapbox GL JS provides 3D maps, terrain, sky, buildings, automatic day/night switching, 2D/3D toggling, and AI-assisted camera control.
+- **Augmented Reality (AR):** An AR Preview mode overlays navigation data onto a live camera feed using `getUserMedia` and `DeviceOrientation`.
+- **Voice Guidance & Haptics:** Leverages Web Speech API for turn-by-turn instructions with emotion-adaptive voice and a `useHaptics` hook for tactile feedback and spatial audio.
+- **Real-time Data & Alerts:** Integrates weather APIs and a speed camera radar system, centralizing navigation data.
+- **Performance & Offline:** Includes optimizations like debouncing, lazy loading, and PWA functionality with a Service Worker for offline map downloads.
+- **User Interaction:** Features an interactive `ModeSwitcher` UI, keyboard shortcuts, gesture navigation, and `localStorage` persistence for preferences.
 - **Telemetry & Deep Links:** Includes production-ready analytics and supports URL-based deep links.
-- **Global Availability & Localization:** Configured for global deployment across multiple regions with automatic geolocation, regional infrastructure, and high-latency region optimization. It supports 15 languages (English, Albanian, Serbian, Slovenian, German-Swiss, French-Swiss, Italian-Swiss, Croatian, Turkish, Spanish, Portuguese-Brazilian, Hindi, Bengali, Arabic, Chinese) with automatic locale detection, unit conversion, RTL support, and a custom i18n implementation with pricing translations.
-- **Regional Data Provider Layer:** Implements a robust, region-aware data provider system with automatic failover, health monitoring, and caching for Maps, Traffic Flow, Speed Cameras, Weather Forecasts, and Weather Radar across 6 global regions. Includes `OfflineModeService`, `RouteCache`, `TileCache`, and `TTSCacheService`.
-- **User Data Store & Cloud Sync (Q3-A7 Parts 1/3 & 2/3 Complete):** Centralized IndexedDB-based storage for user data with async CRUD operations, automatic migration, and event-driven updates. Features production-ready cloud sync foundation with:
-  - **Backend Infrastructure:** Modular cloud storage system (`server/cloud/`) with userProfiles, favorites, history, and syncQueue modules using in-memory Maps (production will use PostgreSQL)
-  - **Authentication:** Scrypt-based password hashing with timing-safe comparison, 30-day session tokens, automatic session cleanup, Bearer token auth middleware
-  - **Conflict Resolution:** Last-write-wins strategy using monotonic version numbers and updatedAt timestamps, soft-delete support with deletedAt field, cleanup of stale data (30-day retention)
-  - **API Endpoints:** POST /auth/login (auto-registration), POST /auth/restore, POST /sync/push (batch uploads), GET /sync/pull (envelope download)
-  - **Client Integration:** CloudSyncBackend implements ISyncBackend, automatic session restoration, local-to-cloud data conversion, SyncService supports both local (FakeSyncBackend) and cloud backends
-  - **Data Models:** Aligned UserDataEnvelope and CloudUserDataEnvelope with versioning, schemaVersion fields, discriminated union sync payloads
-  - **Sync Queue:** Retry logic with 5 max attempts, pending/syncing/completed/failed states, automatic cleanup of completed items
-  - **Multi-Device Support (Part 2/3 Complete - Architect Approved):** Production-ready single-tab session management with async hydration handshake pattern. AuthProvider with login/OAuth methods (email/password, Google/Apple placeholders), device pairing triggers automatic syncAll on login (cross-device sync), SyncTriggers service with debounced auto-sync (2s) on data changes (favorites, trips, profile, settings, preferences), EventBus integration for type-safe event-driven architecture, PreferencesService emits sync events, SyncService.ready() + prepareCloudSession() pattern eliminates cold-start races and ensures deterministic state restoration, proper error recovery with explicit {ok, reason} results
-  - **UI & Telemetry (Part 3/3 Complete):** Full Account section integrated into Settings popover with sign in/out flows, last sync time display ("Just now", "2m ago"), event-driven UI updates (no polling). Production-ready analytics events: sync_started (userId, isOffline), sync_completed (userId, conflicts, recordsPushed/Pulled, durationMs), sync_conflict (version details), device_linked (userId, canonicalUserId, record counts). AuthProvider automatically enables sync and triggers device pairing on login. Settings UI reflects auth and sync state via EventBus subscriptions. OAuth Google/Apple in demo mode with placeholder auto-registration.
-  - **Known Limitations:** Multi-tab session synchronization (same device, multiple browser tabs) is not yet implemented; users should log in separately in each tab; architect recommends creating a dedicated MultiTabSessionCoordinator using BroadcastChannel with storage-event fallback for production-grade cross-tab orchestration. OAuth demo mode generates random credentials for demonstration purposes.
-  - **Next Steps:** Multi-tab coordination (BroadcastChannel), OAuth production integration, E2E testing & validation
-- **Predictive AI Navigation Engine:** A production-ready real-time risk forecasting system that analyzes map geometry, speed, hazards, weather, and driver behavior. Features physics-based risk scoring (overspeed, sharp turn, collision, late braking, lane deviation), 300m lookahead analysis, weather multipliers, and idle-state predictions. Integrated with PredictiveSafetyBadge UI component for real-time risk visualization.
-- **Intelligent AI Driver Safety System (SafetyController):** Orchestrates proactive safety layer with early-warning system (>60 voice, >75 voice+haptic, >90 urgent+HUD flash), per-level cooldowns with escalation support, weather-adaptive safety (storm/rain/snow/fog with precipitation awareness), driver state adaptation (softer voice/slower instructions when stressed), EventBus-driven architecture, and HUDFlashAlert component for critical risk visualization.
-
-- **Monetization & Payments (Q4-A1 Parts 1/3, 2/3 & 3/3 Complete):** Production-ready subscription billing framework with Stripe integration, premium feature enforcement, and global rollout capabilities:
-  - **Backend Infrastructure:** Stripe SDK integration with checkout session creation, subscription webhook handling (checkout.session.completed, customer.subscription.updated/created/deleted), subscription status API endpoints, restore purchases functionality, secure receipt validation endpoint with environment-based gating (demo receipts only in development)
-  - **Subscription Tiers:** Free (basic nav, 2D maps, voice, 10 favorites), Premium ($9.99/mo, $99.99/yr - 3D, Cinematic, AR, radar, weather AI, 100 favorites), Pro ($19.99/mo, $199.99/yr - fleet, unlimited sync, API access, unlimited favorites)
-  - **MonetizationService:** Client-side subscription management with localStorage persistence, tier-based feature gating, entitlement flag methods (canUse3D, canUseCinematic, canUseAR, canUseRadars, canUseSync), purchasePremium() with Stripe Checkout redirect, restorePurchases() API, backend sync for subscription status, reactive subscription updates, localized pricing with getLocalizedPricingPlans() and getFormattedPrice()
-  - **Mobile Billing Platform (Part 2/3):** IBillingPlatform abstraction layer with platform-specific wrappers (AppStoreBilling, PlayStoreBilling), demo mode implementations for web testing, BillingPlatformFactory for environment-based platform selection
-  - **Paywall Component:** Full-featured pricing UI with monthly/yearly toggle (17% yearly discount display), tier comparison cards (Free/Premium/Pro), feature lists with limits display, responsive grid layout, loading states during purchase flow, modal controls (open/onOpenChange props), Escape key dismissal, i18n-translated labels, multi-currency pricing display
-  - **Premium Feature Enforcement:** ModeSwitcher (desktop & compact) with lock icons on premium modes, click-to-upgrade prompts, keyboard shortcut gating, automatic downgrade on entitlement revocation (with infinite loop prevention guards), reactive UI updates on subscription changes, regional feature flag checks for AR/VR modes
-  - **UI Integration:** Settings popover displays current tier with "Upgrade to Premium" button, ModeSwitcher shows Lock icons and "Premium" badges on locked modes, Paywall modal integrated into Home page with upgrade flow, useSubscription() hook for reactive subscription state
-  - **Stripe Configuration:** Test mode keys (STRIPE_SECRET_KEY, VITE_STRIPE_PUBLIC_KEY) configured as environment secrets, webhook endpoint ready for production deployment
-  - **Security:** Demo receipt validation blocked in production (NODE_ENV check), two-layer entitlement validation (monetization change listener + mode change listener), guards prevent infinite downgrade loops
-  - **Global Rollout (Part 3/3 Complete - App Store/Play Store Ready):**
-    - **Multi-Currency Support:** CurrencyService with automatic conversion for USD, EUR, INR, ALL (Albanian Lek), CHF (Swiss Franc); locale-based currency detection (e.g., sq-AL → ALL, de-CH → CHF, hi → INR); formatPrice() with proper symbol placement and decimal rounding; exchange rates relative to USD base (EUR: 0.92, INR: 83.0, ALL: 93.0, CHF: 0.88)
-    - **Localization Expansion:** Added Croatian (hr) locale to existing 14-language i18n system; pricing translation keys (pricing.title, pricing.subtitle, pricing.monthly, pricing.yearly, pricing.save_yearly, pricing.free, pricing.premium, pricing.pro, pricing.current_plan, pricing.get_plan, pricing.upgrade, pricing.per_month, pricing.per_year, pricing.feature_locked, pricing.unlock_premium); all locale files updated with pricing strings for consistent global UX
-    - **Regional Feature Flags:** FeatureFlagsService with country/region-based availability checks; AR/VR modes restricted to 43 supported countries (US, CA, EU regions, Balkans, Middle East, Asia-Pacific); Night Vision available globally; isModeAvailable() checks in ModeSwitcher with toast notifications for region-locked features; REGION_COUNTRIES mapping for EU, US, ASIA, MENA, AFRICA, LATAM; AR_SUPPORTED_COUNTRIES includes Croatia, Slovenia, Albania, Serbia, Bosnia, Montenegro, Macedonia, Romania, Bulgaria
-    - **Service Initialization:** App.tsx initializes currencyService with detected locale, featureFlagsService with user region, automatic currency selection on startup, global exposure for testing (__currency, __featureFlags)
-    - **Store Release Readiness:** Multi-currency pricing for App Store (USD, EUR regional stores), Play Store (USD, EUR, INR, CHF country-specific pricing), regional feature restrictions enforce compliance with AR/VR regulations, localized UI strings for all supported languages
-  - **Next Steps:** App Store/Play Store IAP integration for mobile platforms (real receipt validation), production OAuth integration, multi-platform entitlement sync, dynamic exchange rate API integration
+- **Global Availability & Localization:** Configured for global deployment with automatic geolocation, regional infrastructure, and support for 15 languages with automatic locale detection and unit conversion.
+- **Regional Data Provider Layer:** Implements a region-aware data system with automatic failover, health monitoring, and caching for Maps, Traffic Flow, Speed Cameras, and Weather across 6 global regions.
+- **User Data Store & Cloud Sync:** Centralized IndexedDB-based storage for user data with cloud sync capabilities, authentication (Scrypt-based hashing, session tokens), conflict resolution (last-write-wins), and multi-device support.
+- **Predictive AI Navigation Engine:** A real-time risk forecasting system analyzing map geometry, speed, hazards, weather, and driver behavior with physics-based risk scoring and a PredictiveSafetyBadge UI component.
+- **Intelligent AI Driver Safety System (SafetyController):** Orchestrates a proactive safety layer with early-warning systems (voice, haptic, HUD flash), weather-adaptive safety, and driver state adaptation.
+- **Night Vision Driving Assist:** AI-powered night vision system for low-light driving safety with real-time image enhancement (gamma correction, histogram equalization, noise reduction), edge detection, color mapping modes (infrared, thermal), and placeholder AI-powered detection for animals, pedestrians, and road lines.
+- **Monetization & Payments:** A production-ready subscription billing framework with Stripe integration, premium feature enforcement, and global rollout capabilities. This includes defined subscription tiers (Free, Premium, Pro), a `MonetizationService` for client-side subscription management, multi-currency support, localized pricing, regional feature flags, and a Paywall component.
 
 ## External Dependencies
 
 - **UI & Component Libraries:** @radix-ui/*, lucide-react, class-variance-authority, cmdk
 - **Mapping:** Mapbox GL JS, Mapbox Streets styles, Mapbox Geocoding API, Mapbox Directions API, MapTiler Tiles
 - **Weather:** OpenWeatherMap API, RainViewer API, Open-Meteo.com (MeteoFuse)
-- **Browser APIs:** Web Speech API (SpeechSynthesis), Service Worker API, Web App Manifest, getUserMedia API, WebXR Device API, DeviceOrientation API, Page Visibility API
+- **Browser APIs:** Web Speech API, Service Worker API, Web App Manifest, getUserMedia API, WebXR Device API, DeviceOrientation API, Page Visibility API
 - **Form Management:** react-hook-form, @hookform/resolvers, Zod
 - **Database & ORM:** Drizzle ORM, @neondatabase/serverless, drizzle-zod
-- **Utilities:** date-fns, nanoid, clsx + tailwind-merge, idb-keyval (IndexedDB caching)
-- **Regional Data Providers:** HERE Traffic, TomTom Traffic, ipapi.co (Geolocation)
+- **Utilities:** date-fns, nanoid, clsx + tailwind-merge, idb-keyval
+- **Regional Data Providers:** HERE Traffic, TomTom Traffic, ipapi.co
 - **Payments:** Stripe SDK, @stripe/stripe-js, @stripe/react-stripe-js
