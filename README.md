@@ -1,192 +1,417 @@
 # AI Navigator
 
-A world-class AI-powered navigation application built with React, TypeScript, Mapbox GL JS, and OpenAI. Features multimodal routing, smart route planning, live speed cameras, weather awareness, voice guidance, and premium 3D maps.
+> AI-powered Progressive Web App (PWA) for intelligent navigation with multimodal UI, real-time traffic, AR preview, and predictive safety features.
 
-## Features
+## Overview
 
-### Core Navigation
-- **Multimodal Routing**: Car, bike, walk, and transit modes
-- **Smart Route Planning**: Fastest, shortest, and eco-friendly route options
-- **Turn-by-Turn Navigation**: Voice-guided navigation with detailed step instructions
-- **Real-Time Directions**: Live route calculation with Mapbox Directions API
+AI Navigator is a production-ready navigation application featuring:
 
-### Safety & Awareness
-- **Speed Camera Radar**: Live camera detection with visual and voice alerts
-- **Speed Limit Display**: Real-time speed limit HUD with configurable units (km/h or mph)
-- **Camera Proximity Alerts**: Dismissible warnings for upcoming speed cameras
-- **Hazard Warnings**: Alerts for road hazards with voice announcements
-- **Lane-Level Guidance**: Visual lane arrows showing recommended lanes 200-300m before maneuvers
-  - Highlights correct lanes for upcoming turns
-  - Mock data for 6-8 typical intersections (Zurich/SF)
-  - **TODO**: Integrate real lane data from Mapbox Traffic API, HERE, or TomTom
+- **Multimodal Navigation**: 2D, 3D, Cinematic, AR, VR, ECO, and Night Vision modes
+- **Intelligent Routing**: Real-time traffic fusion, predictive hazard detection, weather-aware rerouting
+- **AR Experience**: Live camera preview with turn-by-turn overlays and device orientation tracking
+- **Global Availability**: 15 languages, 6 regional data centers, offline map support
+- **Premium Features**: Stripe-powered subscription billing (Free, Premium, Pro tiers)
+- **Voice & Haptics**: Turn-by-turn voice guidance with haptic feedback patterns
 
-### Weather Integration
-- **Weather Radar Overlay**: Live precipitation data from RainViewer API
-  - Toggle ON/OFF with Cloud button
-  - Adjustable opacity slider (30-80%)
-  - Auto-refresh every 5 minutes
-- **Severe Weather Alerts**: Automatic warnings for thunderstorms, snow, fog
-- **Weather Forecasts**: Origin and destination weather conditions
+## Quick Start
 
-### Premium Visuals
-- **3D Maps**: Mapbox GL JS with terrain, buildings, and atmospheric sky
-  - 1.2x terrain exaggeration for enhanced depth
-  - Automatic day/night style switching
-- **2D/3D Toggle**: Switch between flat and cinematic views
-- **Cinematic Camera Mode**: Smooth 60fps camera follow with auto-bearing alignment
-- **Day/Night Theming**: Auto-detection with manual override (auto/day/night modes)
+### Prerequisites
 
-### Smart Features
-- **AI Chat Assistant**: Context-aware navigation help powered by OpenAI
-- **AR Preview Mode (Beta)**: Augmented reality navigation overlay
-  - Camera-based HUD with turn-by-turn guidance
-  - WebXR and DeviceOrientation sensor fusion for enhanced AR
-  - Fallback HUD overlay for devices without advanced sensors
-  - Privacy-first: camera processed locally, never transmitted
-  - **TODO**: Add chevron rendering aligned with real-world directions
-- **Favorites Management**: Save locations with geocoding
-- **Trip History**: View and replay previous routes
-- **Eco Mode**: Battery/fuel consumption estimates for electric and gas vehicles
-- **Smart Defaults**: Learn from trip history for personalized settings
+- **Node.js**: v18+ (recommended: v20)
+- **Environment Variables**: See [Environment Setup](#environment-setup)
 
-## Performance Optimizations
+### Installation
 
-### Request Optimization
-- **Debounced Geocoding**: 300ms debounce for search queries to reduce API calls
-- **Debounced Routing**: 150ms debounce for route calculations during rapid changes
-- **Request Cancellation**: AbortController automatically cancels in-flight requests
-- **Race Condition Prevention**: Guards prevent stale data from updating UI
+```bash
+# Install dependencies
+npm install
 
-### Rendering Performance
-- **Memoized Components**: React.memo applied to heavy components (ChatPanel, RoutePanel, SearchBar)
-- **Lazy Loading**: ChatPanel loaded on-demand for faster initial page load
-- **Efficient Re-renders**: Minimal unnecessary re-renders through proper dependency management
-
-### Map Performance
-- **Pre-warmed Styles**: Map styles and layers loaded efficiently on startup
-- **WebGL Detection**: Graceful fallback to 2D mode when WebGL unavailable
-- **Optimized Layers**: Terrain, sky, and 3D buildings managed efficiently
-- **Throttled Updates**: Cinematic camera throttled to 15 updates/sec max
-
-## Controls & Settings
-
-### Map Controls (Right Side)
-- **Radar Toggle**: Cloud/CloudOff icon - enable/disable weather radar
-- **2D/3D Toggle**: Box/Map icon - switch between flat and 3D views
-- **Cinematic Mode**: Video icon - enable smooth camera follow
-- **Theme Toggle**: Sun/Moon icon - cycle through auto/day/night themes
-
-### Radar Controls
-- **Opacity Slider**: Appears below speed limit when radar enabled
-- **Range**: 30-80% opacity for optimal visibility
-
-### Settings Panel
-- **Voice Guidance**: Enable/disable turn-by-turn announcements
-- **Speed Warnings**: Toggle camera and speed limit alerts
-- **Speed Units**: Choose km/h or mph
-- **Transport Mode**: Default mode for new routes
-- **Route Preference**: Default preference (fastest/shortest/eco)
-
-## Environment Variables
-
-Create a `.env` file with the following variables:
-
-```env
-VITE_MAPBOX_TOKEN=your_mapbox_token_here
-VITE_OPENAI_API_KEY=your_openai_key_here (optional)
-VITE_WEATHER_API_KEY=your_openweathermap_key_here (optional)
+# Start development server
+npm run dev
 ```
 
-**Note**: The app gracefully handles missing API keys:
-- Missing Mapbox token: Shows configuration error
-- Missing OpenAI key: Chat feature disabled
-- Missing Weather key: Falls back to mock weather data
-- RainViewer radar requires no API key (public API)
+Navigate to `http://localhost:5000`
 
-## Getting Started
+## Environment Setup
 
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+### Required Environment Variables
 
-2. **Set up environment variables**:
-   - Copy `.env.example` to `.env`
-   - Add your Mapbox token (required)
-   - Add optional API keys for full features
+Create a `.env` file in the project root:
 
-3. **Start development server**:
-   ```bash
-   npm run dev
-   ```
+```bash
+# Mapbox (required for maps)
+VITE_MAPBOX_TOKEN=your_mapbox_token_here
 
-4. **Open in browser**:
-   - Navigate to `http://localhost:5000`
-   - Grant location permissions for best experience
+# Stripe (required for payments)
+VITE_STRIPE_PUBLIC_KEY=your_stripe_public_key
+STRIPE_SECRET_KEY=your_stripe_secret_key
+
+# Testing Stripe (for development)
+TESTING_VITE_STRIPE_PUBLIC_KEY=your_test_stripe_public_key
+TESTING_STRIPE_SECRET_KEY=your_test_stripe_secret_key
+```
+
+### How to Obtain API Keys
+
+#### Mapbox Token
+1. Create account at [mapbox.com](https://www.mapbox.com)
+2. Go to Account → Tokens
+3. Create new token with **Maps SDK** and **Geocoding API** scopes
+4. Copy token to `VITE_MAPBOX_TOKEN`
+
+#### Stripe Keys
+1. Create account at [stripe.com](https://stripe.com)
+2. Go to Developers → API keys
+3. Copy **Publishable key** → `VITE_STRIPE_PUBLIC_KEY`
+4. Copy **Secret key** → `STRIPE_SECRET_KEY`
+5. For testing: use **Test mode** keys → `TESTING_*` variables
 
 ## Architecture
 
-### Frontend
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite for fast development
-- **Routing**: Wouter for client-side routing
-- **UI**: shadcn/ui + Radix UI primitives
-- **Styling**: Tailwind CSS with custom theming
-- **State**: TanStack Query for server state
-- **Maps**: Mapbox GL JS for 3D interactive maps
+### Tech Stack
 
-### Backend
-- **Server**: Express.js for API routing
-- **Storage**: In-memory storage (abstracted for future DB migration)
-- **Schema**: Drizzle ORM with Zod validation
+**Frontend**
+- React 18 + TypeScript + Vite
+- Mapbox GL JS (3D maps)
+- TanStack Query (data fetching)
+- shadcn/ui + Radix UI (components)
+- Tailwind CSS (styling)
 
-### Services
-- **Geocoding**: Mapbox Geocoding API with debouncing
-- **Routing**: Mapbox Directions API with cancellation
-- **Weather**: OpenWeatherMap API + RainViewer radar
-- **Voice**: Web Speech API (browser native)
-- **Preferences**: localStorage with service abstraction
+**Backend**
+- Express.js (HTTP server)
+- In-memory storage (MemStorage)
+- Drizzle ORM + PostgreSQL (planned)
 
-## Browser Compatibility
+**APIs & Services**
+- Mapbox: Maps, Geocoding, Directions
+- Stripe: Subscription billing
+- OpenWeatherMap: Weather data
+- HERE/TomTom: Traffic providers
 
-- **Modern Browsers**: Chrome, Firefox, Safari, Edge (latest 2 versions)
-- **WebGL Required**: For 3D maps and terrain (graceful fallback to 2D)
-- **Web Speech API**: For voice guidance (optional, works in Chrome/Safari)
-- **localStorage**: For preferences and history persistence
+### Key Systems
+
+#### 1. Routing & Navigation
+- **RoutingController**: Orchestrates route computation, ETA calculation, rerouting
+- **TrafficFusionEngine**: Fuses real-time traffic from multiple providers
+- **PredictiveNavigation**: AI-powered risk forecasting (sharp turns, speed changes, hazards)
+- **SmartETA**: Weather-aware, mode-adaptive ETA computation
+
+#### 2. Multimodal UI
+- **UiModeContext**: Manages mode switching (CLASSIC, 3D, CINEMATIC, AR, VR, ECO, NIGHT_VISION)
+- **modeCameraSettings**: Camera pitch/bearing configurations per mode
+- **visual3d**: 3D terrain, sky layer, lighting controls
+
+#### 3. AR Experience
+- **ARExperienceProvider**: Camera stream management, device orientation tracking, health monitoring
+- **ARSensorService**: getUserMedia with rear/front camera fallback, stream diagnostics
+- **OrientationService**: WebXR + DeviceOrientation APIs for heading/tilt
+- **ProjectToScreen**: GPS-to-screen coordinate projection for AR overlays
+
+#### 4. Data & Caching
+- **ProviderRegistry**: Region-aware provider selection (6 global regions)
+- **HealthMonitor**: Circuit breaker pattern for API resilience
+- **CacheService**: Multi-layer caching (traffic, weather, radar, speed cameras)
+- **ResilientFetcher**: Exponential backoff, rate limit detection (429 handling)
+
+#### 5. Performance Monitoring
+- **PerformanceMonitor**: FPS, battery, memory, network tier detection
+- **PerformanceContext**: Exposes `high/medium/low` tier for manual feature optimization
+
+#### 6. Monetization
+- **MonetizationService**: Subscription management, feature gating, localized pricing
+- **Paywall**: Multi-currency pricing UI with Stripe Checkout integration
+
+## Mobile Support
+
+### Progressive Web App (PWA)
+
+AI Navigator is a fully installable PWA with:
+
+- **Standalone Mode**: Runs like a native app (no browser chrome)
+- **Home Screen Install**: "Add to Home Screen" on iOS/Android
+- **Offline Support**: Service Worker caching for map tiles, routes
+- **App Shortcuts**: Quick actions (Navigate Home, Car Mode)
+
+**Manifest**: `client/public/manifest.json`
+
+### Device Capabilities
+
+| Feature | Detection | Fallback |
+|---------|-----------|----------|
+| **WebGL** | `MapboxMap.tsx` checks support | Falls back to 2D if unavailable |
+| **3D Terrain** | `visual3d.ts` tries terrain | Continues in 2D mode gracefully |
+| **AR Camera** | `ARSensorService` checks getUserMedia | Shows "Camera not supported" UI |
+| **Device Orientation** | `OrientationService` checks API | Uses basic HUD overlay |
+| **Haptics** | `navigator.vibrate` check | Disables haptic feedback silently |
+
+### Performance Tiers
+
+The app automatically classifies device performance:
+
+```typescript
+import { usePerformance } from '@/contexts/PerformanceContext';
+
+function MyComponent() {
+  const { tier, isLowEnd, batterySaverActive } = usePerformance();
+  
+  // tier: 'high' | 'medium' | 'low'
+  // Manually optimize features based on tier
+}
+```
+
+**Tier Thresholds:**
+- **Low**: <30 FPS, <15% battery (not charging), 2G network, >512MB memory
+- **Medium**: <60 FPS, moderate battery/network
+- **High**: 60 FPS, good battery/network
+
+**Optimization Guidance:**
+
+For **low-end devices**, consider:
+- Disabling 3D terrain: `map.setTerrain(null)`
+- Reducing refresh rates: Weather updates every 5min vs 1min
+- Limiting concurrent requests: 2 max vs 6
+- Disabling animations: Set `enableAnimations: false`
+
+### AR Camera Fallback
+
+AR camera access uses a robust fallback strategy:
+
+1. **Rear Camera** (environment): Preferred for navigation
+2. **Front Camera** (user): Fallback if rear unavailable
+3. **No Camera**: Graceful error with actionable message
+
+```typescript
+// ARExperienceProvider uses requestCameraWithFallback()
+const { stream, facingMode } = await cameraService.requestCameraWithFallback();
+// User sees toast: "AR Preview: Front Camera" if fallback used
+```
+
+**Stream Health Monitoring:**
+- Checks camera stream every 2 seconds
+- Alerts user if stream disconnects
+- Provides diagnostics (resolution, track count)
+
+### Touch & Gestures
+
+Mapbox GL JS provides built-in touch support:
+- **Pinch to Zoom**: Two-finger zoom in/out
+- **Pan**: Single-finger drag
+- **Rotate**: Two-finger rotation
+- **Tilt**: Two-finger vertical drag (3D mode)
+
+No custom gesture handling required.
+
+### Responsive Breakpoints
+
+```typescript
+import { useIsMobile } from '@/hooks/use-mobile';
+
+const isMobile = useIsMobile(); // true if width < 768px
+```
+
+**Viewport Settings** (`client/index.html`):
+```html
+<meta name="viewport" 
+  content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+```
+
+## Features by Subscription Tier
+
+| Feature | Free | Premium | Pro |
+|---------|------|---------|-----|
+| Basic Navigation | ✅ | ✅ | ✅ |
+| Voice Guidance | ✅ | ✅ | ✅ |
+| Real-time Traffic | ✅ | ✅ | ✅ |
+| 2D/3D Maps | ✅ | ✅ | ✅ |
+| Offline Maps | ❌ | ✅ | ✅ |
+| AR Preview | ❌ | ✅ | ✅ |
+| Cinematic/VR Modes | ❌ | ✅ | ✅ |
+| Speed Camera Alerts | ❌ | ✅ | ✅ |
+| **Night Vision Assist** | ❌ | ❌ | ✅ |
+| Predictive AI Safety | ❌ | ❌ | ✅ |
+| Priority Routing | ❌ | ❌ | ✅ |
+
+**Pricing**: See `MonetizationService.ts` for regional pricing (10 currencies, 15 languages)
+
+## Development
+
+### Project Structure
+
+```
+client/src/
+├── components/         # React components (UI, map, AR, navigation)
+├── contexts/          # React contexts (UIMode, AR, Performance)
+├── services/          # Core business logic
+│   ├── navigation/    # Routing, ETA, rerouting
+│   ├── traffic/       # Traffic fusion, incidents
+│   ├── weather/       # Weather providers, caching
+│   ├── ar/           # AR sensors, orientation
+│   ├── map/          # 3D controls, camera settings
+│   ├── mobile/       # Performance monitoring
+│   ├── monetization/ # Stripe billing
+│   └── i18n/         # Internationalization
+├── hooks/            # Custom React hooks
+├── lib/              # Utilities (query client, resilient fetch)
+└── types/            # TypeScript type definitions
+
+server/
+├── routes.ts         # Express API routes
+├── storage.ts        # Storage interface (MemStorage)
+└── vite.ts           # Vite dev server integration
+
+shared/
+└── schema.ts         # Shared types (routes, traffic, weather)
+```
+
+### Key Files
+
+- **Routing**: `client/src/services/navigation/RoutingController.ts`
+- **Traffic**: `client/src/services/traffic/TrafficFusionEngine.ts`
+- **AR**: `client/src/contexts/ARExperienceProvider.tsx`
+- **Performance**: `client/src/services/mobile/PerformanceMonitor.ts`
+- **Payments**: `client/src/services/monetization/MonetizationService.ts`
+- **i18n**: `client/src/services/i18n/locales/en.json`
+
+### Adding a New Language
+
+1. Create `client/src/services/i18n/locales/{lang}.json` (copy `en.json`)
+2. Translate all keys
+3. Add to `SUPPORTED_LOCALES` in `client/src/services/i18n/index.ts`
+4. Update `MonetizationService` pricing for new region (if applicable)
+
+### Testing AR Features
+
+**Requirements:**
+- HTTPS (required for getUserMedia)
+- Physical mobile device or Chrome DevTools device emulation
+- Camera permissions granted
+
+**Steps:**
+1. Open app on mobile or emulate mobile in Chrome DevTools
+2. Click AR toggle button in header
+3. Grant camera permissions when prompted
+4. Rear camera will be used; if unavailable, app falls back to front camera
+
+**Troubleshooting:**
+- Check browser console for camera errors
+- Verify HTTPS (localhost is exempt)
+- Test in Chrome/Safari (best AR support)
+
+## Deployment
+
+### Publishing to Replit
+
+This app is designed for Replit Deployments:
+
+1. Ensure all environment variables are set in Replit Secrets
+2. Click **"Deploy"** in Replit sidebar
+3. Select **"Autoscale Deployment"** for production traffic
+4. Configure custom domain (optional)
+
+**Health Check**: `/api/health` endpoint for deployment monitoring
+
+### Manual Deployment
+
+```bash
+# Build frontend
+cd client && npm run build
+
+# Start production server
+npm start
+```
+
+Frontend builds to `client/dist`, served by Express at `/`
+
+## Internationalization (i18n)
+
+**Supported Languages** (15):
+- English (en), Spanish (es), French (fr), German (de), Italian (it)
+- Portuguese (pt), Dutch (nl), Russian (ru), Japanese (ja), Korean (ko)
+- Chinese Simplified (zh-CN), Chinese Traditional (zh-TW)
+- Arabic (ar), Hindi (hi), Turkish (tr)
+
+**Usage:**
+```typescript
+import { i18n } from '@/services/i18n';
+
+const translated = i18n.t('navigation.rerouting');
+// Auto-detects browser locale or uses 'en' fallback
+```
+
+**Type Safety:**
+Translation keys are derived from `en.json` via TypeScript:
+```typescript
+type TranslationKey = keyof typeof import('./locales/en.json');
+```
 
 ## Known Limitations
 
-- Unit tests not yet implemented (planned for future release)
-- Weather radar limited to current precipitation (no forecast overlay)
-- Voice guidance uses browser TTS (quality varies by OS/browser)
-- In-memory storage resets on server restart (migrate to DB for persistence)
+1. **Database**: Currently uses in-memory storage (MemStorage). PostgreSQL integration prepared but not active.
+2. **Offline Maps**: Download UI exists but requires backend storage implementation
+3. **AI Models**: Night Vision object detection and lane tracking are documented in `BACKLOG.md` (requires TensorFlow.js integration)
+4. **WebXR**: VR mode requires WebXR-compatible headset (limited browser support)
 
-## Performance Tips
+## Troubleshooting
 
-1. **Enable Hardware Acceleration**: Improves 3D map rendering
-2. **Use Modern Browser**: Latest Chrome/Firefox recommended
-3. **Close Unused Panels**: Minimize re-renders
-4. **Adjust Radar Opacity**: Lower opacity reduces GPU load
-5. **Disable Cinematic Mode**: If experiencing lag on older devices
+### Maps not loading
+- Verify `VITE_MAPBOX_TOKEN` is set and valid
+- Check browser console for 401/403 errors
+- Ensure token has Maps SDK scope enabled
+
+### Stripe checkout fails
+- Verify `VITE_STRIPE_PUBLIC_KEY` and `STRIPE_SECRET_KEY` match (both test or both live)
+- Check Stripe dashboard for webhook errors
+- Ensure prices are created in Stripe dashboard
+
+### AR camera not working
+- Verify HTTPS (required for getUserMedia)
+- Check browser permissions (camera blocked?)
+- Test on physical device (emulators have limited camera support)
+- If rear camera fails, app will try front camera automatically
+
+### Performance issues on mobile
+- Check performance tier: `usePerformance()` hook
+- Disable 3D terrain if `tier === 'low'`
+- Reduce map refresh rate for slow networks
+- Check battery level (battery saver mode may activate)
 
 ## Contributing
 
-This is a demonstration project. For production use:
-- Implement proper authentication
-- Migrate to PostgreSQL database
-- Add comprehensive error handling
-- Implement rate limiting
-- Add analytics and monitoring
-- Create unit and integration tests
+### Code Style
+
+- **TypeScript**: Strict mode enabled
+- **React**: Functional components, hooks-based
+- **Imports**: Use `@/` alias for `client/src/`
+- **Components**: Prefer shadcn/ui primitives over custom styling
+
+### Git Workflow
+
+1. Create feature branch: `git checkout -b feature/name`
+2. Make changes, test locally
+3. Commit with descriptive messages
+4. Push and create Pull Request
+
+### Testing
+
+```bash
+# Run TypeScript type check
+npx tsc --noEmit
+
+# Playwright e2e tests (if configured)
+npm test
+```
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License - See LICENSE file for details
 
-## Acknowledgments
+## Support
 
-- Mapbox for mapping and geocoding APIs
-- OpenWeatherMap for weather data
-- RainViewer for radar imagery
-- OpenAI for chat assistance
-- shadcn/ui for component library
+- **Documentation**: See `native-notes/` for CarPlay/Android Auto migration guides
+- **Issues**: Report bugs via GitHub Issues
+- **Backlog**: See `BACKLOG.md` for planned AI features
+- **Old README**: See `README_OLD.md` for original feature documentation
+
+---
+
+**Built with ❤️ using Replit**

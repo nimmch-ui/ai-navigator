@@ -1,10 +1,19 @@
 # AI Navigator
 
 ## Overview
-AI Navigator is a map-first, AI-assisted Progressive Web App (PWA) designed for interactive mapping, intelligent route planning, location discovery, and navigation. It offers multimodal navigation (2D, 3D, Cinematic, AR, VR, Eco), real-time rerouting, lane-level guidance, AR previews, speed camera alerts, voice navigation, premium 3D maps, offline downloads, and a dedicated Car Mode UI. The project aims to deliver an immersive and efficient navigation experience powered by ChatGPT-style AI. It includes advanced features like an Intelligent AI Driver Safety System with Night Vision Driving Assist, a Predictive AI Navigation Engine, and sophisticated monetization capabilities with global rollout readiness.
+AI Navigator is a production-ready map-first, AI-assisted Progressive Web App (PWA) designed for interactive mapping, intelligent route planning, location discovery, and navigation. It offers multimodal navigation (2D, 3D, Cinematic, AR, VR, Eco, Night Vision), real-time rerouting, lane-level guidance, AR previews, speed camera alerts, voice navigation, premium 3D maps, offline downloads, and a dedicated Car Mode UI. The project delivers an immersive and efficient navigation experience with advanced features like an Intelligent AI Driver Safety System with Night Vision Driving Assist, a Predictive AI Navigation Engine, sophisticated monetization capabilities with global rollout readiness, and mobile-optimized performance monitoring.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+
+## Recent Changes (November 2025)
+
+### Production Stabilization Audit
+- **Error Handling**: ResilientFetcher with exponential backoff, 429 rate limit detection, HealthMonitor circuit breaker
+- **Type Safety**: Fixed all 48 production TypeScript errors (i18n derived types, NIGHT_VISION support, API request signatures)
+- **Weather Integration**: Wired into RoutingController.compareRoutes() with getWeatherForETA() helper
+- **Mobile Optimization**: PerformanceMonitor (FPS/battery/network tier detection), AR camera fallback (rear→front with DOMException error mapping), stream health monitoring
+- **Documentation**: Comprehensive README.md with Architecture, Mobile Support, Performance Tiers, Troubleshooting
 
 ## System Architecture
 

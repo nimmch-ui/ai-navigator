@@ -48,10 +48,11 @@ export class ARSensorService {
 
   /**
    * Request camera access
+   * Throws specific errors based on getUserMedia failure reason
    */
   async requestCamera(facingMode: "user" | "environment" = "environment"): Promise<MediaStream> {
     if (!ARSensorService.isSupported()) {
-      throw new Error("Camera not supported");
+      throw new Error("Camera not supported on this device");
     }
 
     try {
@@ -66,9 +67,21 @@ export class ARSensorService {
       });
 
       return this.stream;
-    } catch (error) {
-      console.error("Camera access denied:", error);
-      throw new Error("Camera permission denied");
+    } catch (error: any) {
+      console.error("Camera access error:", error);
+      
+      // Map DOMException names to user-friendly errors
+      if (error.name === 'NotAllowedError') {
+        throw new Error("Camera permission denied");
+      } else if (error.name === 'NotFoundError') {
+        throw new Error("No camera found");
+      } else if (error.name === 'NotReadableError') {
+        throw new Error("Camera in use");
+      } else if (error.name === 'OverconstrainedError') {
+        throw new Error("Camera constraints not supported");
+      } else {
+        throw new Error("Camera access failed");
+      }
     }
   }
 
@@ -140,6 +153,94 @@ export class ARSensorService {
    */
   getStream(): MediaStream | null {
     return this.stream;
+  }
+
+  /**
+   * Request camera with fallback strategy
+   * Tries environment (rear) camera first, falls back to user (front) camera
+   * Preserves permission errors for proper user guidance
+   */
+  async requestCameraWithFallback(): Promise<{ stream: MediaStream; facingMode: 'environment' | 'user' }> {
+    if (!ARSensorService.isSupported()) {
+      throw new Error("Camera not supported on this device");
+    }
+
+    let rearError: any = null;
+
+    // Try rear camera first
+    try {
+      const stream = await this.requestCamera('environment');
+      return { stream, facingMode: 'environment' };
+    } catch (error) {
+      rearError = error;
+      console.warn('[ARSensorService] Rear camera unavailable, trying front camera:', error);
+    }
+
+    // Fallback to front camera
+    try {
+      const stream = await this.requestCamera('user');
+      return { stream, facingMode: 'user' };
+    } catch (frontError) {
+      console.error('[ARSensorService] Both cameras failed. Rear:', rearError, 'Front:', frontError);
+      
+      // Determine root cause - prioritize permission errors, then hardware errors
+      const rearMsg = rearError instanceof Error ? rearError.message : '';
+      const frontMsg = frontError instanceof Error ? frontError.message : '';
+      
+      // If permission denied on either camera, that's the primary issue
+      if (rearMsg === 'Camera permission denied' || frontMsg === 'Camera permission denied') {
+        throw new Error("Camera permission denied");
+      }
+      
+      // If no camera found on both, device lacks cameras
+      if (rearMsg === 'No camera found' && frontMsg === 'No camera found') {
+        throw new Error("No camera found");
+      }
+      
+      // If camera in use
+      if (rearMsg === 'Camera in use' || frontMsg === 'Camera in use') {
+        throw new Error("Camera in use");
+      }
+      
+      // If camera constraints not supported
+      if (rearMsg === 'Camera constraints not supported' || frontMsg === 'Camera constraints not supported') {
+        throw new Error("Camera constraints not supported");
+      }
+      
+      // Generic fallback
+      throw new Error("Camera access failed");
+    }
+  }
+
+  /**
+   * Check camera stream health
+   */
+  isStreamActive(): boolean {
+    if (!this.stream) return false;
+    
+    const videoTracks = this.stream.getVideoTracks();
+    return videoTracks.length > 0 && videoTracks[0].readyState === 'live';
+  }
+
+  /**
+   * Get stream diagnostics
+   */
+  getStreamDiagnostics(): { active: boolean; trackCount: number; resolution?: { width: number; height: number } } | null {
+    if (!this.stream) return null;
+
+    const videoTracks = this.stream.getVideoTracks();
+    if (videoTracks.length === 0) return { active: false, trackCount: 0 };
+
+    const track = videoTracks[0];
+    const settings = track.getSettings();
+
+    return {
+      active: track.readyState === 'live',
+      trackCount: videoTracks.length,
+      resolution: settings.width && settings.height 
+        ? { width: settings.width, height: settings.height }
+        : undefined
+    };
   }
 
   /**

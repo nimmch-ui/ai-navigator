@@ -4,6 +4,12 @@ import { OrientationService, type HeadingData, type OrientationMode } from '@/se
 import { PreferencesService, type ARPermissionStatus } from '@/services/preferences';
 import { useToast } from '@/hooks/use-toast';
 
+export interface ARStreamHealth {
+  active: boolean;
+  trackCount: number;
+  resolution?: { width: number; height: number };
+}
+
 interface ARExperienceContextValue {
   isARActive: boolean;
   cameraStream: MediaStream | null;
@@ -12,6 +18,7 @@ interface ARExperienceContextValue {
   permissionStatus: ARPermissionStatus;
   toggleAR: (enabled: boolean) => Promise<void>;
   isInitializing: boolean;
+  streamHealth: ARStreamHealth | null;
 }
 
 const ARExperienceContext = createContext<ARExperienceContextValue | null>(null);
@@ -35,10 +42,41 @@ export function ARExperienceProvider({ children }: ARExperienceProviderProps) {
   const [orientationMode, setOrientationMode] = useState<OrientationMode>("none");
   const [permissionStatus, setPermissionStatus] = useState<ARPermissionStatus>("unknown");
   const [isInitializing, setIsInitializing] = useState(false);
+  const [streamHealth, setStreamHealth] = useState<ARStreamHealth | null>(null);
   
   const [cameraService] = useState(() => new ARSensorService());
   const [orientationService] = useState(() => new OrientationService());
   const { toast } = useToast();
+
+  // Monitor camera stream health
+  useEffect(() => {
+    if (!cameraStream) {
+      setStreamHealth(null);
+      return;
+    }
+
+    const checkHealth = () => {
+      const diagnostics = cameraService.getStreamDiagnostics();
+      if (diagnostics) {
+        setStreamHealth(diagnostics);
+        
+        // Alert if stream becomes inactive
+        if (!diagnostics.active && isARActive) {
+          toast({
+            title: 'Camera Stream Lost',
+            description: 'AR Preview camera stream disconnected. Try toggling AR again.',
+            variant: 'destructive',
+          });
+        }
+      }
+    };
+
+    // Check every 2 seconds
+    const interval = setInterval(checkHealth, 2000);
+    checkHealth(); // Initial check
+
+    return () => clearInterval(interval);
+  }, [cameraStream, isARActive, cameraService, toast]);
 
   // Check sensor capabilities on mount
   useEffect(() => {
@@ -70,19 +108,51 @@ export function ARExperienceProvider({ children }: ARExperienceProviderProps) {
 
     try {
       if (enabled) {
-        // Start camera
+        // Start camera with fallback strategy
         try {
-          const stream = await cameraService.requestCamera('environment');
+          const { stream, facingMode } = await cameraService.requestCameraWithFallback();
           setCameraStream(stream);
           setPermissionStatus('granted');
           PreferencesService.updatePreference('arPermissionStatus', 'granted');
+
+          // Notify user if fallback to front camera was used
+          if (facingMode === 'user') {
+            toast({
+              title: 'AR Preview: Front Camera',
+              description: 'Rear camera unavailable. Using front camera instead.',
+            });
+          }
         } catch (error) {
           console.error('Camera access failed:', error);
           setPermissionStatus('denied');
           PreferencesService.updatePreference('arPermissionStatus', 'denied');
+          
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          
+          // Provide specific guidance based on error type
+          let title = 'Camera Access Failed';
+          let description = 'Unable to access camera.';
+          
+          if (errorMessage === 'Camera permission denied') {
+            title = 'Camera Permission Denied';
+            description = 'Please grant camera permissions in your browser settings to use AR Preview.';
+          } else if (errorMessage === 'No camera found') {
+            title = 'No Camera Detected';
+            description = 'Your device does not have a camera or it is not accessible.';
+          } else if (errorMessage === 'Camera not supported on this device') {
+            title = 'Camera Not Supported';
+            description = 'Your browser does not support camera access for AR features.';
+          } else if (errorMessage === 'Camera in use') {
+            title = 'Camera In Use';
+            description = 'Camera is currently being used by another application. Please close other apps and try again.';
+          } else if (errorMessage === 'Camera constraints not supported') {
+            title = 'Camera Configuration Issue';
+            description = 'Your camera does not meet the required specifications for AR mode.';
+          }
+          
           toast({
-            title: 'Camera Access Denied',
-            description: 'Please grant camera permissions to use AR Preview.',
+            title,
+            description,
             variant: 'destructive',
           });
           setIsInitializing(false);
@@ -150,6 +220,7 @@ export function ARExperienceProvider({ children }: ARExperienceProviderProps) {
     permissionStatus,
     toggleAR,
     isInitializing,
+    streamHealth,
   };
 
   return (
