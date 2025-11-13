@@ -18,6 +18,7 @@ import {
   Camera, 
   Glasses, 
   Leaf,
+  Moon,
   Lock,
   Globe
 } from 'lucide-react';
@@ -81,6 +82,14 @@ const MODE_CONFIGS: ModeConfig[] = [
     description: 'Energy-efficient minimal UI',
     shortcuts: ['6', 'e', 'E'],
     requiresPremium: false
+  },
+  {
+    mode: UiMode.NIGHT_VISION,
+    label: 'Night Vision',
+    icon: Moon,
+    description: 'AI-powered night driving assist',
+    shortcuts: ['7', 'n', 'N'],
+    requiresPremium: true
   }
 ];
 
@@ -104,8 +113,15 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
       // Query ModeService directly to avoid stale React state
       const actualMode = ModeService.getMode();
       const currentConfig = MODE_CONFIGS.find(c => c.mode === actualMode);
-      // Only downgrade if needed - prevents infinite loops
-      if (!canUse && currentConfig?.requiresPremium && actualMode !== UiMode.CLASSIC) {
+      
+      // Night Vision requires Pro tier specifically, other premium modes require Premium tier
+      if (actualMode === UiMode.NIGHT_VISION) {
+        const hasProTier = monetizationService.hasFeature('pro');
+        if (!hasProTier) {
+          ModeService.setMode(UiMode.CLASSIC);
+        }
+      } else if (!canUse && currentConfig?.requiresPremium && actualMode !== UiMode.CLASSIC) {
+        // Only downgrade if needed - prevents infinite loops
         ModeService.setMode(UiMode.CLASSIC);
       }
     };
@@ -129,11 +145,19 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
       // Validate entitlements on every mode change (use passed mode param to avoid race)
       // Only validate if switching TO a premium mode (not FROM one)
       if (mode !== UiMode.CLASSIC) {
-        const canUse = monetizationService.canUse3D();
-        const modeConfig = MODE_CONFIGS.find(c => c.mode === mode);
-        if (!canUse && modeConfig?.requiresPremium) {
-          // Force downgrade if user switched to a premium mode without access
-          ModeService.setMode(UiMode.CLASSIC);
+        // Night Vision requires Pro tier specifically
+        if (mode === UiMode.NIGHT_VISION) {
+          const hasProTier = monetizationService.hasFeature('pro');
+          if (!hasProTier) {
+            ModeService.setMode(UiMode.CLASSIC);
+          }
+        } else {
+          const canUse = monetizationService.canUse3D();
+          const modeConfig = MODE_CONFIGS.find(c => c.mode === mode);
+          if (!canUse && modeConfig?.requiresPremium) {
+            // Force downgrade if user switched to a premium mode without access
+            ModeService.setMode(UiMode.CLASSIC);
+          }
         }
       }
     });
@@ -176,8 +200,19 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
       return;
     }
 
-    // Check premium access
-    if (config.requiresPremium && !canUsePremium) {
+    // Check premium access - Night Vision requires Pro tier specifically
+    if (mode === UiMode.NIGHT_VISION) {
+      const hasProTier = monetizationService.hasFeature('pro');
+      if (!hasProTier) {
+        toast({
+          title: 'Pro Tier Required',
+          description: 'Night Vision is a Pro-exclusive feature. Upgrade to unlock AI-powered night driving assistance.',
+          variant: 'destructive',
+        });
+        onUpgradeClick?.();
+        return;
+      }
+    } else if (config.requiresPremium && !canUsePremium) {
       onUpgradeClick?.();
       return;
     }
@@ -198,7 +233,10 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
       {MODE_CONFIGS.map((config) => {
         const Icon = config.icon;
         const isActive = currentMode === config.mode;
-        const isLocked = config.requiresPremium && !canUsePremium;
+        // Night Vision requires Pro tier specifically
+        const isLocked = config.mode === UiMode.NIGHT_VISION 
+          ? !monetizationService.hasFeature('pro')
+          : config.requiresPremium && !canUsePremium;
 
         return (
           <Tooltip key={config.mode}>
@@ -242,7 +280,7 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
               <div className="text-muted-foreground">{config.description}</div>
               {isLocked ? (
                 <div className="text-primary mt-1 font-medium">
-                  Premium feature - Click to upgrade
+                  {config.mode === UiMode.NIGHT_VISION ? 'Pro feature - Click to upgrade' : 'Premium feature - Click to upgrade'}
                 </div>
               ) : (
                 <div className="text-muted-foreground mt-1">
@@ -278,8 +316,15 @@ export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }:
       // Query ModeService directly to avoid stale React state
       const actualMode = ModeService.getMode();
       const currentConfig = MODE_CONFIGS.find(c => c.mode === actualMode);
-      // Only downgrade if needed - prevents infinite loops
-      if (!canUse && currentConfig?.requiresPremium && actualMode !== UiMode.CLASSIC) {
+      
+      // Night Vision requires Pro tier specifically, other premium modes require Premium tier
+      if (actualMode === UiMode.NIGHT_VISION) {
+        const hasProTier = monetizationService.hasFeature('pro');
+        if (!hasProTier) {
+          ModeService.setMode(UiMode.CLASSIC);
+        }
+      } else if (!canUse && currentConfig?.requiresPremium && actualMode !== UiMode.CLASSIC) {
+        // Only downgrade if needed - prevents infinite loops
         ModeService.setMode(UiMode.CLASSIC);
       }
     };
@@ -302,11 +347,19 @@ export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }:
       // Validate entitlements on every mode change (use passed mode param to avoid race)
       // Only validate if switching TO a premium mode (not FROM one)
       if (mode !== UiMode.CLASSIC) {
-        const canUse = monetizationService.canUse3D();
-        const modeConfig = MODE_CONFIGS.find(c => c.mode === mode);
-        if (!canUse && modeConfig?.requiresPremium) {
-          // Force downgrade if user switched to a premium mode without access
-          ModeService.setMode(UiMode.CLASSIC);
+        // Night Vision requires Pro tier specifically
+        if (mode === UiMode.NIGHT_VISION) {
+          const hasProTier = monetizationService.hasFeature('pro');
+          if (!hasProTier) {
+            ModeService.setMode(UiMode.CLASSIC);
+          }
+        } else {
+          const canUse = monetizationService.canUse3D();
+          const modeConfig = MODE_CONFIGS.find(c => c.mode === mode);
+          if (!canUse && modeConfig?.requiresPremium) {
+            // Force downgrade if user switched to a premium mode without access
+            ModeService.setMode(UiMode.CLASSIC);
+          }
         }
       }
     });
@@ -323,8 +376,14 @@ export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }:
       return; // Silently ignore for compact mode (no space for toast)
     }
 
-    // Check premium access
-    if (config.requiresPremium && !canUsePremium) {
+    // Check premium access - Night Vision requires Pro tier specifically
+    if (mode === UiMode.NIGHT_VISION) {
+      const hasProTier = monetizationService.hasFeature('pro');
+      if (!hasProTier) {
+        onUpgradeClick?.();
+        return;
+      }
+    } else if (config.requiresPremium && !canUsePremium) {
       onUpgradeClick?.();
       return;
     }
@@ -350,7 +409,10 @@ export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }:
       <div className="flex items-center gap-0.5">
         {MODE_CONFIGS.map((config, index) => {
           const isActive = currentMode === config.mode;
-          const isLocked = config.requiresPremium && !canUsePremium;
+          // Night Vision requires Pro tier specifically
+          const isLocked = config.mode === UiMode.NIGHT_VISION 
+            ? !monetizationService.hasFeature('pro')
+            : config.requiresPremium && !canUsePremium;
           
           return (
             <button

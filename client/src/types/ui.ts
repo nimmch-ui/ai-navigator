@@ -4,7 +4,8 @@ export enum UiMode {
   CINEMATIC = 'CINEMATIC',
   AR = 'AR',
   VR = 'VR',
-  ECO = 'ECO'
+  ECO = 'ECO',
+  NIGHT_VISION = 'NIGHT_VISION'
 }
 
 export interface DriverState {

@@ -32,6 +32,11 @@ export interface RealismPackSettings {
   radarPulse: boolean;
 }
 
+export interface NightVisionSettings {
+  intensity: number; // 10-100%
+  thermalMode: boolean;
+}
+
 export interface UserPreferences {
   schemaVersion?: number;
   language: Locale;
@@ -60,6 +65,7 @@ export interface UserPreferences {
   arSensorCapabilities: ARSensorCapabilities;
   rerouteSettings: RerouteSettings;
   realismPack: RealismPackSettings;
+  nightVision: NightVisionSettings;
   uiMode: UiMode;
   spatialAudio: boolean;
   ambientMusic: boolean;
@@ -109,6 +115,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     weatherLighting: true,
     motionPolish: true,
     radarPulse: true,
+  },
+  nightVision: {
+    intensity: 50, // Default 50%
+    thermalMode: false,
   },
   uiMode: UiMode.CLASSIC,
   spatialAudio: false,
