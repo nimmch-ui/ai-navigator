@@ -277,6 +277,12 @@ export class TrafficFusionEngine {
       // Save snapshot for offline fallback
       this.lastKnownSnapshot = new Map(this.segments);
       
+      // Emit traffic updated event for visualization
+      EventBus.emit('traffic:updated' as any, {
+        segments: Array.from(this.segments.values()),
+        timestamp: Date.now(),
+      });
+      
       console.log('[TrafficFusionEngine] Update complete. Segments:', this.segments.size);
     } catch (error) {
       console.error('[TrafficFusionEngine] Update failed:', error);

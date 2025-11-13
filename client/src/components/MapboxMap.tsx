@@ -40,6 +40,13 @@ import { UiMode } from '@/types/ui';
 import { CameraRig } from '@/services/map/CameraRig';
 import { RouteRenderer } from '@/services/map/RouteRenderer';
 import { getCameraSettingsForMode } from '@/services/map/modeCameraSettings';
+import { 
+  addTrafficLayer, 
+  updateTrafficLayer, 
+  removeTrafficLayer 
+} from '@/services/map/trafficVisualization';
+import type { TrafficSegment } from '@/services/ai/TrafficFusionEngine';
+import { EventBus } from '@/services/eventBus';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -126,6 +133,9 @@ export default function MapboxMap({
   const cameraRigRef = useRef<CameraRig | null>(null);
   const routeRendererRef = useRef<RouteRenderer | null>(null);
   const isPageVisible = useRef<boolean>(true);
+  
+  // Traffic visualization cache
+  const lastTrafficSegmentsRef = useRef<TrafficSegment[]>([]);
 
   // Toast notifications
   const { toast } = useToast();
@@ -263,6 +273,9 @@ export default function MapboxMap({
       // Add 3D buildings layer
       add3DBuildingsLayer(map.current);
 
+      // Add traffic visualization layer
+      addTrafficLayer(map.current);
+
       // Initialize CINEMATIC mode services
       cameraRigRef.current = new CameraRig(map.current);
       routeRendererRef.current = new RouteRenderer(map.current);
@@ -322,6 +335,14 @@ export default function MapboxMap({
 
           // Re-add 3D buildings layer
           add3DBuildingsLayer(map.current);
+
+          // Re-add traffic visualization layers
+          addTrafficLayer(map.current);
+          
+          // Immediately reapply last known traffic data (prevent empty layers during offline/slow polling)
+          if (lastTrafficSegmentsRef.current.length > 0) {
+            updateTrafficLayer(map.current, lastTrafficSegmentsRef.current);
+          }
 
           // Re-apply 3D mode (terrain and sky)
           toggle3DMode(map.current, is3DMode, 1.2, handle3DModeError);
@@ -862,6 +883,37 @@ export default function MapboxMap({
       }
     };
   }, [laneData, route, currentPosition, mapLoaded]);
+
+  /**
+   * Traffic Visualization - Subscribe to traffic updates
+   */
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    const handleTrafficUpdate = (event: any) => {
+      if (!map.current) return;
+      
+      // Get traffic segments from the event (handle empty arrays to clear stale data)
+      const segments = event.segments as TrafficSegment[];
+      
+      // Cache segments for style change resilience
+      lastTrafficSegmentsRef.current = segments;
+      
+      // Update visualization
+      updateTrafficLayer(map.current, segments);
+    };
+
+    // Subscribe to traffic updates
+    EventBus.subscribe('traffic:updated' as any, handleTrafficUpdate);
+
+    // Cleanup subscription
+    return () => {
+      EventBus.unsubscribe('traffic:updated' as any, handleTrafficUpdate);
+      if (map.current) {
+        removeTrafficLayer(map.current);
+      }
+    };
+  }, [mapLoaded]);
 
   /**
    * Apply camera adjustments when UI mode changes
