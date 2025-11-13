@@ -170,6 +170,7 @@ class DeepLinksService {
       'ar': UiMode.AR,
       'vr': UiMode.VR,
       'eco': UiMode.ECO,
+      'nightvision': UiMode.NIGHT_VISION,
     };
 
     return modeMap[modeStr] || null;
@@ -186,6 +187,7 @@ class DeepLinksService {
       [UiMode.AR]: 'ar',
       [UiMode.VR]: 'vr',
       [UiMode.ECO]: 'eco',
+      [UiMode.NIGHT_VISION]: 'nightvision',
     };
 
     return modeMap[mode] || 'classic';

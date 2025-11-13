@@ -11,7 +11,7 @@
 
 import type { RouteResult } from '../routing';
 import type { WeatherNow } from '../data/types';
-import type { UiMode } from '@/types';
+import { UiMode } from '@/types/ui';
 import { trafficFusionEngine } from '../ai/TrafficFusionEngine';
 import { enrichRouteWithTrafficData, type EnrichedRouteSegment } from '../ai/routeTrafficEnrichment';
 import { EventBus } from '../eventBus';
@@ -188,26 +188,31 @@ function calculateDistance(
 function calculateWeatherDelay(baseTime: number, weather: WeatherNow): number {
   let delayFactor = 0;
 
-  // Rain impact
-  if (weather.rain1h && weather.rain1h > 0) {
-    if (weather.rain1h > 5) {
+  // Rain impact (using precipitation and condition)
+  if (weather.condition === 'rain' && weather.precipitation > 0) {
+    if (weather.precipitation > 5) {
       delayFactor += 0.15; // Heavy rain: +15%
-    } else if (weather.rain1h > 2) {
+    } else if (weather.precipitation > 2) {
       delayFactor += 0.10; // Moderate rain: +10%
     } else {
       delayFactor += 0.05; // Light rain: +5%
     }
   }
 
-  // Snow impact
-  if (weather.snow1h && weather.snow1h > 0) {
-    if (weather.snow1h > 5) {
+  // Snow impact (using precipitation and condition)
+  if (weather.condition === 'snow' && weather.precipitation > 0) {
+    if (weather.precipitation > 5) {
       delayFactor += 0.30; // Heavy snow: +30%
-    } else if (weather.snow1h > 2) {
+    } else if (weather.precipitation > 2) {
       delayFactor += 0.20; // Moderate snow: +20%
     } else {
       delayFactor += 0.10; // Light snow: +10%
     }
+  }
+
+  // Storm impact
+  if (weather.condition === 'storm') {
+    delayFactor += 0.20; // Storm: +20%
   }
 
   // Wind impact (high winds)
