@@ -453,6 +453,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/subscriptions/validate-receipt", async (req, res) => {
+    try {
+      const { platform, receipt, productId } = req.body as {
+        platform: 'app_store' | 'play_store' | 'stripe';
+        receipt: string;
+        productId?: string;
+      };
+
+      if (!platform || !receipt) {
+        return res.status(400).json({ error: "Platform and receipt required" });
+      }
+
+      const isDevelopment = process.env.NODE_ENV === 'development';
+
+      if (platform === 'app_store') {
+        if (isDevelopment) {
+          try {
+            const decoded = JSON.parse(Buffer.from(receipt, 'base64').toString());
+            if (decoded.demo) {
+              console.log('[Receipt Validation] Demo mode: App Store receipt accepted (development only)');
+              return res.json({
+                valid: true,
+                tier: decoded.tier,
+                expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+              });
+            }
+          } catch (error) {
+            console.error('[Receipt Validation] Demo receipt parse error:', error);
+          }
+        }
+
+        console.log('[Receipt Validation] App Store production validation not yet implemented');
+        return res.status(501).json({ 
+          valid: false, 
+          error: "App Store production validation requires Apple verifyReceipt API integration" 
+        });
+      }
+
+      if (platform === 'play_store') {
+        if (isDevelopment) {
+          try {
+            const decoded = JSON.parse(Buffer.from(receipt, 'base64').toString());
+            if (decoded.demo) {
+              console.log('[Receipt Validation] Demo mode: Play Store receipt accepted (development only)');
+              return res.json({
+                valid: true,
+                tier: decoded.tier,
+              });
+            }
+          } catch (error) {
+            console.error('[Receipt Validation] Demo receipt parse error:', error);
+          }
+        }
+
+        console.log('[Receipt Validation] Play Store production validation not yet implemented');
+        return res.status(501).json({ 
+          valid: false, 
+          error: "Play Store production validation requires Google Developer API integration" 
+        });
+      }
+
+      res.status(400).json({ 
+        valid: false, 
+        error: "Unsupported platform" 
+      });
+    } catch (error) {
+      console.error("Receipt validation error:", error);
+      res.status(500).json({ 
+        valid: false,
+        error: error instanceof Error ? error.message : "Validation failed" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
