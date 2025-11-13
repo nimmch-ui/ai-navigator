@@ -28,21 +28,64 @@ function getWeatherSeverity(condition: WeatherCondition, weatherId: number): Wea
   return 'normal';
 }
 
-function getMockWeather(lat: number, lng: number, location: string): WeatherData {
-  const conditions: WeatherCondition[] = ['clear', 'clouds', 'rain'];
-  const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
-  const baseTemp = 15 + Math.random() * 15;
-  
-  return {
-    location,
-    condition: randomCondition,
-    description: randomCondition === 'clear' ? 'Clear sky' : 
-                 randomCondition === 'clouds' ? 'Partly cloudy' : 'Light rain',
-    temperature: Math.round(baseTemp),
-    severity: 'normal',
-    icon: randomCondition === 'clear' ? '01d' : 
-          randomCondition === 'clouds' ? '03d' : '10d'
-  };
+import { EventBus } from './eventBus';
+
+const WEATHER_CACHE_KEY = 'weather_cache';
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+interface CachedWeather {
+  data: WeatherData;
+  timestamp: number;
+  location: string;
+}
+
+function getCachedWeather(lat: number, lng: number): WeatherData | null {
+  try {
+    const cached = localStorage.getItem(WEATHER_CACHE_KEY);
+    if (!cached) return null;
+
+    const entries: CachedWeather[] = JSON.parse(cached);
+    const now = Date.now();
+
+    const match = entries.find(entry => {
+      const age = now - entry.timestamp;
+      if (age > CACHE_TTL_MS) return false;
+
+      const distance = Math.sqrt(
+        Math.pow(parseFloat(entry.data.location.split(',')[0]) - lat, 2) +
+        Math.pow(parseFloat(entry.data.location.split(',')[1]) - lng, 2)
+      );
+      
+      return distance < 0.1;
+    });
+
+    return match?.data || null;
+  } catch (error) {
+    console.error('[Weather] Cache read error:', error);
+    return null;
+  }
+}
+
+function cacheWeather(data: WeatherData, lat: number, lng: number): void {
+  try {
+    const cached = localStorage.getItem(WEATHER_CACHE_KEY);
+    let entries: CachedWeather[] = cached ? JSON.parse(cached) : [];
+
+    const now = Date.now();
+    entries = entries.filter(e => now - e.timestamp < CACHE_TTL_MS);
+
+    entries.push({
+      data,
+      timestamp: now,
+      location: `${lat},${lng}`,
+    });
+
+    entries = entries.slice(-10);
+
+    localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(entries));
+  } catch (error) {
+    console.error('[Weather] Cache write error:', error);
+  }
 }
 
 export async function fetchWeather(
@@ -69,7 +112,7 @@ export async function fetchWeather(
     const condition = getWeatherCondition(weatherNow.weatherCode || 800, weatherNow.condition);
     const severity = getWeatherSeverity(condition, weatherNow.weatherCode || 800);
     
-    return {
+    const weatherData: WeatherData = {
       location: locationName,
       condition,
       description: weatherNow.description,
@@ -77,9 +120,29 @@ export async function fetchWeather(
       severity,
       icon: weatherNow.icon
     };
+
+    cacheWeather(weatherData, lat, lng);
+    
+    return weatherData;
   } catch (error) {
-    console.error('[Weather] Provider error, using mock data:', error);
-    return getMockWeather(lat, lng, locationName);
+    console.error('[Weather] Provider error, attempting cached fallback:', error);
+    
+    const cached = getCachedWeather(lat, lng);
+    if (cached) {
+      EventBus.emit('weather:using_cached_data', {
+        location: locationName,
+        cacheAge: Date.now() - (cached as any).timestamp,
+      });
+      console.warn('[Weather] Using cached data for', locationName);
+      return { ...cached, location: locationName };
+    }
+
+    EventBus.emit('weather:fetch_failed', {
+      location: locationName,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    throw new Error(`Weather data unavailable for ${locationName}`);
   }
 }
 

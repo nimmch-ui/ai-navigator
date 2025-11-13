@@ -2,6 +2,7 @@ import type { TransportMode, RoutePreference } from './preferences';
 import { routeCache } from './navigation/RouteCache';
 import { offlineModeService } from './system/OfflineModeService';
 import { EventBus } from './eventBus';
+import { resilientFetch } from '@/lib/resilientFetch';
 
 export interface RouteStep {
   instruction: string;
@@ -171,7 +172,15 @@ export async function calculateRoute(
   });
 
   try {
-    const response = await fetch(url, { signal });
+    const response = await resilientFetch(
+      url,
+      { signal },
+      {
+        serviceName: 'Mapbox Directions',
+        maxRetries: 3,
+        timeout: 15000,
+      }
+    );
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -180,6 +189,11 @@ export async function calculateRoute(
         statusText: response.statusText,
         error: errorData
       });
+      
+      if (response.status === 429) {
+        throw new Error('Route calculation rate limit exceeded. Please try again in a moment.');
+      }
+      
       throw new Error(`Mapbox API error: ${response.status}`);
     }
 

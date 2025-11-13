@@ -70,6 +70,10 @@ export interface EventPayloadMap {
   'nightVision:pedestrianDetected': { direction?: string; confidence: number; severity: string };
   'nightVision:lowVisibility': { severity: string; timestamp: number };
   'nightVision:stats': { totalDetections: number; animals: number; pedestrians: number; edges: number; processingTime: number; activeHazards: number };
+  'weather:using_cached_data': { location: string; cacheAge: number };
+  'weather:fetch_failed': { location: string; error: string };
+  'api:rate_limit_hit': { service: string; retryAfter: number; limit: number; remaining: number };
+  'api:all_retries_exhausted': { service: string; error?: string };
 }
 
 type EventName = keyof EventPayloadMap;
