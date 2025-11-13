@@ -10,6 +10,8 @@ export interface PerformanceMetrics {
   isCharging: boolean;
   connectionType: 'wifi' | '4g' | '3g' | '2g' | 'slow-2g' | 'offline' | 'unknown';
   saveDataEnabled: boolean;
+  isThermalThrottling: boolean; // Detected overheating risk
+  sustainedLowFPS: boolean; // FPS < 30 for >5 seconds
 }
 
 export type PerformanceTier = 'high' | 'medium' | 'low';
@@ -19,13 +21,17 @@ export interface PerformanceThresholds {
   fpsMinimum: number;
   memoryWarning: number; // MB
   batteryCritical: number; // 0-1
+  batteryLow: number; // 0-1, threshold for degradation
+  thermalWindow: number; // ms to detect sustained high load
 }
 
 const DEFAULT_THRESHOLDS: PerformanceThresholds = {
   fpsTarget: 60,
   fpsMinimum: 30,
   memoryWarning: 512,
-  batteryCritical: 0.15
+  batteryCritical: 0.15,
+  batteryLow: 0.20, // Degradation starts at 20%
+  thermalWindow: 5000 // 5 seconds of high load
 };
 
 export class PerformanceMonitor {
@@ -36,11 +42,15 @@ export class PerformanceMonitor {
     batteryLevel: 1,
     isCharging: false,
     connectionType: 'unknown',
-    saveDataEnabled: false
+    saveDataEnabled: false,
+    isThermalThrottling: false,
+    sustainedLowFPS: false
   };
 
   private performanceTier: PerformanceTier = 'high';
   private frameTimestamps: number[] = [];
+  private lowFPSStartTime: number | null = null;
+  private highLoadStartTime: number | null = null;
   private rafId: number | null = null;
   private memoryIntervalId: NodeJS.Timeout | null = null;
   private metricsCallbacks: Set<(metrics: PerformanceMetrics) => void> = new Set();
@@ -125,6 +135,31 @@ export class PerformanceMonitor {
         this.metrics.fps = this.frameTimestamps.length;
       }
 
+      // Detect sustained low FPS (potential overheating or struggling device)
+      if (this.metrics.fps < this.thresholds.fpsMinimum) {
+        if (this.lowFPSStartTime === null) {
+          this.lowFPSStartTime = timestamp;
+        } else if (timestamp - this.lowFPSStartTime > this.thresholds.thermalWindow) {
+          this.metrics.sustainedLowFPS = true;
+        }
+      } else {
+        this.lowFPSStartTime = null;
+        this.metrics.sustainedLowFPS = false;
+      }
+
+      // Detect thermal throttling (high memory + sustained load)
+      const isHighLoad = this.metrics.memory > this.thresholds.memoryWarning * 0.8;
+      if (isHighLoad && this.metrics.sustainedLowFPS) {
+        if (this.highLoadStartTime === null) {
+          this.highLoadStartTime = timestamp;
+        } else if (timestamp - this.highLoadStartTime > this.thresholds.thermalWindow) {
+          this.metrics.isThermalThrottling = true;
+        }
+      } else {
+        this.highLoadStartTime = null;
+        this.metrics.isThermalThrottling = false;
+      }
+
       // Update performance tier based on FPS
       this.updatePerformanceTier();
 
@@ -199,7 +234,20 @@ export class PerformanceMonitor {
       newTier = 'medium';
     }
 
-    // Check battery
+    // Thermal throttling forces low tier
+    if (this.metrics.isThermalThrottling) {
+      newTier = 'low';
+    }
+
+    // Sustained low FPS forces medium or low tier
+    if (this.metrics.sustainedLowFPS && newTier === 'high') {
+      newTier = 'medium';
+    }
+
+    // Check battery (degradation at 20%, critical at 15%)
+    if (!this.metrics.isCharging && this.metrics.batteryLevel < this.thresholds.batteryLow) {
+      newTier = newTier === 'high' ? 'medium' : 'low';
+    }
     if (!this.metrics.isCharging && this.metrics.batteryLevel < this.thresholds.batteryCritical) {
       newTier = 'low';
     }
@@ -286,6 +334,20 @@ export class PerformanceMonitor {
    */
   hasSlowNetwork(): boolean {
     return ['2g', 'slow-2g'].includes(this.metrics.connectionType) || this.metrics.saveDataEnabled;
+  }
+
+  /**
+   * Check if thermal throttling is detected (overheating risk)
+   */
+  isThermalThrottling(): boolean {
+    return this.metrics.isThermalThrottling;
+  }
+
+  /**
+   * Check if device should reduce load (battery + thermal)
+   */
+  shouldReduceLoad(): boolean {
+    return this.shouldEnableBatterySaver() || this.metrics.isThermalThrottling || this.metrics.sustainedLowFPS;
   }
 }
 
