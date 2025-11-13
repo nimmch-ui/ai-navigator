@@ -37,6 +37,7 @@ import CameraProximityAlert from '@/components/CameraProximityAlert';
 import EcoSummary from '@/components/EcoSummary';
 import WeatherPanel from '@/components/WeatherPanel';
 import SevereWeatherAlert from '@/components/SevereWeatherAlert';
+import PredictiveSafetyBadge from '@/components/PredictiveSafetyBadge';
 import { mockHazards, getHazardWarningMessage } from '@/data/hazards';
 import type { Hazard } from '@/data/hazards';
 import { announce, isVoiceSupported, getVoiceEnabled, setVoiceEnabled, getVoiceVolume, setVoiceVolume, getHapticsEnabled, setHapticsEnabled, isHapticsSupported } from '@/services/voiceGuidance';
@@ -1127,6 +1128,7 @@ export default function Home() {
             speedLimit={currentSpeedLimit}
             transportMode={transportMode}
           />
+          <PredictiveSafetyBadge data-testid="component-predictive-safety-badge" />
           {radarEnabled && (
             <div className="bg-card/95 backdrop-blur-sm border rounded-lg p-3 shadow-lg max-w-xs">
               <Label htmlFor="radar-opacity" className="text-sm font-medium mb-2 block">

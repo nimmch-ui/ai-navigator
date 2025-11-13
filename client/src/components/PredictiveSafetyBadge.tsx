@@ -33,11 +33,8 @@ export default function PredictiveSafetyBadge({
     return () => unsubscribe();
   }, []);
 
-  if (!riskScores) {
-    return null;
-  }
-
-  const { overall } = riskScores;
+  // Use default safe score of 0 if no data yet
+  const overall = riskScores?.overall ?? 0;
 
   // Determine risk level and styling
   const getRiskLevel = (score: number): {
