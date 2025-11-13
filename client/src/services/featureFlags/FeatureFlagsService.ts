@@ -44,7 +44,14 @@ class FeatureFlagsService {
    */
   async initialize(region: Region, countryCode: string): Promise<void> {
     this.currentRegion = region;
-    this.currentCountry = countryCode.toUpperCase();
+    
+    // Defensive handling for invalid/missing country codes
+    if (!countryCode || typeof countryCode !== 'string') {
+      const countries = REGION_COUNTRIES[region] || [];
+      this.currentCountry = countries[0] || 'US';
+    } else {
+      this.currentCountry = countryCode.toUpperCase();
+    }
     
     // Update feature availability
     this.updateFeatureAvailability();

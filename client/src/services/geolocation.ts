@@ -1,5 +1,15 @@
 import { GlobalConfig, type Region } from "@shared/global.config";
 
+// Region to country mapping for fallback
+const REGION_COUNTRIES: Record<Region, string[]> = {
+  EU: ['GB', 'DE', 'FR', 'IT', 'ES'],
+  US: ['US', 'CA'],
+  ASIA: ['JP', 'KR', 'SG', 'HK', 'TW'],
+  MENA: ['AE', 'SA', 'IL', 'QA', 'KW'],
+  AFRICA: ['ZA', 'NG', 'KE', 'GH', 'EG'],
+  LATAM: ['MX', 'BR', 'AR', 'CL', 'CO'],
+};
+
 export interface UserLocation {
   continentCode: string;
   countryCode: string;
@@ -94,7 +104,15 @@ class GeolocationService {
         return null;
       }
 
-      return parsed.location;
+      const location = parsed.location as UserLocation;
+      
+      // Migrate legacy cached locations without countryCode
+      if (!location.countryCode) {
+        const countries = REGION_COUNTRIES[location.region as Region] || [];
+        location.countryCode = countries[0] || 'US';
+      }
+
+      return location;
     } catch {
       return null;
     }
