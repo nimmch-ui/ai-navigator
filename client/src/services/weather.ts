@@ -39,7 +39,11 @@ interface CachedWeather {
   location: string;
 }
 
-function getCachedWeather(lat: number, lng: number): WeatherData | null {
+interface CachedWeatherResult extends WeatherData {
+  cachedAt: number;
+}
+
+function getCachedWeather(lat: number, lng: number): CachedWeatherResult | null {
   try {
     const cached = localStorage.getItem(WEATHER_CACHE_KEY);
     if (!cached) return null;
@@ -59,7 +63,12 @@ function getCachedWeather(lat: number, lng: number): WeatherData | null {
       return distance < 0.1;
     });
 
-    return match?.data || null;
+    if (!match) return null;
+
+    return {
+      ...match.data,
+      cachedAt: match.timestamp,
+    };
   } catch (error) {
     console.error('[Weather] Cache read error:', error);
     return null;
@@ -127,14 +136,29 @@ export async function fetchWeather(
   } catch (error) {
     console.error('[Weather] Provider error, attempting cached fallback:', error);
     
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
+    const isRateLimitError = errorMessage.includes('429') || errorMessage.includes('rate limit');
+    
+    if (isRateLimitError) {
+      EventBus.emit('api:rate_limit_hit', {
+        service: 'Weather',
+        retryAfter: 60,
+        limit: 0,
+        remaining: 0,
+      });
+    }
+    
     const cached = getCachedWeather(lat, lng);
     if (cached) {
+      const cacheAge = Date.now() - cached.cachedAt;
       EventBus.emit('weather:using_cached_data', {
         location: locationName,
-        cacheAge: Date.now() - (cached as any).timestamp,
+        cacheAge,
       });
-      console.warn('[Weather] Using cached data for', locationName);
-      return { ...cached, location: locationName };
+      console.warn('[Weather] Using cached data for', locationName, `(age: ${Math.round(cacheAge / 1000)}s)`);
+      
+      const { cachedAt, ...weatherData } = cached;
+      return { ...weatherData, location: locationName };
     }
 
     EventBus.emit('weather:fetch_failed', {

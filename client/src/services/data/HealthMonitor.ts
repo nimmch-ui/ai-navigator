@@ -22,7 +22,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
 
 export class HealthMonitor {
   private static circuitBreakers: Map<string, CircuitBreakerState> = new Map();
-  private static readonly CIRCUIT_BREAKER_TIMEOUT = 60000;
+  private static readonly CIRCUIT_BREAKER_TIMEOUT = 30000;
   private static readonly CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3;
   private static readonly REQUEST_TIMEOUT = 5000;
 

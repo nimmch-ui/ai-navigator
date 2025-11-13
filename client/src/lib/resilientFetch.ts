@@ -31,8 +31,8 @@ export interface RateLimitInfo {
 
 const DEFAULT_OPTIONS: Required<ResilientFetchOptions> = {
   maxRetries: 3,
-  initialDelay: 500,
-  maxDelay: 5000,
+  initialDelay: 1000,
+  maxDelay: 32000,
   backoffMultiplier: 2,
   timeout: 10000,
   serviceName: 'unknown',
@@ -71,9 +71,11 @@ function calculateBackoffWithJitter(
     maxDelay
   );
   
-  // Add jitter: random value between 0 and exponentialDelay
-  const jitter = Math.random() * exponentialDelay;
-  return Math.floor(exponentialDelay + jitter);
+  // Add jitter: random value between 0 and exponentialDelay * 0.5
+  // This keeps total delay within initialDelay to maxDelay window
+  const jitter = Math.random() * exponentialDelay * 0.5;
+  const totalDelay = Math.min(exponentialDelay + jitter, maxDelay);
+  return Math.floor(totalDelay);
 }
 
 /**
