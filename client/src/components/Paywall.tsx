@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { monetizationService, PRICING_PLANS } from '@/services/monetization/MonetizationService';
+import { monetizationService } from '@/services/monetization/MonetizationService';
+import { i18n } from '@/services/i18n';
 import type { SubscriptionTier } from '@shared/schema';
 
 interface PaywallProps {
@@ -20,6 +21,7 @@ export function Paywall({ open, onOpenChange, requiredTier, feature }: PaywallPr
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('yearly');
   const [isPurchasing, setIsPurchasing] = useState<SubscriptionTier | null>(null);
   const { toast } = useToast();
+  const localizedPlans = monetizationService.getLocalizedPricingPlans();
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -113,21 +115,21 @@ export function Paywall({ open, onOpenChange, requiredTier, feature }: PaywallPr
         <div className="space-y-8 p-6">
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-bold" data-testid="text-paywall-title">
-              {requiredTier ? `Upgrade to ${requiredTier}` : 'Choose Your Plan'}
+              {requiredTier ? `${i18n.t('pricing.upgrade')} ${i18n.t(`pricing.${requiredTier}` as any)}` : i18n.t('pricing.title')}
             </h2>
             {feature && (
               <p className="text-muted-foreground" data-testid="text-paywall-feature">
-                {feature} requires a {requiredTier} subscription
+                {feature} {i18n.t('pricing.feature_locked')}
               </p>
             )}
             <p className="text-muted-foreground">
-              Unlock advanced navigation features with premium plans
+              {i18n.t('pricing.subtitle')}
             </p>
           </div>
 
           <div className="flex items-center justify-center gap-4">
             <Label htmlFor="billing-toggle" className={billingPeriod === 'monthly' ? 'font-semibold' : ''}>
-              Monthly
+              {i18n.t('pricing.monthly')}
             </Label>
             <Switch
               id="billing-toggle"
@@ -136,18 +138,18 @@ export function Paywall({ open, onOpenChange, requiredTier, feature }: PaywallPr
               data-testid="switch-billing-period"
             />
             <Label htmlFor="billing-toggle" className={billingPeriod === 'yearly' ? 'font-semibold' : ''}>
-              Yearly
+              {i18n.t('pricing.yearly')}
             </Label>
             {billingPeriod === 'yearly' && (
               <Badge variant="secondary" data-testid="badge-yearly-discount">
-                Save up to 17%
+                {i18n.t('pricing.save_yearly')}
               </Badge>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {PRICING_PLANS.map((plan) => {
-              const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+            {localizedPlans.map((plan) => {
+              const priceStr = billingPeriod === 'monthly' ? plan.localizedMonthlyPrice : plan.localizedYearlyPrice;
               const savings = billingPeriod === 'yearly' && plan.tier !== 'free'
                 ? getYearlySavings(plan.monthlyPrice, plan.yearlyPrice)
                 : null;
@@ -173,20 +175,20 @@ export function Paywall({ open, onOpenChange, requiredTier, feature }: PaywallPr
                   <CardHeader>
                     <div className="flex items-center gap-2">
                       {getTierIcon(plan.tier)}
-                      <CardTitle data-testid={`text-plan-name-${plan.tier}`}>{plan.name}</CardTitle>
+                      <CardTitle data-testid={`text-plan-name-${plan.tier}`}>{plan.localizedName}</CardTitle>
                     </div>
                     <CardDescription>
                       <div className="mt-4">
                         <span className="text-4xl font-bold" data-testid={`text-price-${plan.tier}`}>
-                          ${price.toFixed(2)}
+                          {priceStr}
                         </span>
                         <span className="text-muted-foreground">
-                          /{billingPeriod === 'monthly' ? 'mo' : 'yr'}
+                          {i18n.t(billingPeriod === 'monthly' ? 'pricing.per_month' : 'pricing.per_year')}
                         </span>
                       </div>
                       {savings && (
                         <p className="text-sm text-primary mt-1" data-testid={`text-savings-${plan.tier}`}>
-                          Save ${savings.amount.toFixed(2)} ({savings.percentage}%)
+                          {i18n.t('pricing.save_yearly')} ({savings.percentage}%)
                         </p>
                       )}
                     </CardDescription>
@@ -203,9 +205,9 @@ export function Paywall({ open, onOpenChange, requiredTier, feature }: PaywallPr
                       {isPurchasing === plan.tier ? (
                         'Processing...'
                       ) : plan.tier === 'free' ? (
-                        'Current Plan'
+                        i18n.t('pricing.current_plan')
                       ) : (
-                        `Get ${plan.name}`
+                        `${i18n.t('pricing.get_plan')} ${plan.localizedName}`
                       )}
                     </Button>
 

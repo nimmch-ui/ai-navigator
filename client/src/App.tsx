@@ -19,6 +19,8 @@ import { DeepLinks } from "@/services/deepLinks";
 import { Analytics } from "@/services/analytics";
 import { regionRouter } from "@/services/regionRouter";
 import { i18n } from "@/services/i18n";
+import { currencyService } from "@/services/currency/CurrencyService";
+import { featureFlagsService } from "@/services/featureFlags/FeatureFlagsService";
 import { geolocationService } from "@/services/geolocation";
 import { userDataStore } from "@/services/data/UserDataStore";
 import { PredictiveNavigation } from "@/services/ai/PredictiveNavigation";
@@ -51,11 +53,22 @@ function App() {
       
       // Initialize i18n with detected region
       i18n.initialize(location.region).then(() => {
-        console.log('[App] i18n initialized:', i18n.getLocale(), i18n.getUnitSystem());
+        const locale = i18n.getLocale();
+        console.log('[App] i18n initialized:', locale, i18n.getUnitSystem());
+        
+        // Initialize currency service based on locale
+        currencyService.initialize(locale);
+        console.log('[App] Currency service initialized:', currencyService.getCurrency());
+        
+        // Initialize feature flags service with region and country
+        featureFlagsService.initialize(location.region, location.country);
+        console.log('[App] Feature flags initialized:', featureFlagsService.getFeatureAvailability());
         
         // Expose i18n globally for testing
         if (typeof window !== 'undefined') {
           (window as any).__i18n = i18n;
+          (window as any).__currency = currencyService;
+          (window as any).__featureFlags = featureFlagsService;
         }
       });
     }).catch(err => {

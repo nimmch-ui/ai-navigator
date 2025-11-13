@@ -1,4 +1,6 @@
 import type { Subscription, SubscriptionTier, PricingPlan } from '@shared/schema';
+import { currencyService } from '@/services/currency/CurrencyService';
+import { i18n } from '@/services/i18n';
 
 const STORAGE_KEY_SUBSCRIPTION = 'ai_navigator_subscription';
 
@@ -164,6 +166,33 @@ class MonetizationService {
 
   getPlanForTier(tier: SubscriptionTier): PricingPlan | undefined {
     return PRICING_PLANS.find(plan => plan.tier === tier);
+  }
+
+  /**
+   * Get localized pricing with currency conversion
+   */
+  getLocalizedPricingPlans(): Array<PricingPlan & { 
+    localizedMonthlyPrice: string;
+    localizedYearlyPrice: string;
+    localizedName: string;
+  }> {
+    return PRICING_PLANS.map(plan => ({
+      ...plan,
+      localizedMonthlyPrice: currencyService.formatPrice(plan.monthlyPrice),
+      localizedYearlyPrice: currencyService.formatPrice(plan.yearlyPrice),
+      localizedName: i18n.t(`pricing.${plan.tier}` as any, plan.name),
+    }));
+  }
+
+  /**
+   * Get formatted price for a specific tier and period
+   */
+  getFormattedPrice(tier: SubscriptionTier, period: 'monthly' | 'yearly'): string {
+    const plan = this.getPlanForTier(tier);
+    if (!plan) return '';
+    
+    const price = period === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+    return currencyService.formatPrice(price);
   }
 
   async purchasePremium(tier: SubscriptionTier, billingPeriod: 'monthly' | 'yearly'): Promise<{

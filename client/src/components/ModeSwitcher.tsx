@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { UiMode } from '@/types/ui';
 import { ModeService } from '@/services/mode';
 import { monetizationService } from '@/services/monetization/MonetizationService';
+import { featureFlagsService } from '@/services/featureFlags/FeatureFlagsService';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -17,9 +18,11 @@ import {
   Camera, 
   Glasses, 
   Leaf,
-  Lock
+  Lock,
+  Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface ModeConfig {
   mode: UiMode;
@@ -90,6 +93,7 @@ interface ModeSwitcherProps {
 export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSwitcherProps) {
   const [currentMode, setCurrentMode] = useState<UiMode>(ModeService.getMode());
   const [canUsePremium, setCanUsePremium] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const checkEntitlements = () => {
@@ -161,10 +165,23 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
   }, [canUsePremium, onUpgradeClick]);
 
   const handleModeSelect = (mode: UiMode, config: ModeConfig) => {
+    // Check regional availability first
+    const isRegionallyAvailable = featureFlagsService.isModeAvailable(mode);
+    if (!isRegionallyAvailable) {
+      toast({
+        title: `${config.label} Not Available`,
+        description: `This feature is not available in your region.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check premium access
     if (config.requiresPremium && !canUsePremium) {
       onUpgradeClick?.();
       return;
     }
+    
     ModeService.setMode(mode);
   };
 
@@ -300,6 +317,13 @@ export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }:
   }, [onModeChange]);
 
   const handleModeSelect = (mode: UiMode, config: ModeConfig) => {
+    // Check regional availability first
+    const isRegionallyAvailable = featureFlagsService.isModeAvailable(mode);
+    if (!isRegionallyAvailable) {
+      return; // Silently ignore for compact mode (no space for toast)
+    }
+
+    // Check premium access
     if (config.requiresPremium && !canUsePremium) {
       onUpgradeClick?.();
       return;
