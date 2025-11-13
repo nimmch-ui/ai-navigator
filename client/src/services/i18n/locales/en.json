@@ -100,5 +100,20 @@
   "offline.back_online": "Back online – maps and traffic updated",
   "offline.no_cached_route": "No saved route for this destination. Please go online to plan it.",
   "offline.use_cached_route": "Use saved route from cache",
-  "offline.feature_unavailable": "This feature requires an internet connection"
+  "offline.feature_unavailable": "This feature requires an internet connection",
+  "pricing.title": "Choose Your Plan",
+  "pricing.subtitle": "Unlock advanced navigation features with premium plans",
+  "pricing.monthly": "Monthly",
+  "pricing.yearly": "Yearly",
+  "pricing.save_yearly": "Save up to 17%",
+  "pricing.free": "Free",
+  "pricing.premium": "Premium",
+  "pricing.pro": "Pro",
+  "pricing.current_plan": "Current Plan",
+  "pricing.get_plan": "Get",
+  "pricing.upgrade": "Upgrade",
+  "pricing.per_month": "/mo",
+  "pricing.per_year": "/yr",
+  "pricing.feature_locked": "Premium feature",
+  "pricing.unlock_premium": "Click to upgrade"
 }

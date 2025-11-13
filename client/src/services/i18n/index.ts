@@ -10,6 +10,7 @@ export type Locale =
   | "de-CH"
   | "fr-CH"
   | "it-CH"
+  | "hr"
   | "tr"
   | "es"
   | "pt-BR"
@@ -51,7 +52,22 @@ export type TranslationKey =
   | "settings.theme"
   | "voice.style"
   | "voice.muted"
-  | "voice.enabled";
+  | "voice.enabled"
+  | "pricing.title"
+  | "pricing.subtitle"
+  | "pricing.monthly"
+  | "pricing.yearly"
+  | "pricing.save_yearly"
+  | "pricing.free"
+  | "pricing.premium"
+  | "pricing.pro"
+  | "pricing.current_plan"
+  | "pricing.get_plan"
+  | "pricing.upgrade"
+  | "pricing.per_month"
+  | "pricing.per_year"
+  | "pricing.feature_locked"
+  | "pricing.unlock_premium";
 
 export type TranslationDict = Record<TranslationKey, string>;
 
@@ -74,6 +90,7 @@ const TTS_VOICE_MAPPINGS: Record<Locale, string[]> = {
   "de-CH": ["de-CH", "de-DE", "de", "en"],
   "fr-CH": ["fr-CH", "fr-FR", "fr", "en"],
   "it-CH": ["it-CH", "it-IT", "it", "en"],
+  "hr": ["hr-HR", "hr", "en"],
   "tr": ["tr-TR", "tr", "en"],
   "es": ["es-ES", "es-MX", "es", "en"],
   "pt-BR": ["pt-BR", "pt-PT", "pt", "en"],
@@ -128,6 +145,7 @@ class I18nService {
     if (browserLang.startsWith("de") && browserLang.includes("CH")) return "de-CH";
     if (browserLang.startsWith("fr") && browserLang.includes("CH")) return "fr-CH";
     if (browserLang.startsWith("it") && browserLang.includes("CH")) return "it-CH";
+    if (browserLang.startsWith("hr")) return "hr";
     if (browserLang.startsWith("pt") && browserLang.includes("BR")) return "pt-BR";
     if (browserLang.startsWith("zh")) return "zh-CN";
     
@@ -137,7 +155,7 @@ class I18nService {
 
   private isValidLocale(code: string): boolean {
     const validLocales: Locale[] = [
-      "en", "sq-AL", "sr", "sl-SI", "de-CH", "fr-CH", "it-CH",
+      "en", "sq-AL", "sr", "sl-SI", "de-CH", "fr-CH", "it-CH", "hr",
       "tr", "es", "pt-BR", "hi", "bn", "ar", "zh-CN"
     ];
     return validLocales.includes(code as Locale);
@@ -330,7 +348,7 @@ class I18nService {
 
   getAvailableLocales(): Locale[] {
     return [
-      "en", "sq-AL", "sr", "sl-SI", "de-CH", "fr-CH", "it-CH",
+      "en", "sq-AL", "sr", "sl-SI", "de-CH", "fr-CH", "it-CH", "hr",
       "tr", "es", "pt-BR", "hi", "bn", "ar", "zh-CN"
     ];
   }
@@ -344,6 +362,7 @@ class I18nService {
       "de-CH": "Deutsch (Schweiz)",
       "fr-CH": "Français (Suisse)",
       "it-CH": "Italiano (Svizzera)",
+      "hr": "Hrvatski",
       "tr": "Türkçe",
       "es": "Español",
       "pt-BR": "Português (Brasil)",
