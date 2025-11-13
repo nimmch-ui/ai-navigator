@@ -3,6 +3,8 @@ import type { Locale } from "@/services/i18n";
 import type { NetworkStatus } from "@/services/system/OfflineModeService";
 import type { UserProfile, FavoritePlace, TripRecord } from "@/services/data/userDataModels";
 import type { RiskScores, RiskFactor } from "@/services/ai/PredictiveEngine";
+import type { WeatherNow } from "@/services/data/types";
+import type { SafetyAlert, WeatherAdaptation, DriverStateAdaptation } from "@/services/ai/SafetyController";
 
 export interface EventPayloadMap {
   'uiMode:changed': { mode: UiMode; previousMode: UiMode };
@@ -42,6 +44,11 @@ export interface EventPayloadMap {
   'sync:identityChanged': { previousUserId: string; canonicalUserId: string };
   'ai:predictionTick': { timestamp: number };
   'ai:riskUpdate': { scores: RiskScores; timestamp: number; factors: RiskFactor[] };
+  'weather:updated': { weather: WeatherNow | null; timestamp: number };
+  'safety:alert': { alert: SafetyAlert; timestamp: number };
+  'safety:hudFlash': { color: string; duration: number; timestamp: number };
+  'safety:weatherAdapted': { adaptation: WeatherAdaptation; timestamp: number };
+  'safety:driverStateAdapted': { adaptation: DriverStateAdaptation; timestamp: number };
 }
 
 type EventName = keyof EventPayloadMap;
