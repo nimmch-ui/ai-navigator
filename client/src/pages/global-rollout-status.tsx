@@ -25,6 +25,7 @@ export default function GlobalRolloutStatus() {
     const loadData = async () => {
       try {
         // Wait for services to initialize (deterministic readiness signal)
+        // This will throw if initialization fails or times out
         await servicesReady;
 
         // Get available currencies
@@ -43,7 +44,14 @@ export default function GlobalRolloutStatus() {
         
         setIsLoading(false);
       } catch (err) {
-        console.error('[GlobalRolloutStatus] Failed to load data:', err);
+        console.error('[GlobalRolloutStatus] Service initialization failed:', err);
+        // Still load with defaults to avoid infinite loading
+        setCurrencies(['USD']);
+        setCurrentCurrency('USD');
+        setLanguages(['en']);
+        setCurrentLocale('en');
+        setFeatureFlags({ ar: false, nightVision: false });
+        setPricingPlans([]);
         setIsLoading(false);
       }
     };
