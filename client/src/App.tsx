@@ -56,7 +56,7 @@ function App() {
       console.log('[App] Region router initialized:', regionRouter.getState());
       
       // Initialize i18n with detected region
-      i18n.initialize(location.region).then(() => {
+      i18n.initialize(location.region).then(async () => {
         const locale = i18n.getLocale();
         console.log('[App] i18n initialized:', locale, i18n.getUnitSystem());
         
@@ -64,8 +64,8 @@ function App() {
         currencyService.initialize(locale);
         console.log('[App] Currency service initialized:', currencyService.getCurrency());
         
-        // Initialize feature flags service with region and country code
-        featureFlagsService.initialize(location.region, location.countryCode);
+        // Initialize feature flags service with region and country code (await it)
+        await featureFlagsService.initialize(location.region, location.countryCode);
         console.log('[App] Feature flags initialized:', featureFlagsService.getFeatureAvailability());
         
         // Expose i18n globally for testing

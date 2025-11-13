@@ -17,21 +17,29 @@ export default function GlobalRolloutStatus() {
   const [currentLocale, setCurrentLocale] = useState('en');
   const [featureFlags, setFeatureFlags] = useState({ ar: false, nightVision: false });
   const [pricingPlans, setPricingPlans] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get available currencies
-    setCurrencies(currencyService.getAvailableCurrencies());
-    setCurrentCurrency(currencyService.getCurrency());
+    // Wait a brief moment for services to initialize
+    const timer = setTimeout(() => {
+      // Get available currencies
+      setCurrencies(currencyService.getAvailableCurrencies());
+      setCurrentCurrency(currencyService.getCurrency());
 
-    // Get available languages
-    setLanguages(i18n.getAvailableLocales());
-    setCurrentLocale(i18n.getLocale());
+      // Get available languages
+      setLanguages(i18n.getAvailableLocales());
+      setCurrentLocale(i18n.getLocale());
 
-    // Get feature flags
-    setFeatureFlags(featureFlagsService.getFeatureAvailability());
+      // Get feature flags
+      setFeatureFlags(featureFlagsService.getFeatureAvailability());
 
-    // Get pricing plans
-    setPricingPlans(monetizationService.getLocalizedPricingPlans());
+      // Get pricing plans
+      setPricingPlans(monetizationService.getLocalizedPricingPlans());
+      
+      setIsLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const requiredCurrencies = ['USD', 'EUR', 'INR', 'ALL', 'CHF'];
@@ -60,6 +68,19 @@ export default function GlobalRolloutStatus() {
 
   const allCurrenciesSupported = requiredCurrencies.every(c => currencies.includes(c));
   const allLanguagesSupported = requiredLanguages.every(l => languages.includes(l));
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4 max-w-6xl">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="text-lg font-semibold">Loading global rollout status...</div>
+            <div className="text-sm text-muted-foreground mt-2">Initializing services</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4 max-w-6xl">
