@@ -35,16 +35,13 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    // Initialize user data store
-    userDataStore.initialize().then(() => {
-      console.log('[App] User data store initialized');
-    });
-
-    // Initialize region router and i18n for global availability
+    // Initialize all core services together
     Promise.all([
+      userDataStore.initialize(),
       regionRouter.initialize(),
       geolocationService.detectUserLocation(),
-    ]).then(([, location]) => {
+    ]).then(([, , location]) => {
+      console.log('[App] User data store initialized');
       console.log('[App] Region router initialized:', regionRouter.getState());
       
       // Initialize i18n with detected region
@@ -56,6 +53,8 @@ function App() {
           (window as any).__i18n = i18n;
         }
       });
+    }).catch(err => {
+      console.error('[App] Initialization failed:', err);
     });
 
     registerServiceWorker().then((registration) => {

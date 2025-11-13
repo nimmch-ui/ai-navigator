@@ -1,0 +1,49 @@
+TITLE: Q3-A5 (2/2) – Cloud-ready sync layer & multi-device preparation
+
+Goal: Add a clean sync abstraction so the app is ready for future backend integration (multi-device sync), while still working fully offline with a fake/local backend today.
+
+Tasks:
+
+1) Sync abstraction
+- Create SyncService in client/src/services/sync/SyncService.ts with:
+  - syncAll(userId)
+  - pushLocalChanges(userId)
+  - pullRemoteChanges(userId)
+- Define SyncBackend interface (ISyncBackend) with methods for profile, favorites, and trip history:
+  - loadUserData(userId)
+  - saveUserData(userId, data)
+- Implement a FakeSyncBackend that persists to local storage / IndexedDB (separate namespace) to simulate a remote server.
+- Ensure SyncService uses UserDataStore as the source of truth and can merge remote data safely.
+
+2) Conflict handling & strategy
+- Use “last write wins” on a per-record basis using updatedAt timestamps.
+- Make sure merging never produces duplicates (same id) and never deletes all data silently.
+- Log sync operations and conflicts to a small diagnostic channel (console + EventBus event “sync/summary”).
+
+3) Connectivity & offline mode integration
+- Integrate with OfflineModeService:
+  - Queue sync operations while offline.
+  - Run syncAll() when connectivity is restored or when the user opens the app and is online.
+- Add simple backoff logic if sync fails repeatedly (e.g. retry after 30s, 2min, 5min).
+
+4) Settings & user controls
+- Extend Settings with a “Cloud sync” / “Multi-device sync ready” section:
+  - Toggle: “Enable sync of profile, favorites & trip history”
+  - Button: “Sync now”
+  - Button: “Clear cloud copy” (only clears FakeSyncBackend, not local data).
+- Show non-technical, friendly copy: explain that data is stored anonymously and that the current implementation uses a placeholder backend ready to be swapped for a real cloud service.
+
+5) QA & documentation
+- QA:
+  - Verify that disabling sync leaves local UserDataStore behavior unchanged.
+  - Verify that after enabling sync, changes made in one session are pulled correctly after a “fresh start” (simulating another device).
+  - Test behavior in offline mode and when coming back online.
+- Update replit.md:
+  - Describe SyncService and ISyncBackend.
+  - Document how to replace FakeSyncBackend with a real backend (REST/GraphQL/Firebase/etc.) for a production multi-device release.
+
+Deliverables:
+- SyncService + ISyncBackend + FakeSyncBackend implementation.
+- Settings UI for sync control and status.
+- Stable integration with UserDataStore and OfflineModeService.
+- Tests and documentation confirming the app is ready for future cloud sync and true multi-device support.

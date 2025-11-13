@@ -246,15 +246,25 @@ export default function Home() {
   useEffect(() => {
     const prefs = PreferencesService.getPreferences();
     
-    TripHistoryService.getSmartDefaults().then(smartDefaults => {
-      if (smartDefaults) {
-        setTransportMode(smartDefaults.transportMode);
-        setRoutePreference(smartDefaults.routePreference);
-      } else {
+    let mounted = true;
+    
+    TripHistoryService.getSmartDefaults()
+      .then(smartDefaults => {
+        if (!mounted) return;
+        if (smartDefaults) {
+          setTransportMode(smartDefaults.transportMode);
+          setRoutePreference(smartDefaults.routePreference);
+        } else {
+          setTransportMode(prefs.transportMode);
+          setRoutePreference(prefs.routePreference);
+        }
+      })
+      .catch(err => {
+        console.error('[Home] Failed to load smart defaults:', err);
+        if (!mounted) return;
         setTransportMode(prefs.transportMode);
         setRoutePreference(prefs.routePreference);
-      }
-    });
+      });
 
     setEcoMode(prefs.ecoMode);
     setVehicleType(prefs.vehicleType);
@@ -277,8 +287,14 @@ export default function Home() {
     setRadarPulse(prefs.realismPack.radarPulse);
 
     getSpeedCameras().then(cameras => {
-      setSpeedCameras(cameras);
+      if (mounted) {
+        setSpeedCameras(cameras);
+      }
     });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleTransportModeChange = (mode: TransportMode) => {
