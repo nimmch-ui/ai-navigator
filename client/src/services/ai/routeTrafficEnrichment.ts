@@ -67,6 +67,7 @@ export function enrichRouteWithTrafficData(
 
 /**
  * Find nearest traffic segment to route coordinates
+ * Uses multiple sample points for better matching
  */
 function findNearestTrafficSegment(
   routeCoords: [number, number][],
@@ -76,24 +77,43 @@ function findNearestTrafficSegment(
     return null;
   }
 
-  const routeCenter = routeCoords[Math.floor(routeCoords.length / 2)];
-  let nearest: TrafficSegment | null = null;
-  let minDistance = Infinity;
+  // Sample multiple points along the route segment for better matching
+  const samplePoints: [number, number][] = [];
+  const sampleCount = Math.min(5, routeCoords.length);
+  
+  for (let i = 0; i < sampleCount; i++) {
+    const index = Math.floor((i / (sampleCount - 1)) * (routeCoords.length - 1));
+    samplePoints.push(routeCoords[index]);
+  }
+
+  let bestMatch: { segment: TrafficSegment; avgDistance: number } | null = null;
 
   for (const segment of trafficSegments) {
     if (segment.coordinates.length === 0) continue;
     
-    const segmentCenter = segment.coordinates[Math.floor(segment.coordinates.length / 2)];
-    const distance = calculateDistance(routeCenter, segmentCenter);
+    // Calculate average distance from all sample points to segment
+    let totalDistance = 0;
+    for (const point of samplePoints) {
+      // Find closest point on segment to this route point
+      let minDistToSegment = Infinity;
+      for (const segCoord of segment.coordinates) {
+        const dist = calculateDistance(point, segCoord);
+        if (dist < minDistToSegment) {
+          minDistToSegment = dist;
+        }
+      }
+      totalDistance += minDistToSegment;
+    }
     
-    if (distance < minDistance) {
-      minDistance = distance;
-      nearest = segment;
+    const avgDistance = totalDistance / samplePoints.length;
+    
+    if (!bestMatch || avgDistance < bestMatch.avgDistance) {
+      bestMatch = { segment, avgDistance };
     }
   }
 
-  // Only return if within reasonable distance (5km)
-  return minDistance < 5000 ? nearest : null;
+  // Return if within reasonable distance (3km average)
+  return bestMatch && bestMatch.avgDistance < 3000 ? bestMatch.segment : null;
 }
 
 /**

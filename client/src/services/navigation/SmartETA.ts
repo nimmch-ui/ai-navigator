@@ -103,6 +103,7 @@ export function recalculateETAOnUpdate(
 
 /**
  * Calculate delay caused by traffic congestion
+ * Uses actual segment distances, not coordinate counts
  */
 function calculateTrafficDelay(
   segments: EnrichedRouteSegment[],
@@ -113,13 +114,32 @@ function calculateTrafficDelay(
   }
 
   let totalDelay = 0;
-
+  
+  // Calculate total route distance from segments
+  let totalDistance = 0;
+  const segmentDistances: number[] = [];
+  
   for (const segment of segments) {
+    let segmentDist = 0;
+    for (let i = 0; i < segment.coordinates.length - 1; i++) {
+      segmentDist += calculateDistance(
+        segment.coordinates[i],
+        segment.coordinates[i + 1]
+      );
+    }
+    segmentDistances.push(segmentDist);
+    totalDistance += segmentDist;
+  }
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    const segmentDist = segmentDistances[i];
     const congestion = segment.congestion; // 0-100
     
-    // Estimate segment base time (proportional to segment length)
-    const segmentLength = segment.coordinates.length;
-    const segmentBaseTime = baseTime * (segmentLength / getTotalSegmentLength(segments));
+    if (segmentDist === 0 || totalDistance === 0) continue;
+    
+    // Estimate segment base time (proportional to actual distance)
+    const segmentBaseTime = baseTime * (segmentDist / totalDistance);
     
     // Apply congestion factor
     // 0% congestion = 0% delay
@@ -132,11 +152,34 @@ function calculateTrafficDelay(
     
     // Add incident delays
     for (const incident of segment.incidents) {
-      totalDelay += incident.delayMinutes * 60; // Convert to seconds
+      totalDelay += (incident.delayMinutes || 0) * 60; // Convert to seconds
     }
   }
 
   return totalDelay;
+}
+
+/**
+ * Calculate distance between two points (Haversine formula)
+ */
+function calculateDistance(
+  point1: [number, number],
+  point2: [number, number]
+): number {
+  const [lat1, lon1] = point1;
+  const [lat2, lon2] = point2;
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
 }
 
 /**
@@ -281,11 +324,6 @@ export function setupETAAutoUpdate(
     onETAUpdate(newETA);
   };
 
-  // Listen for traffic updates
-  EventBus.on('ai:trafficUpdate' as any, handleTrafficUpdate);
-
-  // Cleanup function
-  return () => {
-    EventBus.off('ai:trafficUpdate' as any, handleTrafficUpdate);
-  };
+  // Listen for traffic updates and return cleanup function
+  return EventBus.subscribe('ai:trafficUpdate' as any, handleTrafficUpdate);
 }

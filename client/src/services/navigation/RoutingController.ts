@@ -14,6 +14,7 @@ import { computeETA, type ETAResult } from './SmartETA';
 import { EventBus } from '../eventBus';
 import { PreferencesService } from '../preferences';
 import { voiceGuidanceService } from '../voiceGuidance';
+import { SharedNavigationState } from '../ui/SharedNavigationState';
 
 export type RerouteMode = 'auto' | 'manual';
 
@@ -58,6 +59,8 @@ export class RoutingController {
   private checkInterval: ReturnType<typeof setInterval> | null = null;
   private readonly CHECK_INTERVAL_MS = 60000; // Check every minute
   private isEvaluating: boolean = false;
+  private trafficUnsubscribe: (() => void) | null = null;
+  private boundTrafficHandler: () => void;
 
   constructor(
     mode: TransportMode = 'car',
@@ -76,6 +79,9 @@ export class RoutingController {
     };
     
     this.thresholds = { ...DEFAULT_THRESHOLDS };
+    
+    // Bind traffic handler once to avoid listener leaks
+    this.boundTrafficHandler = this.handleTrafficUpdate.bind(this);
   }
 
   /**
@@ -99,8 +105,8 @@ export class RoutingController {
       this.evaluateReroute();
     }, this.CHECK_INTERVAL_MS);
 
-    // Listen for traffic updates
-    EventBus.on('ai:trafficUpdate' as any, this.handleTrafficUpdate.bind(this));
+    // Listen for traffic updates using bound handler (prevents listener leaks)
+    this.trafficUnsubscribe = EventBus.subscribe('ai:trafficUpdate' as any, this.boundTrafficHandler);
 
     console.log('[RoutingController] Started monitoring for reroutes');
   }
@@ -114,7 +120,11 @@ export class RoutingController {
       this.checkInterval = null;
     }
 
-    EventBus.off('ai:trafficUpdate' as any, this.handleTrafficUpdate.bind(this));
+    // Call the unsubscribe function
+    if (this.trafficUnsubscribe) {
+      this.trafficUnsubscribe();
+      this.trafficUnsubscribe = null;
+    }
     
     console.log('[RoutingController] Stopped monitoring');
   }
@@ -141,11 +151,21 @@ export class RoutingController {
     this.state.currentRoute = proposal.alternativeRoute;
     this.state.lastProposal = null;
     
+    // Emit reroute accepted event FIRST (before clearing isEvaluating)
     EventBus.emit('route:reroute_accepted' as any, {
       newRoute: proposal.alternativeRoute,
       timeSaved: proposal.timeSaved,
       reason: proposal.reason,
     });
+    
+    // Update SharedNavigationState directly (this emits navigation:stateChanged)
+    SharedNavigationState.updateState({
+      route: proposal.alternativeRoute.geometry,
+      isNavigating: true, // Keep navigation active
+    });
+    
+    // Clear evaluating state LAST
+    this.isEvaluating = false;
     
     console.log('[RoutingController] Reroute accepted, time saved:', proposal.timeSaved);
   }
@@ -155,6 +175,13 @@ export class RoutingController {
    */
   rejectReroute(): void {
     this.state.lastProposal = null;
+    this.isEvaluating = false;
+    
+    // Emit rejection event to clear UI
+    EventBus.emit('route:reroute_rejected' as any, {
+      timestamp: Date.now(),
+    });
+    
     console.log('[RoutingController] Reroute rejected');
   }
 
@@ -251,7 +278,7 @@ export class RoutingController {
   }
 
   /**
-   * Check congestion level ahead on current route
+   * Check congestion level ahead on current route (distance-weighted)
    */
   private async checkCongestionAhead(): Promise<number> {
     if (!this.state.currentRoute || !this.state.currentPosition) {
@@ -265,9 +292,17 @@ export class RoutingController {
       return 0;
     }
 
-    // Calculate average congestion
-    const totalCongestion = upcomingSegments.reduce((sum, seg) => sum + (seg.congestion || 0), 0);
-    return totalCongestion / upcomingSegments.length;
+    // Calculate distance-weighted average congestion
+    let weightedCongestion = 0;
+    let totalWeight = 0;
+    
+    for (const seg of upcomingSegments) {
+      const weight = seg.weight || (1 / upcomingSegments.length);
+      weightedCongestion += (seg.congestion || 0) * weight;
+      totalWeight += weight;
+    }
+
+    return totalWeight > 0 ? weightedCongestion / totalWeight : 0;
   }
 
   /**
@@ -388,6 +423,7 @@ export class RoutingController {
 
   /**
    * Get upcoming route segments based on current position
+   * Redesigned for proper segment geometry and distance-weighted matching
    */
   private getUpcomingSegments(distanceMeters: number): any[] {
     if (!this.state.currentRoute || !this.state.currentPosition) {
@@ -410,39 +446,63 @@ export class RoutingController {
       }
     }
 
-    // Extract upcoming segments within distance
-    const upcomingCoords: [number, number][] = [];
+    // Extract upcoming route segments (include both from and to coordinates)
+    const upcomingSegments: Array<{ from: [number, number]; to: [number, number]; length: number }> = [];
     let accumulatedDistance = 0;
     
     for (let i = closestIndex; i < route.geometry.length - 1 && accumulatedDistance < distanceMeters; i++) {
-      const from = route.geometry[i];
-      const to = route.geometry[i + 1];
-      const segmentDistance = this.calculateDistance(from as [number, number], to as [number, number]);
-      accumulatedDistance += segmentDistance;
-      upcomingCoords.push(from as [number, number]);
+      const from = route.geometry[i] as [number, number];
+      const to = route.geometry[i + 1] as [number, number];
+      const segmentLength = this.calculateDistance(from, to);
+      
+      upcomingSegments.push({ from, to, length: segmentLength });
+      accumulatedDistance += segmentLength;
     }
 
-    // Get traffic data for upcoming segments
-    const segments = trafficFusionEngine.getAllSegments();
-    const enrichedUpcoming = upcomingCoords.map(coord => {
-      // Find nearest traffic segment
-      let nearest = null;
-      let nearestDist = Infinity;
+    if (upcomingSegments.length === 0) {
+      return [];
+    }
+
+    // Get traffic data and match with upcoming segments
+    const trafficSegments = trafficFusionEngine.getAllSegments();
+    const totalDistance = upcomingSegments.reduce((sum, seg) => sum + seg.length, 0);
+    
+    const enrichedUpcoming = upcomingSegments.map(routeSegment => {
+      // Find best matching traffic segment using both from and to points
+      let bestMatch = null;
+      let bestScore = Infinity;
       
-      for (const segment of segments) {
-        if (segment.coordinates.length === 0) continue;
-        const segCenter = segment.coordinates[Math.floor(segment.coordinates.length / 2)];
-        const dist = this.calculateDistance(coord, segCenter);
-        if (dist < nearestDist && dist < 1000) { // Within 1km
-          nearestDist = dist;
-          nearest = segment;
+      for (const trafficSeg of trafficSegments) {
+        if (trafficSeg.coordinates.length === 0) continue;
+        
+        // Calculate average distance from route segment endpoints to traffic segment
+        let minDistFrom = Infinity;
+        let minDistTo = Infinity;
+        
+        for (const trafficCoord of trafficSeg.coordinates) {
+          const distFrom = this.calculateDistance(routeSegment.from, trafficCoord);
+          const distTo = this.calculateDistance(routeSegment.to, trafficCoord);
+          
+          if (distFrom < minDistFrom) minDistFrom = distFrom;
+          if (distTo < minDistTo) minDistTo = distTo;
+        }
+        
+        const avgDist = (minDistFrom + minDistTo) / 2;
+        
+        // Relaxed threshold: 5km instead of 1km
+        if (avgDist < 5000 && avgDist < bestScore) {
+          bestScore = avgDist;
+          bestMatch = trafficSeg;
         }
       }
       
       return {
-        coords: coord,
-        congestion: nearest?.congestion || 0,
-        incidents: nearest?.incidents || [],
+        from: routeSegment.from,
+        to: routeSegment.to,
+        length: routeSegment.length,
+        weight: routeSegment.length / totalDistance, // Distance weighting
+        congestion: bestMatch?.congestion || 0,
+        incidents: bestMatch?.incidents || [],
       };
     });
 
