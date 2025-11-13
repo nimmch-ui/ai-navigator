@@ -3,4 +3,8 @@ import App from "./App";
 import "./index.css";
 import '@/services/data';
 
+if (import.meta.env.DEV) {
+  import('./dev/testProviderHealthCaching');
+}
+
 createRoot(document.getElementById("root")!).render(<App />);

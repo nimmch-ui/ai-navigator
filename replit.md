@@ -30,7 +30,12 @@ The design system incorporates the Inter font, a hierarchical sizing scale, an 8
 - **Telemetry & Deep Links:** Includes a production-ready analytics service for observability and supports URL-based deep links for shareable navigation.
 - **Global Availability:** Configured for global deployment across EU, US, ASIA, MENA, AFRICA, LATAM regions with automatic geolocation, regional infrastructure, and high-latency region optimization.
 - **Localization:** Supports 14 languages with automatic locale detection, unit conversion (metric/imperial), RTL support for Arabic, and a custom, lightweight i18n implementation.
-- **Regional Data Provider Layer:** Implements a robust, region-aware data provider system with automatic failover for Maps, Traffic, Radar, and Weather services across 6 global regions (EU, CH, US, IN, ME, GLOBAL).
+- **Regional Data Provider Layer:** Implements a robust, region-aware data provider system with automatic failover, health monitoring, and caching for Maps, Traffic, Radar, and Weather services across 6 global regions (EU, CH, US, IN, ME, GLOBAL).
+  - **Health Monitoring:** HealthMonitor with 3-5s timeouts, exponential backoff (0.5s→1s→2s), and circuit breaker (60s lockout after 3 failures).
+  - **Caching:** IndexedDB-based cache via idb-keyval with service-specific TTLs (Maps: 7d, Traffic: 5min, Radar: 24h, Weather: 30min).
+  - **Failover:** Automatic provider failover with telemetry events, toast notifications on failures, and stale cache fallback.
+  - **Telemetry:** EventBus integration with provider_failover, circuit_breaker_opened, radar_loaded, traffic_loaded, weather_loaded events including latency metrics.
+  - **Settings UI:** Region selector (EU/CH/US/IN/ME/GLOBAL) in Settings panel with auto-detection and manual override.
 
 ## External Dependencies
 
@@ -74,9 +79,18 @@ The design system incorporates the Inter font, a hierarchical sizing scale, an 8
 - date-fns
 - nanoid
 - clsx + tailwind-merge
+- idb-keyval (IndexedDB caching)
 
 ### Regional Data Providers
 - MapTiler Tiles
 - HERE Traffic
 - TomTom Traffic
 - ipapi.co (Geolocation)
+
+### Environment Variables (Provider Layer)
+- VITE_MAPBOX_TOKEN (existing)
+- VITE_MAPTILER_KEY
+- VITE_HERE_KEY
+- VITE_TOMTOM_KEY
+- VITE_OPENWEATHER_KEY
+- VITE_RADAR_URL
