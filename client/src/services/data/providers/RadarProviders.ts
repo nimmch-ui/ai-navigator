@@ -1,13 +1,14 @@
 import type { IRadar, BBox, SpeedCamera, Region } from '../types';
 
 const REGIONAL_RADAR_URLS: Record<Region, string> = {
-  EU: 'https://data.europa.eu/api/hub/store/data/speed-cameras-eu.geojson',
-  CH: 'https://opendata.swiss/api/3/action/datastore_search?resource_id=speed-cameras-ch',
-  US: 'https://opendata.arcgis.com/api/v3/datasets/speed-cameras-us/downloads/data?format=geojson',
-  IN: 'https://data.gov.in/api/datastore/resource_id/speed-cameras-in?format=json',
-  ME: 'https://data.gov.ae/api/speed-cameras-me.geojson',
-  GLOBAL: 'https://raw.githubusercontent.com/datasets/speed-cameras/main/data/cameras.geojson',
+  EU: '',
+  CH: '',
+  US: '',
+  IN: '',
+  ME: '',
+  GLOBAL: '',
 };
+
 
 export class RemoteGeoJSONRadar implements IRadar {
   constructor(private region: Region) {}
@@ -18,8 +19,8 @@ export class RemoteGeoJSONRadar implements IRadar {
 
   async getCameras(bbox: BBox): Promise<SpeedCamera[]> {
     const url = REGIONAL_RADAR_URLS[this.region];
-    if (!url) {
-      throw new Error(`[RemoteGeoJSONRadar] No URL configured for region: ${this.region}`);
+    if (!url || url === '') {
+      throw new Error(`[RemoteGeoJSONRadar] No remote radar data source configured for region: ${this.region}. Falling back to next provider.`);
     }
 
     const response = await fetch(url, {

@@ -94,20 +94,41 @@ export class RegionDetector {
 
   static async detectRegion(): Promise<Region> {
     const now = Date.now();
+    
     if (this.cachedRegion && (now - this.lastDetectionTime) < this.CACHE_DURATION) {
       return this.cachedRegion;
+    }
+
+    const storedPrefs = PreferencesService.getPreferences();
+    if (storedPrefs.region && storedPrefs.region !== 'EU') {
+      console.log(`[RegionDetector] Using stored region from preferences: ${storedPrefs.region}`);
+      this.cachedRegion = storedPrefs.region;
+      this.lastDetectionTime = now;
+      return storedPrefs.region;
     }
 
     try {
       const region = await this.detectByGeolocation();
       this.cachedRegion = region;
       this.lastDetectionTime = now;
+      try {
+        PreferencesService.updatePreference('region', region);
+        console.log(`[RegionDetector] Detected region: ${region}, persisted to preferences`);
+      } catch (error) {
+        console.error('[RegionDetector] Failed to persist region to preferences:', error);
+      }
       return region;
     } catch (error) {
       console.warn('[RegionDetector] Geolocation failed, falling back to locale detection', error);
       const region = this.detectByLocale();
       this.cachedRegion = region;
       this.lastDetectionTime = now;
+      try {
+        PreferencesService.updatePreference('region', region);
+        console.log(`[RegionDetector] Fallback region: ${region}, persisted to preferences`);
+      } catch (error) {
+        console.error('[RegionDetector] Failed to persist fallback region to preferences:', error);
+      }
       return region;
     }
   }
@@ -166,5 +187,11 @@ export class RegionDetector {
   static setRegion(region: Region): void {
     this.cachedRegion = region;
     this.lastDetectionTime = Date.now();
+    try {
+      PreferencesService.updatePreference('region', region);
+      console.log(`[RegionDetector] Manual region set: ${region}, persisted to preferences`);
+    } catch (error) {
+      console.error('[RegionDetector] Failed to persist manual region to preferences:', error);
+    }
   }
 }

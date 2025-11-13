@@ -1,15 +1,22 @@
 import type { ITraffic, BBox, TrafficFlow } from '../types';
 
 export class MapboxTraffic implements ITraffic {
+  private token: string;
+
+  constructor() {
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (!token) {
+      throw new Error('[MapboxTraffic] VITE_MAPBOX_TOKEN not configured');
+    }
+    this.token = token;
+  }
+
   getName(): string {
     return 'Mapbox Traffic';
   }
 
   async getFlow(bbox: BBox): Promise<TrafficFlow[]> {
-    const token = import.meta.env.VITE_MAPBOX_TOKEN;
-    if (!token) {
-      throw new Error('[MapboxTraffic] VITE_MAPBOX_TOKEN not found');
-    }
+    const token = this.token;
 
     const url = `https://api.mapbox.com/v4/mapbox.mapbox-traffic-v1/tilequery/${bbox.minLng},${bbox.minLat}.json?access_token=${token}`;
     
@@ -52,15 +59,22 @@ export class MapboxTraffic implements ITraffic {
 }
 
 export class HereTraffic implements ITraffic {
+  private apiKey: string;
+
+  constructor() {
+    const apiKey = import.meta.env.VITE_HERE_API_KEY;
+    if (!apiKey) {
+      throw new Error('[HereTraffic] VITE_HERE_API_KEY not configured');
+    }
+    this.apiKey = apiKey;
+  }
+
   getName(): string {
     return 'HERE Traffic';
   }
 
   async getFlow(bbox: BBox): Promise<TrafficFlow[]> {
-    const apiKey = import.meta.env.VITE_HERE_API_KEY;
-    if (!apiKey) {
-      throw new Error('[HereTraffic] VITE_HERE_API_KEY not found');
-    }
+    const apiKey = this.apiKey;
 
     const url = `https://data.traffic.hereapi.com/v7/flow?bbox=${bbox.minLat},${bbox.minLng},${bbox.maxLat},${bbox.maxLng}&apiKey=${apiKey}`;
     
@@ -94,15 +108,22 @@ export class HereTraffic implements ITraffic {
 }
 
 export class TomTomTraffic implements ITraffic {
+  private apiKey: string;
+
+  constructor() {
+    const apiKey = import.meta.env.VITE_TOMTOM_API_KEY;
+    if (!apiKey) {
+      throw new Error('[TomTomTraffic] VITE_TOMTOM_API_KEY not configured');
+    }
+    this.apiKey = apiKey;
+  }
+
   getName(): string {
     return 'TomTom Traffic';
   }
 
   async getFlow(bbox: BBox): Promise<TrafficFlow[]> {
-    const apiKey = import.meta.env.VITE_TOMTOM_API_KEY;
-    if (!apiKey) {
-      throw new Error('[TomTomTraffic] VITE_TOMTOM_API_KEY not found');
-    }
+    const apiKey = this.apiKey;
 
     const url = `https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?bbox=${bbox.minLng},${bbox.minLat},${bbox.maxLng},${bbox.maxLat}&key=${apiKey}`;
     

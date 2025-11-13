@@ -1,15 +1,22 @@
 import type { IWeather, WeatherNow } from '../types';
 
 export class OpenWeather implements IWeather {
+  private apiKey: string;
+
+  constructor() {
+    const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
+    if (!apiKey) {
+      throw new Error('[OpenWeather] VITE_OPENWEATHER_API_KEY not configured');
+    }
+    this.apiKey = apiKey;
+  }
+
   getName(): string {
     return 'OpenWeather';
   }
 
   async getNow(lat: number, lng: number): Promise<WeatherNow> {
-    const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
-    if (!apiKey) {
-      throw new Error('[OpenWeather] VITE_OPENWEATHER_API_KEY not found');
-    }
+    const apiKey = this.apiKey;
 
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=${apiKey}`;
     
