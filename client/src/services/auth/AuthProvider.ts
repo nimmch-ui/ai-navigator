@@ -35,7 +35,6 @@ class AuthProvider {
 
   constructor() {
     this.initialize();
-    this.setupStorageListener();
   }
 
   private async initialize(): Promise<void> {
@@ -55,32 +54,6 @@ class AuthProvider {
     }
   }
 
-  private setupStorageListener(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.addEventListener('storage', (event) => {
-      if (event.key === 'cloudSync_session' && !event.newValue && this.state.isAuthenticated) {
-        console.log('[AuthProvider] Session removed in another tab - logging out');
-        this.logout();
-      }
-      
-      if (event.key === 'cloudSync_session' && event.newValue && !this.state.isAuthenticated) {
-        console.log('[AuthProvider] Session added in another tab - restoring cloud session and enabling sync');
-        syncService.restoreCloudSession();
-        syncService.setSyncEnabled(true);
-        this.refresh().then((restored) => {
-          if (restored && this.state.session) {
-            console.log('[AuthProvider] Triggering device pairing sync in secondary tab for user:', this.state.session.userId);
-            syncService.syncAll(this.state.session.userId).catch(err => {
-              console.error('[AuthProvider] Device pairing sync failed in secondary tab:', err);
-            });
-          }
-        });
-      }
-    });
-  }
 
   async login(email: string, password: string): Promise<AuthLoginResponse> {
     this.setState({ isLoading: true, error: null });
