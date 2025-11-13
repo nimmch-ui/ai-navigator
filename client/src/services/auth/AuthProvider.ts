@@ -67,9 +67,17 @@ class AuthProvider {
       }
       
       if (event.key === 'cloudSync_session' && event.newValue && !this.state.isAuthenticated) {
-        console.log('[AuthProvider] Session added in another tab - restoring cloud session');
+        console.log('[AuthProvider] Session added in another tab - restoring cloud session and enabling sync');
         syncService.restoreCloudSession();
-        this.refresh();
+        syncService.setSyncEnabled(true);
+        this.refresh().then((restored) => {
+          if (restored && this.state.session) {
+            console.log('[AuthProvider] Triggering device pairing sync in secondary tab for user:', this.state.session.userId);
+            syncService.syncAll(this.state.session.userId).catch(err => {
+              console.error('[AuthProvider] Device pairing sync failed in secondary tab:', err);
+            });
+          }
+        });
       }
     });
   }
@@ -222,6 +230,8 @@ class AuthProvider {
         return false;
       }
 
+      syncService.restoreCloudSession();
+      
       const isValid = await syncService.isCloudEnabled();
       
       if (!isValid) {
