@@ -1,7 +1,9 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { offlineModeService, type NetworkStatus, type NetworkQuality } from '@/services/system/OfflineModeService';
 import { tileCache } from '@/services/map/TileCache';
 import { routeCache } from '@/services/navigation/RouteCache';
+import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface OfflineContextType {
   isOnline: boolean;
@@ -19,16 +21,31 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<NetworkStatus>(offlineModeService.getStatus());
   const [tileCacheSize, setTileCacheSize] = useState(0);
   const [routeCacheSize, setRouteCacheSize] = useState(0);
+  const { toast } = useToast();
+  const { t } = useTranslation();
+  const wasOfflineRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = offlineModeService.onStatusChange((newStatus) => {
+      const wasOffline = wasOfflineRef.current;
+      const isNowOnline = !newStatus.isOffline;
+      
+      if (wasOffline && isNowOnline) {
+        toast({
+          title: t('offline.back_online'),
+          variant: 'default',
+        });
+      }
+      
+      wasOfflineRef.current = newStatus.isOffline;
       setStatus(newStatus);
     });
 
     updateCacheSize();
+    wasOfflineRef.current = offlineModeService.getStatus().isOffline;
 
     return unsubscribe;
-  }, []);
+  }, [toast, t]);
 
   const updateCacheSize = async () => {
     const [tileStats, routeSize] = await Promise.all([
