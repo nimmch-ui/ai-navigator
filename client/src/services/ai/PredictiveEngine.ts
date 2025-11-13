@@ -342,9 +342,9 @@ class PredictiveEngineImpl {
   /**
    * Calculate lane deviation risk
    * Placeholder for future GPS/camera-based lane tracking
+   * See BACKLOG.md: Lane Deviation Prediction (PredictiveEngine)
    */
   private calculateLaneDeviationRisk(context: PredictionContext): number {
-    // TODO: Implement when lane tracking data is available
     // Would require GPS accuracy + map lane data or camera vision
     
     const driverStress = context.driverStress || EmotionEngine.getDriverState()?.stress || 20;

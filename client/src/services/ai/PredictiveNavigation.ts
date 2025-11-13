@@ -9,12 +9,21 @@ import { announcePredictiveRisk } from '@/services/voiceGuidance';
 import { EmotionEngine } from '@/services/emotion/EmotionEngine';
 import { SharedNavigationState } from '@/services/ui/SharedNavigationState';
 
+interface PositionSample {
+  position: [number, number];
+  timestamp: number;
+}
+
 class PredictiveNavigationImpl {
   private initialized = false;
   private lastRiskScores: Record<string, number> = {};
   private lastAnnouncementTime: Record<string, number> = {};
   private readonly ANNOUNCEMENT_COOLDOWN = 10000; // 10 seconds between same risk type
   private unsubscribers: Array<() => void> = [];
+  private positionHistory: PositionSample[] = [];
+  private readonly MAX_POSITION_HISTORY = 10; // Keep last 10 positions
+  private readonly MIN_POSITIONS_FOR_HEADING = 2; // Need at least 2 positions
+  private readonly MIN_DISTANCE_FOR_HEADING = 5; // Minimum 5 meters between positions
 
   init(): void {
     if (this.initialized) {
@@ -74,11 +83,34 @@ class PredictiveNavigationImpl {
    * Called when navigation state changes
    */
   private onNavigationUpdate(updates: Record<string, any>): void {
+    // Update position history when position changes
+    if (updates.currentPosition) {
+      this.updatePositionHistory(updates.currentPosition);
+    }
+
     // Trigger immediate prediction on significant state changes
     if (updates.currentSpeed !== undefined || 
         updates.currentPosition !== undefined ||
         updates.route !== undefined) {
       this.performPrediction();
+    }
+  }
+
+  /**
+   * Update position history for heading calculation
+   */
+  private updatePositionHistory(position: [number, number]): void {
+    const now = Date.now();
+    
+    // Add new position
+    this.positionHistory.push({
+      position,
+      timestamp: now,
+    });
+    
+    // Keep only last MAX_POSITION_HISTORY positions
+    if (this.positionHistory.length > this.MAX_POSITION_HISTORY) {
+      this.positionHistory.shift();
     }
   }
 
@@ -112,7 +144,7 @@ class PredictiveNavigationImpl {
       currentSpeed: navState.currentSpeed ?? 0,
       speedLimit: navState.speedLimit ?? 50,
       position: navState.currentPosition,
-      heading: 0, // TODO: Calculate from recent position changes
+      heading: this.calculateHeading(),
       route: navState.route,
       hazards: navState.hazards,
       speedCameras: navState.speedCameras,
@@ -227,6 +259,76 @@ class PredictiveNavigationImpl {
     };
 
     return mapping[factorType] || null;
+  }
+
+  /**
+   * Calculate heading from position history
+   * Returns bearing in degrees (0-360) or 0 if insufficient data
+   */
+  private calculateHeading(): number {
+    // Need at least 2 positions
+    if (this.positionHistory.length < this.MIN_POSITIONS_FOR_HEADING) {
+      return 0;
+    }
+
+    // Find the most recent two positions that are far enough apart
+    // to calculate a meaningful bearing (>= MIN_DISTANCE_FOR_HEADING meters)
+    for (let i = this.positionHistory.length - 1; i >= 1; i--) {
+      const recent = this.positionHistory[i];
+      
+      for (let j = i - 1; j >= 0; j--) {
+        const older = this.positionHistory[j];
+        const distance = this.calculateDistance(older.position, recent.position);
+        
+        if (distance >= this.MIN_DISTANCE_FOR_HEADING) {
+          // Calculate bearing from older to recent position
+          return this.calculateBearing(older.position, recent.position);
+        }
+      }
+    }
+
+    // Insufficient movement - fallback to 0
+    return 0;
+  }
+
+  /**
+   * Calculate bearing between two geographic points
+   * Returns bearing in degrees (0-360)
+   */
+  private calculateBearing(from: [number, number], to: [number, number]): number {
+    const [lat1, lon1] = from;
+    const [lat2, lon2] = to;
+    
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+    
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+    
+    const θ = Math.atan2(y, x);
+    return (θ * 180 / Math.PI + 360) % 360;
+  }
+
+  /**
+   * Calculate distance between two geographic points (Haversine formula)
+   * Returns distance in meters
+   */
+  private calculateDistance(point1: [number, number], point2: [number, number]): number {
+    const [lat1, lon1] = point1;
+    const [lat2, lon2] = point2;
+    const R = 6371e3; // Earth radius in meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
   }
 
   /**

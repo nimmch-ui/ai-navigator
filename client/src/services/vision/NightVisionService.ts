@@ -335,27 +335,27 @@ class NightVisionService {
 
   /**
    * Detect animals in the frame (AI-powered - placeholder)
+   * See BACKLOG.md: Animal Detection (NightVisionService)
    */
   async detectAnimals(imageData: ImageData): Promise<DetectionResult[]> {
-    // TODO: Integrate AI model (TensorFlow.js COCO-SSD or OpenAI Vision)
     console.log('[NightVision] Animal detection called - AI integration pending');
     return [];
   }
 
   /**
    * Detect pedestrians in the frame (AI-powered - placeholder)
+   * See BACKLOG.md: Pedestrian Detection (NightVisionService)
    */
   async detectPedestrians(imageData: ImageData): Promise<DetectionResult[]> {
-    // TODO: Integrate AI model (TensorFlow.js COCO-SSD or OpenAI Vision)
     console.log('[NightVision] Pedestrian detection called - AI integration pending');
     return [];
   }
 
   /**
    * Detect road lines in the frame (AI-powered - placeholder)
+   * See BACKLOG.md: Road Line Detection (NightVisionService)
    */
   async detectRoadLines(imageData: ImageData): Promise<DetectionResult[]> {
-    // TODO: Integrate computer vision algorithm or AI model
     console.log('[NightVision] Road line detection called - AI integration pending');
     return [];
   }

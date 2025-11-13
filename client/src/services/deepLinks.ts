@@ -115,10 +115,10 @@ class DeepLinksService {
       await ModeManager.enter(params.mode);
     }
 
-    // Note: Navigation start/end will be handled by navigation service in future
+    // See BACKLOG.md: Deep Link Navigation Trigger
     if (params.start && params.end) {
       console.log('[DeepLinks] Navigation coordinates detected:', params);
-      // TODO: Trigger navigation when navigation service supports it
+      // Navigation trigger pending navigation service integration
     }
   }
 

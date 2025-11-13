@@ -433,8 +433,8 @@ export class RoutingController {
     congestion: number,
     incidents: TrafficIncidentData[]
   ): Promise<RerouteProposal | null> {
-    // Get current weather
-    const weather = null; // TODO: Get from weather service
+    // Get current weather from SharedNavigationState
+    const weather = this.getWeatherForETA();
 
     // Compute ETAs with traffic awareness
     const currentETA = computeETA(currentRoute, weather);
@@ -692,6 +692,42 @@ export class RoutingController {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
+  }
+
+  /**
+   * Get weather in WeatherNow format for ETA calculations
+   * Converts WeatherData from SharedNavigationState to WeatherNow format
+   */
+  private getWeatherForETA(): WeatherNow | null {
+    const navState = SharedNavigationState.getState();
+    
+    if (!navState.weatherConditions || navState.weatherConditions.length === 0) {
+      console.log('[RoutingController] No weather data available for ETA calculation');
+      return null;
+    }
+
+    const weather = navState.weatherConditions[0];
+    console.log(`[RoutingController] Using weather for ETA: ${weather.condition}, ${weather.temperature}°C`);
+    
+    // Map weather condition to WeatherNow format (same as PredictiveNavigation)
+    let condition: 'clear' | 'clouds' | 'rain' | 'snow' | 'fog' | 'storm' = 'clear';
+    if (weather.condition === 'thunderstorm') {
+      condition = 'storm';
+    } else if (['clear', 'clouds', 'rain', 'snow', 'fog'].includes(weather.condition)) {
+      condition = weather.condition as any;
+    }
+    
+    // WeatherData only provides temperature and condition - use defaults for other fields
+    return {
+      temperature: weather.temperature || 15,
+      condition,
+      windSpeed: 0,
+      windDirection: 0,
+      precipitation: 0,
+      visibility: 10000,
+      humidity: 50,
+      timestamp: Date.now(),
+    };
   }
 
   /**
