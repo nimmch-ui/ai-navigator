@@ -18,6 +18,19 @@ export interface TrafficFlow {
   speed: number;
   freeFlowSpeed: number;
   congestionLevel: 'low' | 'moderate' | 'high' | 'severe';
+  segmentId?: string;
+}
+
+export interface TrafficIncidentData {
+  id: string;
+  type: 'accident' | 'construction' | 'congestion' | 'road_closure' | 'weather' | 'other';
+  severity: 'low' | 'moderate' | 'severe';
+  location: [number, number];
+  description: string;
+  delayMinutes?: number;
+  affectedRoadName?: string;
+  startTime?: number;
+  endTime?: number;
 }
 
 export interface SpeedCamera {
@@ -47,6 +60,7 @@ export interface IMapTiles {
 
 export interface ITraffic {
   getFlow(bbox: BBox): Promise<TrafficFlow[]>;
+  getIncidents(bbox: BBox): Promise<TrafficIncidentData[]>;
   getName(): string;
 }
 
