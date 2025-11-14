@@ -72,6 +72,18 @@ import { getDeviceCapabilities } from '@/services/map/webglCapability';
 import { getBestSupportedMode } from '@/services/map/modeCapabilities';
 import { validateCoordinates, getZurichFallback } from '@/utils/coordinateValidation';
 
+// ⚠️ DEVELOPMENT MODE: Import demo navigation data for testing
+import { 
+  DEV_NAV_DEMO_MODE, 
+  MOCK_ROUTE, 
+  MOCK_TRIP_ESTIMATE,
+  DEMO_ORIGIN,
+  DEMO_DESTINATION,
+  DEMO_ORIGIN_COORDS,
+  DEMO_DESTINATION_COORDS,
+  MOCK_SPEED_LIMIT
+} from '@/dev/navigationDemo';
+
 interface SearchResult {
   id: string;
   name: string;
@@ -305,6 +317,37 @@ export default function Home() {
       mounted = false;
     };
   }, []);
+
+  // ⚠️ DEVELOPMENT MODE: Load demo navigation UI on mount for testing
+  useEffect(() => {
+    if (import.meta.env.DEV && DEV_NAV_DEMO_MODE && !routeResult) {
+      console.log('[Home] 🎬 Loading DEV demo navigation for testing');
+      
+      // Set origin and destination
+      setOrigin(DEMO_ORIGIN);
+      setDestination(DEMO_DESTINATION);
+      setOriginCoords(DEMO_ORIGIN_COORDS);
+      setDestinationCoords(DEMO_DESTINATION_COORDS);
+      
+      // Center map on route
+      setMapCenter(DEMO_ORIGIN_COORDS);
+      setMapZoom(12);
+      
+      // Load mock route and trigger all dependent state updates
+      handleRouteUpdate(MOCK_ROUTE);
+      
+      // Enable route display
+      setShowRoute(true);
+      
+      // Set mock speed limit for HUD
+      setCurrentSpeedLimit(MOCK_SPEED_LIMIT);
+      
+      // Set trip estimate (handleRouteUpdate also calculates this, but we can override)
+      setTripEstimate(MOCK_TRIP_ESTIMATE);
+      
+      console.log('[Home] ✅ DEV demo navigation loaded - All navigation UI should be visible');
+    }
+  }, []); // Run once on mount, ignore handleRouteUpdate dependency to prevent loops
 
   const handleTransportModeChange = (mode: TransportMode) => {
     setTransportMode(mode);
