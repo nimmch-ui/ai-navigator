@@ -42,6 +42,16 @@ Preferred communication style: Simple, everyday language.
 - **AR Camera Fallback:** Rear→front with DOMException error mapping (6 error types), stream health monitoring with disconnect alerts
 - **Production Verification:** E2E tested, 0 TypeScript errors, no crashes, architect-approved, ready for global deployment
 
+**Coordinate Validation System - COMPLETED ✓**
+- **Production NaN Bug Fixed:** Resolved "Invalid LngLat object: (NaN, 47.3769)" errors caused by Swiss locale number formatting (comma decimal separators) being parsed incorrectly in production builds
+- **Comprehensive Validation:** Created defensive validation utility (`client/src/utils/coordinateValidation.ts`) with NaN/null/undefined/range guards for all geographic coordinates
+- **Multi-Layer Protection:** Validates coordinates at MapboxMap initialization, center prop updates, theme switching, AI camera loop, and Home state management
+- **Safe Fallback:** Automatic fallback to Zurich coordinates [lat: 47.3769, lng: 8.5417] when invalid values detected
+- **Telemetry Logging:** console.info("FALLBACK: ...") logs flag incidents when fallback coordinates are used for production monitoring
+- **Coverage:** All vulnerable Mapbox entry points protected (initialization, center updates, currentPosition, search results, theme resolution)
+- **Validation Functions:** `validateCoordinates()` for [lat,lng] format, `validateAndConvertForMapbox()` for [lng,lat] Mapbox format, automatic coordinate format conversion
+- **Production Verified:** E2E tests passed, no NaN errors, map renders successfully with validated coordinates, architect-approved
+
 **Bug Fixes:**
 - Fixed radar provider TypeError: getCameras(bbox) now used instead of non-existent getSpeedCameras()
 - Disabled outdated dev test imports causing console errors
