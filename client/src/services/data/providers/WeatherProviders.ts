@@ -63,18 +63,30 @@ export class MeteoFuse implements IWeather {
   }
 
   async getNow(lat: number, lng: number): Promise<WeatherNow> {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&hourly=precipitation,visibility`;
-    
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(5000),
-    });
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&hourly=precipitation,visibility`;
+      
+      console.log(`[MeteoFuse] Fetching weather for ${lat}, ${lng}`);
+      
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(5000),
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`MeteoFuse API error: ${response.status}`);
+      if (!response.ok) {
+        console.error(`[MeteoFuse] API error: ${response.status} ${response.statusText}`);
+        throw new Error(`MeteoFuse API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('[MeteoFuse] Weather data received successfully');
+      return this.transformResponse(data);
+    } catch (error) {
+      console.error('[MeteoFuse] Failed to fetch weather:', error);
+      throw error;
     }
-
-    const data = await response.json();
-    return this.transformResponse(data);
   }
 
   private transformResponse(data: any): WeatherNow {
@@ -112,8 +124,15 @@ export class MockWeather implements IWeather {
   }
 
   async getNow(lat: number, lng: number): Promise<WeatherNow> {
+    // ⚠️ GUARANTEED FALLBACK: This provider NEVER fails
+    // Used when all real weather APIs are unavailable
+    console.log('[MockWeather] Using mock weather data as fallback');
+    
     const hour = new Date().getHours();
     const isSunny = hour > 6 && hour < 20;
+
+    // Add small delay to simulate API call
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     return {
       temperature: 18 + Math.random() * 10,
