@@ -45,14 +45,15 @@ Preferred communication style: Simple, everyday language.
 **Coordinate Validation System - COMPLETED ✓**
 - **Production NaN Bug Fixed:** Resolved "Invalid LngLat object: (NaN, 47.3769)" errors caused by radar provider data containing speed cameras with `lon: null`
 - **Root Cause:** Speed camera data from radar provider included entries with null longitude values, which became `[null, 47.3769]` when passed to Mapbox's `setLngLat()`, causing Mapbox parser to convert null → NaN
-- **Marker Validation Guards:** Added coordinate validation to speed camera rendering (MapboxMap.tsx line 1036-1041) and hazard rendering (line 1009-1013) to filter out null/undefined/NaN coordinates before rendering markers
-- **Comprehensive Validation:** Created defensive validation utility (`client/src/utils/coordinateValidation.ts`) with NaN/null/undefined/range guards for all geographic coordinates
-- **Multi-Layer Protection:** Validates coordinates at MapboxMap initialization, center prop updates, theme switching, AI camera loop, and Home state management
-- **Safe Fallback:** Automatic fallback to Zurich coordinates [lat: 47.3769, lng: 8.5417] when invalid values detected
-- **Telemetry Logging:** console.warn logs when markers with invalid coordinates are skipped; console.info logs when fallback coordinates are used for production monitoring
-- **Coverage:** All vulnerable Mapbox entry points protected (initialization, center updates, currentPosition, search results, theme resolution, marker rendering)
+- **Multi-Layer Defense:**
+  1. **Enhanced LngLatGuard** (mapboxLngLatGuard.ts): Factory-level wrapper on Mapbox's `LngLat.convert` that catches ALL invalid coordinates before they reach Mapbox internals. Converts null/undefined → NaN for consistent validation, validates coordinate ranges (lng: -180 to 180, lat: -90 to 90), logs detailed error reasons with stack traces, falls back to Zurich coordinates [8.5417, 47.3769].
+  2. **Per-Marker Validation** (MapboxMap.tsx line 1009-1013, 1036-1041): Early validation filters that skip speed cameras and hazards with null/undefined/NaN coordinates before marker creation.
+  3. **Coordinate Utilities** (coordinateValidation.ts): Defensive validation helpers with NaN/null/undefined/range guards for all geographic coordinate handling.
+- **Multi-Layer Protection:** Validates coordinates at MapboxMap initialization, center prop updates, theme switching, AI camera loop, Home state management, and all marker rendering
+- **Production Telemetry:** Installation logs with timestamp `[LngLatGuard] ✓ INSTALLED at <ISO>`, critical coordinate errors logged with detailed reason, normalized coordinates logged when null or comma separator detected
+- **Coverage:** ALL Mapbox entry points protected: map initialization, camera movements (easeTo/flyTo/jumpTo), marker placement (setLngLat), center updates, search results, theme switching
 - **Validation Functions:** `validateCoordinates()` for [lat,lng] format, `validateAndConvertForMapbox()` for [lng,lat] Mapbox format, automatic coordinate format conversion
-- **Production Verified:** E2E tests passed, NO NaN errors, app remains stable, invalid markers skipped gracefully, architect-approved
+- **Production Verified:** E2E tests passed, NO NaN errors, app remains stable, invalid markers skipped gracefully, architect-approved, comprehensive null handling implemented
 
 **Bug Fixes:**
 - Fixed radar provider TypeError: getCameras(bbox) now used instead of non-existent getSpeedCameras()
