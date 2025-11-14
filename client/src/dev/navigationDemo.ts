@@ -11,9 +11,9 @@
 import type { RouteResult } from '@/services/routing';
 import type { TripEstimate } from '@/services/tripEstimates';
 
-// ⚠️ Enable demo navigation UI ONLY in development builds
-// Set to false to disable even in dev, or true to enable (automatically false in production)
-export const DEV_NAV_DEMO_MODE = import.meta.env.DEV && true;
+// ⚠️ Enable demo navigation UI in test mode for internal testing
+// Set VITE_TEST_MODE=true in Replit secrets to enable in production
+export const DEV_NAV_DEMO_MODE = (import.meta.env.DEV || import.meta.env.VITE_TEST_MODE === 'true') && true;
 
 /**
  * Mock route from Zurich HB to Zurich Airport
@@ -22,6 +22,7 @@ export const DEV_NAV_DEMO_MODE = import.meta.env.DEV && true;
 export const MOCK_ROUTE: RouteResult = {
   distance: 12400, // 12.4 km
   duration: 840, // 14 minutes
+  profile: 'driving-traffic',
   geometry: [
     [8.5417, 47.3769], // Zurich HB (start)
     [8.5420, 47.3780],
@@ -42,8 +43,6 @@ export const MOCK_ROUTE: RouteResult = {
       maneuver: {
         type: 'depart',
         location: [8.5417, 47.3769],
-        bearing_before: 0,
-        bearing_after: 10,
       },
     },
     {
@@ -54,8 +53,6 @@ export const MOCK_ROUTE: RouteResult = {
         type: 'turn',
         modifier: 'right',
         location: [8.5430, 47.3800],
-        bearing_before: 10,
-        bearing_after: 85,
       },
     },
     {
@@ -66,8 +63,6 @@ export const MOCK_ROUTE: RouteResult = {
         type: 'continue',
         modifier: 'straight',
         location: [8.5500, 47.3900],
-        bearing_before: 85,
-        bearing_after: 85,
       },
     },
     {
@@ -78,8 +73,6 @@ export const MOCK_ROUTE: RouteResult = {
         type: 'on ramp',
         modifier: 'slight right',
         location: [8.5600, 47.4000],
-        bearing_before: 85,
-        bearing_after: 95,
       },
     },
     {
@@ -90,8 +83,6 @@ export const MOCK_ROUTE: RouteResult = {
         type: 'continue',
         modifier: 'straight',
         location: [8.5650, 47.4050],
-        bearing_before: 95,
-        bearing_after: 95,
       },
     },
     {
@@ -102,8 +93,6 @@ export const MOCK_ROUTE: RouteResult = {
         type: 'off ramp',
         modifier: 'right',
         location: [8.5550, 47.4100],
-        bearing_before: 95,
-        bearing_after: 45,
       },
     },
     {
@@ -113,8 +102,6 @@ export const MOCK_ROUTE: RouteResult = {
       maneuver: {
         type: 'arrive',
         location: [8.5490, 47.4150],
-        bearing_before: 45,
-        bearing_after: 0,
       },
     },
   ],
@@ -124,12 +111,14 @@ export const MOCK_ROUTE: RouteResult = {
  * Mock trip estimate matching the route above
  */
 export const MOCK_TRIP_ESTIMATE: TripEstimate = {
-  distance: MOCK_ROUTE.distance,
-  duration: MOCK_ROUTE.duration,
-  arrivalTime: Date.now() + MOCK_ROUTE.duration * 1000,
-  fuelCost: 3.5,
-  tollCost: 0,
-  co2Emissions: 2.8,
+  distance: MOCK_ROUTE.distance / 1000, // Convert to km
+  duration: MOCK_ROUTE.duration / 60, // Convert to minutes
+  fuelConsumption: 1.2,
+  disclaimer: 'Demo data for testing purposes',
+  ecoTips: [
+    'Maintain steady speed for better fuel efficiency',
+    'Avoid rapid acceleration and braking',
+  ],
 };
 
 /**

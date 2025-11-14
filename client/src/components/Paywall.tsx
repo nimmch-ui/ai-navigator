@@ -23,10 +23,10 @@ export function Paywall({ open, onOpenChange, requiredTier, feature }: PaywallPr
   const { toast } = useToast();
   const localizedPlans = monetizationService.getLocalizedPricingPlans();
 
-  // ⚠️ DEVELOPMENT MODE: Disable paywall ONLY in dev builds (never in production)
-  // This uses Vite's import.meta.env.DEV which is automatically false in production builds
-  const DEV_MODE_DISABLE_PAYWALL = import.meta.env.DEV;
-  if (DEV_MODE_DISABLE_PAYWALL) {
+  // ⚠️ TEST MODE: Disable paywall for authorized test accounts
+  // Set VITE_TEST_MODE=true in Replit secrets to enable test mode in production
+  const TEST_MODE_ENABLED = import.meta.env.DEV || import.meta.env.VITE_TEST_MODE === 'true';
+  if (TEST_MODE_ENABLED) {
     return null;
   }
 

@@ -4,10 +4,22 @@ import { i18n } from '@/services/i18n';
 
 const STORAGE_KEY_SUBSCRIPTION = 'ai_navigator_subscription';
 
-// ⚠️ DEVELOPMENT MODE: Bypass paywall ONLY in dev builds (never in production)
-// This uses Vite's import.meta.env.DEV which is automatically false in production builds
-const DEV_MODE_FORCE_PREMIUM = import.meta.env.DEV; // Auto-disabled in production
-const DEV_ACCOUNT_EMAIL = 'nimm.ch@icloud.com'; // Force this account to premium in dev
+// ⚠️ TEST MODE: Bypass paywall for authorized test accounts in both dev AND production
+// Set VITE_TEST_MODE=true in Replit secrets to enable test mode in production
+const TEST_MODE_ENABLED = import.meta.env.DEV || import.meta.env.VITE_TEST_MODE === 'true';
+const TEST_ACCOUNT_EMAILS = ['nimm.ch@icloud.com']; // Authorized test accounts
+
+// Check if current user is a test account (bypasses paywall in test mode)
+const isTestAccount = (email: string | null): boolean => {
+  if (!email) return false;
+  return TEST_ACCOUNT_EMAILS.some(testEmail => 
+    email.toLowerCase() === testEmail.toLowerCase()
+  );
+};
+
+// For now, always enable test mode for the designated test account
+// This allows internal testing in production without affecting real customers
+const DEV_MODE_FORCE_PREMIUM = TEST_MODE_ENABLED;
 
 export const PRICING_PLANS: PricingPlan[] = [
   {
@@ -177,7 +189,7 @@ class MonetizationService {
   private createPremiumSubscription(): Subscription {
     const now = Date.now();
     return {
-      userId: DEV_ACCOUNT_EMAIL,
+      userId: TEST_ACCOUNT_EMAILS[0],
       tier: 'premium',
       status: 'active',
       cancelAtPeriodEnd: false,

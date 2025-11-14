@@ -25,9 +25,9 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-// ⚠️ DEVELOPMENT MODE: Bypass paywall ONLY in dev builds (never in production)
-// This uses Vite's import.meta.env.DEV which is automatically false in production builds
-const DEV_MODE_NO_PAYWALL = import.meta.env.DEV;
+// ⚠️ TEST MODE: Bypass paywall for authorized test accounts
+// Set VITE_TEST_MODE=true in Replit secrets to enable test mode in production
+const TEST_MODE_NO_PAYWALL = import.meta.env.DEV || import.meta.env.VITE_TEST_MODE === 'true';
 
 interface ModeConfig {
   mode: UiMode;
@@ -208,8 +208,8 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
     if (mode === UiMode.NIGHT_VISION) {
       const hasProTier = monetizationService.hasFeature('pro');
       if (!hasProTier) {
-        // ⚠️ DEVELOPMENT MODE: Skip paywall in dev mode
-        if (!DEV_MODE_NO_PAYWALL) {
+        // ⚠️ TEST MODE: Skip paywall in test mode
+        if (!TEST_MODE_NO_PAYWALL) {
           toast({
             title: 'Pro Tier Required',
             description: 'Night Vision is a Pro-exclusive feature. Upgrade to unlock AI-powered night driving assistance.',
@@ -220,8 +220,8 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
         }
       }
     } else if (config.requiresPremium && !canUsePremium) {
-      // ⚠️ DEVELOPMENT MODE: Skip paywall in dev mode
-      if (!DEV_MODE_NO_PAYWALL) {
+      // ⚠️ TEST MODE: Skip paywall in test mode
+      if (!TEST_MODE_NO_PAYWALL) {
         onUpgradeClick?.();
         return;
       }
@@ -390,15 +390,15 @@ export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }:
     if (mode === UiMode.NIGHT_VISION) {
       const hasProTier = monetizationService.hasFeature('pro');
       if (!hasProTier) {
-        // ⚠️ DEVELOPMENT MODE: Skip paywall in dev mode
-        if (!DEV_MODE_NO_PAYWALL) {
+        // ⚠️ TEST MODE: Skip paywall in test mode
+        if (!TEST_MODE_NO_PAYWALL) {
           onUpgradeClick?.();
           return;
         }
       }
     } else if (config.requiresPremium && !canUsePremium) {
-      // ⚠️ DEVELOPMENT MODE: Skip paywall in dev mode
-      if (!DEV_MODE_NO_PAYWALL) {
+      // ⚠️ TEST MODE: Skip paywall in test mode
+      if (!TEST_MODE_NO_PAYWALL) {
         onUpgradeClick?.();
         return;
       }
