@@ -406,12 +406,17 @@ export default function MapboxMap({
 
   /**
    * Smooth camera animation when center/zoom changes
+   * CRITICAL: Validate center to prevent NaN errors from invalid coordinates
    */
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
+    // Validate coordinates to prevent crashes from NaN values
+    const validatedCenter = validateCoordinates(center, 'center prop update');
+    const [validLat, validLng] = validatedCenter;
+
     map.current.easeTo({
-      center: [center[1], center[0]],
+      center: [validLng, validLat], // [lng, lat] for Mapbox
       zoom: zoom,
       duration: 1000,
       easing: (t) => t * (2 - t) // Ease out quad
@@ -584,14 +589,20 @@ export default function MapboxMap({
       // Apply camera parameters to map
       const { pitch, zoom, bearing, duration } = newCameraState.params;
 
+      // Validate and convert currentPosition to prevent NaN errors
+      let cameraCenter = map.current.getCenter();
+      if (currentPosition) {
+        const validatedPos = validateCoordinates(currentPosition, 'AI camera currentPosition');
+        const [validLat, validLng] = validatedPos;
+        cameraCenter = { lng: validLng, lat: validLat };
+      }
+
       // Smooth camera update using easeTo
       map.current.easeTo({
         pitch,
         zoom,
         bearing,
-        center: currentPosition 
-          ? [currentPosition[1], currentPosition[0]] // Convert [lat, lng] to [lng, lat]
-          : map.current.getCenter(),
+        center: cameraCenter,
         duration: duration || 100,
         easing: (t) => t, // Linear for frame-by-frame updates
       });

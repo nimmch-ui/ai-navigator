@@ -32,7 +32,7 @@ export function validateCoordinates(
 ): [number, number] {
   // Handle null/undefined
   if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 2) {
-    console.warn(`[CoordinateValidation] Invalid coordinate structure from ${source}, using Zurich fallback`);
+    console.info(`[CoordinateValidation] FALLBACK: Invalid coordinate structure from ${source}, using Zurich fallback [${FALLBACK_ZURICH_LAT}, ${FALLBACK_ZURICH_LNG}]`);
     return [FALLBACK_ZURICH_LAT, FALLBACK_ZURICH_LNG];
   }
 
@@ -40,30 +40,29 @@ export function validateCoordinates(
 
   // Check latitude validity
   if (!isValidCoordinate(lat)) {
-    console.warn(`[CoordinateValidation] Invalid latitude (${lat}) from ${source}, using Zurich fallback`);
+    console.info(`[CoordinateValidation] FALLBACK: Invalid latitude (${lat}) from ${source}, using Zurich fallback [${FALLBACK_ZURICH_LAT}, ${FALLBACK_ZURICH_LNG}]`);
     return [FALLBACK_ZURICH_LAT, FALLBACK_ZURICH_LNG];
   }
 
   // Check longitude validity
   if (!isValidCoordinate(lng)) {
-    console.warn(`[CoordinateValidation] Invalid longitude (${lng}) from ${source}, using Zurich fallback`);
+    console.info(`[CoordinateValidation] FALLBACK: Invalid longitude (${lng}) from ${source}, using Zurich fallback [${FALLBACK_ZURICH_LAT}, ${FALLBACK_ZURICH_LNG}]`);
     return [FALLBACK_ZURICH_LAT, FALLBACK_ZURICH_LNG];
   }
 
   // Validate latitude range
   if (lat < -90 || lat > 90) {
-    console.warn(`[CoordinateValidation] Latitude ${lat} out of range from ${source}, using Zurich fallback`);
+    console.info(`[CoordinateValidation] FALLBACK: Latitude ${lat} out of range from ${source}, using Zurich fallback [${FALLBACK_ZURICH_LAT}, ${FALLBACK_ZURICH_LNG}]`);
     return [FALLBACK_ZURICH_LAT, FALLBACK_ZURICH_LNG];
   }
 
   // Validate longitude range
   if (lng < -180 || lng > 180) {
-    console.warn(`[CoordinateValidation] Longitude ${lng} out of range from ${source}, using Zurich fallback`);
+    console.info(`[CoordinateValidation] FALLBACK: Longitude ${lng} out of range from ${source}, using Zurich fallback [${FALLBACK_ZURICH_LAT}, ${FALLBACK_ZURICH_LNG}]`);
     return [FALLBACK_ZURICH_LAT, FALLBACK_ZURICH_LNG];
   }
 
   // Coordinates are valid
-  console.log(`[CoordinateValidation] Valid coordinates from ${source}: [${lat}, ${lng}]`);
   return [lat, lng];
 }
 
