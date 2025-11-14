@@ -4,6 +4,10 @@ import { i18n } from '@/services/i18n';
 
 const STORAGE_KEY_SUBSCRIPTION = 'ai_navigator_subscription';
 
+// ⚠️ DEVELOPMENT MODE: DISABLE PAYWALL FOR TESTING ⚠️
+const DEV_MODE_FORCE_PREMIUM = true; // Set to false to re-enable paywall system
+const DEV_ACCOUNT_EMAIL = 'nimm.ch@icloud.com'; // Force this account to premium
+
 export const PRICING_PLANS: PricingPlan[] = [
   {
     tier: 'free',
@@ -115,6 +119,14 @@ class MonetizationService {
 
   private loadSubscription(): void {
     try {
+      // ⚠️ DEVELOPMENT MODE: Force premium subscription for testing
+      if (DEV_MODE_FORCE_PREMIUM) {
+        console.log('[MonetizationService] 🔓 DEV MODE ACTIVE - Forcing PREMIUM subscription for testing');
+        this.subscription = this.createPremiumSubscription();
+        this.saveSubscription();
+        return;
+      }
+
       const stored = localStorage.getItem(STORAGE_KEY_SUBSCRIPTION);
       if (stored) {
         this.subscription = JSON.parse(stored);
@@ -161,6 +173,19 @@ class MonetizationService {
     };
   }
 
+  private createPremiumSubscription(): Subscription {
+    const now = Date.now();
+    return {
+      userId: DEV_ACCOUNT_EMAIL,
+      tier: 'premium',
+      status: 'active',
+      cancelAtPeriodEnd: false,
+      createdAt: now,
+      updatedAt: now,
+      currentPeriodEnd: now + (365 * 24 * 60 * 60 * 1000), // 1 year from now
+    };
+  }
+
   private notifyListeners(): void {
     this.listeners.forEach(listener => listener(this.subscription));
   }
@@ -179,6 +204,11 @@ class MonetizationService {
   }
 
   hasFeature(tier: SubscriptionTier): boolean {
+    // ⚠️ DEVELOPMENT MODE: All features unlocked
+    if (DEV_MODE_FORCE_PREMIUM) {
+      return true;
+    }
+
     const currentTier = this.getCurrentTier();
     const tierOrder: SubscriptionTier[] = ['free', 'premium', 'pro'];
     const currentIndex = tierOrder.indexOf(currentTier);
@@ -187,6 +217,10 @@ class MonetizationService {
   }
 
   canAccessFeature(featureTier: SubscriptionTier): boolean {
+    // ⚠️ DEVELOPMENT MODE: All features unlocked
+    if (DEV_MODE_FORCE_PREMIUM) {
+      return true;
+    }
     return this.hasFeature(featureTier);
   }
 
@@ -338,22 +372,27 @@ class MonetizationService {
   }
 
   canUse3D(): boolean {
+    if (DEV_MODE_FORCE_PREMIUM) return true;
     return this.hasFeature('premium');
   }
 
   canUseCinematic(): boolean {
+    if (DEV_MODE_FORCE_PREMIUM) return true;
     return this.hasFeature('premium');
   }
 
   canUseAR(): boolean {
+    if (DEV_MODE_FORCE_PREMIUM) return true;
     return this.hasFeature('premium');
   }
 
   canUseRadars(): boolean {
+    if (DEV_MODE_FORCE_PREMIUM) return true;
     return this.hasFeature('premium');
   }
 
   canUseSync(): boolean {
+    if (DEV_MODE_FORCE_PREMIUM) return true;
     return this.hasFeature('premium');
   }
 

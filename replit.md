@@ -8,6 +8,42 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (November 2025)
 
+### Development Mode Configuration - ACTIVE ✓
+
+**⚠️ PAYWALL SYSTEM DISABLED FOR INTERNAL TESTING**
+
+For development and testing purposes, the entire paywall/subscription system has been temporarily disabled:
+
+**MonetizationService.ts Changes:**
+- `DEV_MODE_FORCE_PREMIUM = true` - Forces all users to premium tier
+- `DEV_ACCOUNT_EMAIL = 'nimm.ch@icloud.com'` - Development account identifier
+- All feature checks (`hasFeature`, `canUse3D`, `canUseCinematic`, `canUseAR`, `canUseRadars`, `canUseSync`) return `true`
+- Premium subscription created with 1-year expiry (365 days)
+- Console log on startup: `[MonetizationService] 🔓 DEV MODE ACTIVE - Forcing PREMIUM subscription for testing`
+
+**Paywall.tsx Changes:**
+- `DEV_MODE_DISABLE_PAYWALL = true` - Paywall modal never renders
+- All subscription popups disabled
+
+**Active Features in Development Mode:**
+- ✅ All navigation features unlocked
+- ✅ 3D map mode enabled
+- ✅ Cinematic mode enabled
+- ✅ AR navigation enabled
+- ✅ Speed camera radar enabled
+- ✅ Weather AI integration enabled
+- ✅ Cloud sync enabled
+- ✅ Offline maps enabled
+- ✅ NO subscription checks
+- ✅ NO paywall popups
+
+**To Re-Enable Production Paywall (For Customer Release):**
+1. Set `DEV_MODE_FORCE_PREMIUM = false` in `client/src/services/monetization/MonetizationService.ts`
+2. Set `DEV_MODE_DISABLE_PAYWALL = false` in `client/src/components/Paywall.tsx`
+3. Redeploy application
+
+**Testing Status:** Verified working - app fully interactive, no paywall blocking, premium features accessible
+
 ### Production Stabilization Audit - COMPLETED ✓
 
 **Error Handling & Resilience:**

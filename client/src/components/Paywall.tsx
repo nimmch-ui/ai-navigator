@@ -23,6 +23,12 @@ export function Paywall({ open, onOpenChange, requiredTier, feature }: PaywallPr
   const { toast } = useToast();
   const localizedPlans = monetizationService.getLocalizedPricingPlans();
 
+  // ⚠️ DEVELOPMENT MODE: Never show paywall during testing
+  const DEV_MODE_DISABLE_PAYWALL = true;
+  if (DEV_MODE_DISABLE_PAYWALL) {
+    return null;
+  }
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && open) {
