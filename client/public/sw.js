@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2-nan-fix';
 const CACHE_NAMES = {
   static: `ai-nav-static-${CACHE_VERSION}`,
   mapbox: `ai-nav-mapbox-${CACHE_VERSION}`,
@@ -12,35 +12,38 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
+  console.log('[SW] Installing service worker v2-nan-fix...');
   event.waitUntil(
     caches.open(CACHE_NAMES.static).then((cache) => {
       console.log('[SW] Caching static assets');
       return cache.addAll(STATIC_ASSETS);
     })
   );
-  // Don't call skipWaiting() here - let the service worker enter waiting state
-  // so PWAUpdateNotification can detect it and prompt the user.
-  // skipWaiting() will be called when user clicks "Update" via SKIP_WAITING message.
+  // CRITICAL: Force immediate activation to invalidate old cached JS bundle
+  console.log('[SW] Calling skipWaiting() to activate immediately and bust cache');
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
+  console.log('[SW] Activating service worker v2-nan-fix...');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    (async () => {
+      // Delete all old caches to force fresh fetch of JS bundle
+      const cacheNames = await caches.keys();
+      await Promise.all(
         cacheNames
-          .filter((name) => {
-            return Object.values(CACHE_NAMES).indexOf(name) === -1;
-          })
+          .filter((name) => Object.values(CACHE_NAMES).indexOf(name) === -1)
           .map((name) => {
             console.log('[SW] Deleting old cache:', name);
             return caches.delete(name);
           })
       );
-    })
+      
+      // Take control of all clients immediately
+      await self.clients.claim();
+      console.log('[SW] v2-nan-fix activated and claimed all clients. Users must hard refresh (Ctrl+Shift+R / Cmd+Shift+R) to load new bundle.');
+    })()
   );
-  return self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {

@@ -980,6 +980,12 @@ export default function MapboxMap({
 
     // Add regular markers
     markers.forEach(({ lat, lng, label }) => {
+      // Validate coordinates before rendering marker
+      if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) {
+        console.warn('[MapboxMap] Skipping regular marker with invalid coordinates:', { lat, lng, label });
+        return;
+      }
+
       const el = document.createElement('div');
       el.className = 'w-10 h-10 bg-primary rounded-full border-2 border-white shadow-lg flex items-center justify-center';
       el.innerHTML = `
