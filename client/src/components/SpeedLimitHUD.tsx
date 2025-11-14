@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Car, Bike, Footprints, Train } from 'lucide-react';
 import type { TransportMode } from '@/services/preferences';
 
@@ -19,7 +20,7 @@ const getModeIcon = (mode: TransportMode) => {
   }
 };
 
-export default function SpeedLimitHUD({ speedLimit, transportMode }: SpeedLimitHUDProps) {
+const SpeedLimitHUD = memo(function SpeedLimitHUD({ speedLimit, transportMode }: SpeedLimitHUDProps) {
   return (
     <div 
       className="bg-card border border-border rounded-lg shadow-lg p-3 min-w-[100px]"
@@ -46,4 +47,6 @@ export default function SpeedLimitHUD({ speedLimit, transportMode }: SpeedLimitH
       </div>
     </div>
   );
-}
+});
+
+export default SpeedLimitHUD;

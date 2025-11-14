@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Car, Zap, Flame, Info } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,7 @@ interface TripSummaryProps {
   ecoMode: boolean;
 }
 
-export default function TripSummary({ estimate, vehicleType, ecoMode }: TripSummaryProps) {
+const TripSummary = memo(function TripSummary({ estimate, vehicleType, ecoMode }: TripSummaryProps) {
   return (
     <Card className="p-4" data-testid="trip-summary">
       <div className="flex items-center justify-between mb-3">
@@ -127,4 +128,6 @@ export default function TripSummary({ estimate, vehicleType, ecoMode }: TripSumm
       </div>
     </Card>
   );
-}
+});
+
+export default TripSummary;

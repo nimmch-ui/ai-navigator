@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Leaf, Fuel, Zap, Cloud } from 'lucide-react';
 import type { EcoEstimate } from '@/services/ecoEstimates';
 
@@ -5,7 +6,7 @@ interface EcoSummaryProps {
   estimate: EcoEstimate;
 }
 
-export default function EcoSummary({ estimate }: EcoSummaryProps) {
+const EcoSummary = memo(function EcoSummary({ estimate }: EcoSummaryProps) {
   return (
     <div 
       className="bg-green-500/10 border border-green-500/20 rounded-lg p-3"
@@ -71,4 +72,6 @@ export default function EcoSummary({ estimate }: EcoSummaryProps) {
       </div>
     </div>
   );
-}
+});
+
+export default EcoSummary;

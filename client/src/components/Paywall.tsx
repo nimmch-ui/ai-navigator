@@ -23,8 +23,9 @@ export function Paywall({ open, onOpenChange, requiredTier, feature }: PaywallPr
   const { toast } = useToast();
   const localizedPlans = monetizationService.getLocalizedPricingPlans();
 
-  // ⚠️ DEVELOPMENT MODE: Never show paywall during testing
-  const DEV_MODE_DISABLE_PAYWALL = true;
+  // ⚠️ DEVELOPMENT MODE: Disable paywall ONLY in dev builds (never in production)
+  // This uses Vite's import.meta.env.DEV which is automatically false in production builds
+  const DEV_MODE_DISABLE_PAYWALL = import.meta.env.DEV;
   if (DEV_MODE_DISABLE_PAYWALL) {
     return null;
   }

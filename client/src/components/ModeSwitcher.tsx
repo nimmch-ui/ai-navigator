@@ -25,8 +25,9 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-// ⚠️ DEVELOPMENT MODE: Never trigger paywall during testing
-const DEV_MODE_NO_PAYWALL = true;
+// ⚠️ DEVELOPMENT MODE: Bypass paywall ONLY in dev builds (never in production)
+// This uses Vite's import.meta.env.DEV which is automatically false in production builds
+const DEV_MODE_NO_PAYWALL = import.meta.env.DEV;
 
 interface ModeConfig {
   mode: UiMode;

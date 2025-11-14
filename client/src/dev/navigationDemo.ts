@@ -11,8 +11,9 @@
 import type { RouteResult } from '@/services/routing';
 import type { TripEstimate } from '@/services/tripEstimates';
 
-// ⚠️ Set to true to enable demo navigation UI on app load
-export const DEV_NAV_DEMO_MODE = true;
+// ⚠️ Enable demo navigation UI ONLY in development builds
+// Set to false to disable even in dev, or true to enable (automatically false in production)
+export const DEV_NAV_DEMO_MODE = import.meta.env.DEV && true;
 
 /**
  * Mock route from Zurich HB to Zurich Airport

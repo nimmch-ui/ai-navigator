@@ -4,9 +4,10 @@ import { i18n } from '@/services/i18n';
 
 const STORAGE_KEY_SUBSCRIPTION = 'ai_navigator_subscription';
 
-// ⚠️ DEVELOPMENT MODE: DISABLE PAYWALL FOR TESTING ⚠️
-const DEV_MODE_FORCE_PREMIUM = true; // Set to false to re-enable paywall system
-const DEV_ACCOUNT_EMAIL = 'nimm.ch@icloud.com'; // Force this account to premium
+// ⚠️ DEVELOPMENT MODE: Bypass paywall ONLY in dev builds (never in production)
+// This uses Vite's import.meta.env.DEV which is automatically false in production builds
+const DEV_MODE_FORCE_PREMIUM = import.meta.env.DEV; // Auto-disabled in production
+const DEV_ACCOUNT_EMAIL = 'nimm.ch@icloud.com'; // Force this account to premium in dev
 
 export const PRICING_PLANS: PricingPlan[] = [
   {
