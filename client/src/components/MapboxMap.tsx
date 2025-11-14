@@ -48,6 +48,7 @@ import {
 import type { TrafficSegment } from '@/services/ai/TrafficFusionEngine';
 import { EventBus } from '@/services/eventBus';
 import { usePerformance } from '@/contexts/PerformanceContext';
+import { validateAndConvertForMapbox, validateCoordinates, getZurichFallback } from '@/utils/coordinateValidation';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -84,7 +85,7 @@ interface MapboxMapProps {
 }
 
 export default function MapboxMap({
-  center = [37.7749, -122.4194], // Default: [lat, lng]
+  center = getZurichFallback(), // Default: Zurich [lat, lng]
   zoom = 13,
   onLocationSelect,
   markers = [],
@@ -262,15 +263,25 @@ export default function MapboxMap({
 
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
+    // Validate and sanitize center coordinates to prevent NaN errors
+    // This handles production issues with locale-specific number parsing
+    const validatedCenter = validateCoordinates(center, 'map initialization');
+    const [validLat, validLng] = validatedCenter;
+    
+    // Convert to Mapbox format [lng, lat]
+    const mapboxCenter: [number, number] = [validLng, validLat];
+
     // Resolve theme to get initial style
-    const resolvedTheme = resolveTheme(mapTheme, center[0], center[1]);
+    const resolvedTheme = resolveTheme(mapTheme, validLat, validLng);
     const initialStyle = getStyleUrl(resolvedTheme);
     currentStyleUrl.current = initialStyle;
+
+    console.log('[MapboxMap] Initializing map with center:', { lng: validLng, lat: validLat, source: 'validated' });
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: initialStyle,
-      center: [center[1], center[0]], // Convert [lat, lng] to [lng, lat] for Mapbox
+      center: mapboxCenter, // [lng, lat] format for Mapbox, validated
       zoom: zoom,
       pitch: is3DMode ? 45 : 0,
       bearing: 0,
@@ -321,8 +332,12 @@ export default function MapboxMap({
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
+    // Validate center coordinates before using for theme resolution
+    const validatedCenter = validateCoordinates(center, 'theme switching');
+    const [validLat, validLng] = validatedCenter;
+    
     // Resolve the theme based on current settings and location
-    const resolvedTheme = resolveTheme(mapTheme, center[0], center[1]);
+    const resolvedTheme = resolveTheme(mapTheme, validLat, validLng);
     const newStyleUrl = getStyleUrl(resolvedTheme);
     
     // Check if style needs to change by comparing actual URLs
