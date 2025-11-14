@@ -1002,6 +1002,13 @@ export default function MapboxMap({
 
     // Add hazard markers
     hazards.forEach((hazard) => {
+      // Validate coordinates before rendering marker
+      const [lat, lng] = hazard.coordinates;
+      if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) {
+        console.warn('[MapboxMap] Skipping hazard with invalid coordinates:', hazard);
+        return;
+      }
+
       const metadata = getHazardMetadata(hazard.type);
       
       const el = document.createElement('div');
@@ -1020,7 +1027,7 @@ export default function MapboxMap({
       `;
 
       const marker = new mapboxgl.Marker(el)
-        .setLngLat([hazard.coordinates[1], hazard.coordinates[0]])
+        .setLngLat([lng, lat])
         .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
         .addTo(map.current!);
 
@@ -1030,6 +1037,13 @@ export default function MapboxMap({
     // Add speed camera markers
     if (showSpeedCameras) {
       speedCameras.forEach((camera) => {
+        // Validate coordinates before rendering marker
+        if (camera.lon == null || camera.lat == null || 
+            isNaN(camera.lon) || isNaN(camera.lat)) {
+          console.warn('[MapboxMap] Skipping speed camera with invalid coordinates:', camera);
+          return;
+        }
+
         const el = document.createElement('div');
         el.className = 'w-10 h-10 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center animate-pulse';
         el.innerHTML = `
