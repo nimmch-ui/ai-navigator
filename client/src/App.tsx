@@ -31,10 +31,15 @@ import { EmotionEngine } from "@/services/emotion/EmotionEngine";
 import { syncTriggers } from "@/services/sync/SyncTriggers";
 import { authProvider } from "@/services/auth/AuthProvider";
 import { notifyServicesReady, notifyServicesError } from "@/services/appInitialization";
+import { installLngLatGuard } from "@/utils/mapboxLngLatGuard";
 import Home from "@/pages/Home";
 import NightVisionDemo from "@/pages/night-vision-demo";
 import GlobalRolloutStatus from "@/pages/global-rollout-status";
 import NotFound from "@/pages/not-found";
+
+// Install Mapbox LngLat guard IMMEDIATELY at module level
+// This MUST run before any Mapbox components are rendered
+installLngLatGuard();
 
 function Router() {
   return (

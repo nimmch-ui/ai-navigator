@@ -590,11 +590,11 @@ export default function MapboxMap({
       const { pitch, zoom, bearing, duration } = newCameraState.params;
 
       // Validate and convert currentPosition to prevent NaN errors
-      let cameraCenter = map.current.getCenter();
+      let cameraCenter: [number, number] | mapboxgl.LngLat = map.current.getCenter();
       if (currentPosition) {
         const validatedPos = validateCoordinates(currentPosition, 'AI camera currentPosition');
         const [validLat, validLng] = validatedPos;
-        cameraCenter = { lng: validLng, lat: validLat };
+        cameraCenter = [validLng, validLat]; // [lng, lat] for Mapbox
       }
 
       // Smooth camera update using easeTo
