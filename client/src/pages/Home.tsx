@@ -70,6 +70,7 @@ import { useRerouting } from '@/hooks/useRerouting';
 import { ModeService } from '@/services/mode';
 import { getDeviceCapabilities } from '@/services/map/webglCapability';
 import { getBestSupportedMode } from '@/services/map/modeCapabilities';
+import { validateCoordinates, getZurichFallback } from '@/utils/coordinateValidation';
 
 interface SearchResult {
   id: string;
@@ -98,7 +99,7 @@ export default function Home() {
   const [showChat, setShowChat] = useState(false);
   const [showRoute, setShowRoute] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([37.7749, -122.4194]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(getZurichFallback());
   const [mapZoom, setMapZoom] = useState(13);
   const [markers, setMarkers] = useState<Array<{ lat: number; lng: number; label?: string }>>([
     { lat: 37.7749, lng: -122.4194, label: 'San Francisco' }
@@ -606,9 +607,11 @@ export default function Home() {
       isOrigin: !origin
     });
     
-    setMapCenter(result.coordinates);
+    // Validate coordinates before setting map center
+    const validatedCoords = validateCoordinates(result.coordinates, 'search result selection');
+    setMapCenter(validatedCoords);
     setMapZoom(15);
-    setMarkers([{ lat: result.coordinates[0], lng: result.coordinates[1], label: result.name }]);
+    setMarkers([{ lat: validatedCoords[0], lng: validatedCoords[1], label: result.name }]);
     setSearchResults([]);
     
     if (!origin) {
@@ -1225,7 +1228,7 @@ export default function Home() {
             onZoomOut={() => setMapZoom((z) => Math.max(z - 1, 3))}
             onLayersToggle={() => toast({ title: 'Layers', description: 'Layer toggle coming soon' })}
             onCurrentLocation={() => {
-              setMapCenter([37.7749, -122.4194]);
+              setMapCenter(getZurichFallback());
               setMapZoom(13);
             }}
           />
