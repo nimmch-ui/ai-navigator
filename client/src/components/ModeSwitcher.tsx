@@ -25,6 +25,9 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
+// ⚠️ DEVELOPMENT MODE: Never trigger paywall during testing
+const DEV_MODE_NO_PAYWALL = true;
+
 interface ModeConfig {
   mode: UiMode;
   label: string;
@@ -204,17 +207,23 @@ export function ModeSwitcher({ className, onModeChange, onUpgradeClick }: ModeSw
     if (mode === UiMode.NIGHT_VISION) {
       const hasProTier = monetizationService.hasFeature('pro');
       if (!hasProTier) {
-        toast({
-          title: 'Pro Tier Required',
-          description: 'Night Vision is a Pro-exclusive feature. Upgrade to unlock AI-powered night driving assistance.',
-          variant: 'destructive',
-        });
+        // ⚠️ DEVELOPMENT MODE: Skip paywall in dev mode
+        if (!DEV_MODE_NO_PAYWALL) {
+          toast({
+            title: 'Pro Tier Required',
+            description: 'Night Vision is a Pro-exclusive feature. Upgrade to unlock AI-powered night driving assistance.',
+            variant: 'destructive',
+          });
+          onUpgradeClick?.();
+          return;
+        }
+      }
+    } else if (config.requiresPremium && !canUsePremium) {
+      // ⚠️ DEVELOPMENT MODE: Skip paywall in dev mode
+      if (!DEV_MODE_NO_PAYWALL) {
         onUpgradeClick?.();
         return;
       }
-    } else if (config.requiresPremium && !canUsePremium) {
-      onUpgradeClick?.();
-      return;
     }
     
     ModeService.setMode(mode);
@@ -380,12 +389,18 @@ export function ModeSwitcherCompact({ className, onModeChange, onUpgradeClick }:
     if (mode === UiMode.NIGHT_VISION) {
       const hasProTier = monetizationService.hasFeature('pro');
       if (!hasProTier) {
+        // ⚠️ DEVELOPMENT MODE: Skip paywall in dev mode
+        if (!DEV_MODE_NO_PAYWALL) {
+          onUpgradeClick?.();
+          return;
+        }
+      }
+    } else if (config.requiresPremium && !canUsePremium) {
+      // ⚠️ DEVELOPMENT MODE: Skip paywall in dev mode
+      if (!DEV_MODE_NO_PAYWALL) {
         onUpgradeClick?.();
         return;
       }
-    } else if (config.requiresPremium && !canUsePremium) {
-      onUpgradeClick?.();
-      return;
     }
     ModeService.setMode(mode);
   };

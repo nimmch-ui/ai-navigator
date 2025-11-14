@@ -100,14 +100,16 @@ export class ProviderRegistry {
   private static getWeatherProviders(region: Region): IWeather[] {
     const providers: IWeather[] = [];
 
+    // ⚠️ DEVELOPMENT MODE: Prioritize free providers that don't need API keys
+    providers.push(new MeteoFuse()); // Free, no key required
+    providers.push(new MockWeather()); // Fallback with hardcoded data
+
+    // Only add OpenWeather if API key is available
     try {
       providers.push(new OpenWeather());
     } catch (e) {
-      console.warn(`[ProviderRegistry] OpenWeather not available for ${region}:`, e);
+      console.warn(`[ProviderRegistry] OpenWeather not available (missing API key) for ${region}:`, e);
     }
-
-    providers.push(new MeteoFuse());
-    providers.push(new MockWeather());
 
     return providers;
   }
