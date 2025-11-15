@@ -692,10 +692,12 @@ export default function Home() {
     setShowRoute(true);
     setRouteResult(null);
     
-    console.log('[Route] Calculating with coords:', { 
-      origin: originCoords, 
-      destination: destinationCoords 
-    });
+    if (import.meta.env.DEV) {
+      console.log('[Route] Calculating with coords:', { 
+        origin: originCoords, 
+        destination: destinationCoords 
+      });
+    }
     
     const result = await routeFetcher.current.fetch<RouteResult>(async (signal) => {
       return calculateRoute(
@@ -749,7 +751,9 @@ export default function Home() {
       });
       setTripEstimate(estimate);
     } catch (error) {
-      console.error('Route calculation error:', error);
+      if (import.meta.env.DEV) {
+        console.error('Route calculation error:', error);
+      }
       toast({
         title: 'Route Error',
         description: error instanceof Error ? error.message : 'Failed to calculate route',

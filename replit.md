@@ -6,6 +6,39 @@ AI Navigator is a production-ready, map-first, AI-assisted Progressive Web App (
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Production Deployment Notes (November 15, 2025)
+
+### Security & Privacy Enhancements
+- **GPS Privacy Protection**: All location coordinate logging is gated with `import.meta.env.DEV` checks to prevent sensitive user location data from appearing in production console logs. Only accuracy and speed metrics are logged in development.
+- **SSR/Browser Safety**: GPS service includes browser environment checks (`typeof window !== 'undefined'`) to prevent crashes in server-side rendering or non-browser contexts.
+- **API Key Security**: Client-side keys (VITE_MAPBOX_TOKEN, VITE_STRIPE_PUBLIC_KEY) properly separated from server-side secrets (OPENAI_API_KEY, STRIPE_SECRET_KEY). No backend secrets exposed to client.
+
+### GPS Navigation Implementation
+- **Service**: `client/src/services/gps.ts` - Production-ready GPS tracking service using navigator.geolocation API
+- **Features**: 
+  - Real-time position tracking with `watchPosition()`
+  - High-accuracy mode for mobile devices (iOS/Android/iPad)
+  - Graceful fallback to route simulation when GPS fails
+  - Permission denial handling with user-friendly toast notifications
+  - 15-second timeout with automatic fallback
+  - Proper cleanup of watchers and timers to prevent memory leaks
+- **Integration**: Automatically starts GPS tracking when navigation begins, stops when navigation ends
+
+### Production Configuration
+- **Demo Mode**: Disabled (`DEV_NAV_DEMO_MODE = false`) to prevent auto-loading of Zurich HB → Airport demo route
+- **Fallback Banner**: Hidden in production (`RegionFallbackBanner` checks `import.meta.env.PROD`) for clean UX while maintaining regional failover functionality
+- **Test Mode**: Set `VITE_TEST_MODE=true` in Replit Secrets to enable internal testing account (nimm.ch@icloud.com) with full premium access
+
+### Weather System
+- **Providers**: MeteoFuse (free Open-Meteo.com API) with MockWeather fallback
+- **Resilience**: Enhanced error handling and detailed logging for troubleshooting
+- **Fallback**: Guaranteed MockWeather fallback that never fails
+
+### Mobile Optimization
+- **GPS Support**: Full iOS/iPad/Android geolocation support
+- **Performance**: Adaptive quality scaling based on device capabilities
+- **UI**: Touch-optimized controls, responsive breakpoints
+
 ## System Architecture
 
 ### UI/UX Decisions
@@ -19,10 +52,11 @@ The frontend is built with React 18, TypeScript, and Vite, using Wouter for rout
 - **Mapping & Visualization:** Offers 3D maps, terrain, sky, buildings, automatic day/night switching, and AI-assisted camera control.
 - **Augmented Reality (AR):** AR Preview mode overlays navigation onto a live camera feed.
 - **Voice & Haptic Guidance:** Utilizes Web Speech API for turn-by-turn instructions with emotion-adaptive voice and haptic feedback.
+- **Real-time GPS Navigation:** Production-safe GPS tracking using navigator.geolocation API with graceful fallback to simulation when GPS is unavailable, permission denied, or signal is weak. Includes 15-second timeout with automatic fallback and proper cleanup to prevent memory leaks.
 - **Real-time Data & Alerts:** Integrates weather APIs and a speed camera radar system.
 - **Performance & Offline:** Includes debouncing, lazy loading, PWA functionality with Service Worker for offline map downloads, and adaptive quality scaling for mobile performance.
 - **Global Availability & Localization:** Supports 15 languages, automatic locale detection, unit conversion, and regional infrastructure.
-- **Regional Data Provider Layer:** Region-aware data system with failover, health monitoring, and caching for Maps, Traffic Flow, Speed Cameras, and Weather across 6 global regions.
+- **Regional Data Provider Layer:** Region-aware data system with failover, health monitoring, and caching for Maps, Traffic Flow, Speed Cameras, and Weather across 6 global regions. Fallback banner hidden in production for clean UX.
 - **User Data Store & Cloud Sync:** IndexedDB-based storage with cloud sync, authentication, and multi-device support.
 - **Predictive AI Navigation Engine:** Real-time risk forecasting analyzing map geometry, speed, hazards, weather, and driver behavior with physics-based risk scoring.
 - **Intelligent AI Driver Safety System (SafetyController):** Orchestrates a proactive safety layer with early-warning systems, weather-adaptive safety, and driver state adaptation.
@@ -37,7 +71,7 @@ The frontend is built with React 18, TypeScript, and Vite, using Wouter for rout
 - **UI & Component Libraries:** @radix-ui/*, lucide-react, class-variance-authority, cmdk
 - **Mapping:** Mapbox GL JS, Mapbox Streets styles, Mapbox Geocoding API, Mapbox Directions API, MapTiler Tiles
 - **Weather:** OpenWeatherMap API, RainViewer API, Open-Meteo.com (MeteoFuse)
-- **Browser APIs:** Web Speech API, Service Worker API, Web App Manifest, getUserMedia API, WebXR Device API, DeviceOrientation API, Page Visibility API
+- **Browser APIs:** Web Speech API, Geolocation API (navigator.geolocation), Service Worker API, Web App Manifest, getUserMedia API, WebXR Device API, DeviceOrientation API, Page Visibility API
 - **Form Management:** react-hook-form, @hookform/resolvers, Zod
 - **Database & ORM:** Drizzle ORM, @neondatabase/serverless, drizzle-zod
 - **Utilities:** date-fns, nanoid, clsx + tailwind-merge, idb-keyval
