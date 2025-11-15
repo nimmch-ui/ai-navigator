@@ -71,6 +71,7 @@ import { ModeService } from '@/services/mode';
 import { getDeviceCapabilities } from '@/services/map/webglCapability';
 import { getBestSupportedMode } from '@/services/map/modeCapabilities';
 import { validateCoordinates, getZurichFallback } from '@/utils/coordinateValidation';
+import { gpsService } from '@/services/gps';
 
 // ⚠️ DEVELOPMENT MODE: Import demo navigation data for testing
 import { 
@@ -882,20 +883,116 @@ export default function Home() {
 
   useEffect(() => {
     if (rerouting.isNavigating && routeResult && routeResult.geometry.length > 0) {
-      let currentIndex = 0;
-      const interval = setInterval(() => {
-        if (currentIndex < routeResult.geometry.length) {
-          const position = routeResult.geometry[currentIndex];
-          rerouting.updatePosition(position);
-          currentIndex += Math.floor(routeResult.geometry.length / 20);
-        } else {
-          clearInterval(interval);
-        }
-      }, 10000);
+      if (import.meta.env.DEV) {
+        console.log('[GPS] Starting GPS tracking for navigation');
+      }
+      
+      if (gpsService.isGPSSupported()) {
+        let hasReceivedPosition = false;
+        let fallbackTimer: NodeJS.Timeout | null = null;
+        let simulationInterval: NodeJS.Timeout | null = null;
 
-      return () => clearInterval(interval);
+        const startSimulation = () => {
+          if (import.meta.env.DEV) {
+            console.warn('[GPS] Starting fallback simulation');
+          }
+          let currentIndex = 0;
+          simulationInterval = setInterval(() => {
+            if (currentIndex < routeResult.geometry.length) {
+              const position = routeResult.geometry[currentIndex];
+              rerouting.updatePosition(position);
+              setCurrentNavigationPosition(position);
+              currentIndex += Math.floor(routeResult.geometry.length / 20);
+            } else if (simulationInterval) {
+              clearInterval(simulationInterval);
+            }
+          }, 10000);
+        };
+
+        gpsService.startTracking({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 1000,
+        });
+
+        const unsubscribe = gpsService.onPositionUpdate((gpsPosition) => {
+          hasReceivedPosition = true;
+          if (fallbackTimer) {
+            clearTimeout(fallbackTimer);
+            fallbackTimer = null;
+          }
+          const position: [number, number] = [gpsPosition.latitude, gpsPosition.longitude];
+          if (import.meta.env.DEV) {
+            console.log('[GPS] Updating navigation position');
+          }
+          rerouting.updatePosition(position);
+          setCurrentNavigationPosition(position);
+        });
+
+        const unsubscribeError = gpsService.onError((error) => {
+          if (import.meta.env.DEV) {
+            console.error('[GPS] Navigation tracking error:', error.message);
+          }
+          
+          if (error.code === error.PERMISSION_DENIED) {
+            toast({
+              title: 'GPS Permission Required',
+              description: 'Please enable location permissions to use real-time navigation. Using simulated route instead.',
+              variant: 'destructive',
+            });
+            gpsService.stopTracking();
+            startSimulation();
+          } else if (!hasReceivedPosition) {
+            toast({
+              title: 'GPS Unavailable',
+              description: 'Unable to get your location. Using simulated navigation.',
+            });
+          }
+        });
+
+        fallbackTimer = setTimeout(() => {
+          if (!hasReceivedPosition) {
+            if (import.meta.env.DEV) {
+              console.warn('[GPS] No position received after 15s, falling back to simulation');
+            }
+            toast({
+              title: 'GPS Signal Weak',
+              description: 'Using simulated navigation instead.',
+            });
+            startSimulation();
+          }
+        }, 15000);
+
+        return () => {
+          if (import.meta.env.DEV) {
+            console.log('[GPS] Stopping GPS tracking');
+          }
+          gpsService.stopTracking();
+          unsubscribe();
+          unsubscribeError();
+          if (fallbackTimer) clearTimeout(fallbackTimer);
+          if (simulationInterval) clearInterval(simulationInterval);
+        };
+      } else {
+        if (import.meta.env.DEV) {
+          console.warn('[GPS] GPS not supported, using demo position simulation');
+        }
+        let currentIndex = 0;
+        const interval = setInterval(() => {
+          if (currentIndex < routeResult.geometry.length) {
+            const position = routeResult.geometry[currentIndex];
+            rerouting.updatePosition(position);
+            setCurrentNavigationPosition(position);
+            currentIndex += Math.floor(routeResult.geometry.length / 20);
+          } else {
+            clearInterval(interval);
+          }
+        }, 10000);
+
+        return () => clearInterval(interval);
+      }
     }
-  }, [rerouting.isNavigating, routeResult]);
+  }, [rerouting.isNavigating, routeResult, toast]);
 
   const handleStartNavigation = async () => {
     if (origin && destination && routeResult && originCoords && destinationCoords) {

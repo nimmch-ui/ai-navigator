@@ -11,9 +11,10 @@
 import type { RouteResult } from '@/services/routing';
 import type { TripEstimate } from '@/services/tripEstimates';
 
-// ⚠️ Enable demo navigation UI in test mode for internal testing
-// Set VITE_TEST_MODE=true in Replit secrets to enable in production
-export const DEV_NAV_DEMO_MODE = (import.meta.env.DEV || import.meta.env.VITE_TEST_MODE === 'true') && true;
+// ⚠️ DEMO MODE DISABLED FOR PRODUCTION
+// Demo mode is now OFF by default. Set to true only for internal testing.
+// This prevents auto-loading of Zurich HB → Airport demo route
+export const DEV_NAV_DEMO_MODE = false;
 
 /**
  * Mock route from Zurich HB to Zurich Airport

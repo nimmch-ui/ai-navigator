@@ -17,6 +17,8 @@ export function RegionFallbackBanner() {
       const customEvent = event as CustomEvent<FallbackEvent>;
       setFallbackInfo(customEvent.detail);
       setIsDismissed(false);
+      
+      console.log('[RegionFallback] Fallback detected:', customEvent.detail);
     };
 
     window.addEventListener("region-fallback", handleFallback);
@@ -27,6 +29,8 @@ export function RegionFallbackBanner() {
         reason: state.fallbackReason,
         fallbackRegion: state.currentRegion,
       });
+      
+      console.log('[RegionFallback] Initial fallback state:', state);
     }
 
     return () => {
@@ -35,6 +39,11 @@ export function RegionFallbackBanner() {
   }, []);
 
   if (!fallbackInfo || isDismissed) {
+    return null;
+  }
+  
+  if (import.meta.env.PROD && !import.meta.env.VITE_TEST_MODE) {
+    console.log('[RegionFallback] Banner hidden in production (silent fallback)');
     return null;
   }
 
