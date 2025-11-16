@@ -1,2 +1,5 @@
 rm -rf dist .vite node_modules/.vite
 npm cache clean --force
+git remote add origin https://github.com/nimmch-ui/ai-navigator.git
+git branch -M main
+git push -u origin main
