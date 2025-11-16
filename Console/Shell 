@@ -3,3 +3,10 @@ npm cache clean --force
 git remote add origin https://github.com/nimmch-ui/ai-navigator.git
 git branch -M main
 git push -u origin main
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/nimmch-ui/ai-navigator.git
+git branch -M main
+git push -u origin main
+
