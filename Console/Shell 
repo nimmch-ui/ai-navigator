@@ -1,0 +1,2 @@
+rm -rf dist .vite node_modules/.vite
+npm cache clean --force
